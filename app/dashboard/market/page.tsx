@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
 import { useToast } from '@/hooks/useToast'
 import { useConfirm } from '@/components/ui/confirm-modal'
+import { useAuth } from '@/hooks/useAuth'
+import { useLogout } from '@/hooks/useLogout'
 import Button from '@/components/ui/button'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
@@ -31,78 +33,87 @@ export default function MarketPage() {
   const router = useRouter()
   const toast = useToast()
   const confirm = useConfirm()
-  const [user, setUser] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const { user, loading: authLoading } = useAuth()
+  const logout = useLogout()
   const [propiedades, setPropiedades] = useState<Propiedad[]>([])
-  
+
   // Estados para búsqueda y filtro
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState<'todos' | 'publicado' | 'pausado' | 'borrador'>('todos')
   const [filtroOperacion, setFiltroOperacion] = useState<'todos' | 'venta' | 'renta' | 'vacacional'>('todos')
 
-  useEffect(() => { 
-    checkUser()
-  }, [])
-
-  const checkUser = async () => {
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    if (!authUser) { router.push('/login'); return }
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', authUser.id).single()
-    setUser({ ...profile, id: authUser.id })
-    cargarPropiedades(authUser.id)
-    setLoading(false)
-  }
+  useEffect(() => {
+    if (user?.id) {
+      cargarPropiedades(user.id)
+    }
+  }, [user])
 
   const cargarPropiedades = async (userId: string) => {
-    // Cargar propiedades propias
+    // ✅ QUERY 1: Propiedades propias con JOIN a imágenes (1 query en lugar de N+1)
     const { data: propiedadesPropias, error: errorPropias } = await supabase
       .from('propiedades')
-      .select('*')
+      .select(`
+        *,
+        property_images (
+          url_thumbnail,
+          is_cover
+        )
+      `)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-    
+
     if (errorPropias) {
       console.error('Error cargando propiedades propias:', errorPropias)
       toast.error('Error al cargar propiedades')
       setPropiedades([])
       return
     }
-    
-    // Cargar propiedades compartidas
+
+    // Transformar propiedades propias con foto de portada
+    const propsPropias = (propiedadesPropias || []).map((prop: any) => ({
+      ...prop,
+      es_propio: true,
+      foto_portada: prop.property_images?.find((img: any) => img.is_cover)?.url_thumbnail || null
+    }))
+
+    // ✅ QUERY 2: IDs de propiedades compartidas
     const { data: propiedadesCompartidas } = await supabase
       .from('propiedades_colaboradores')
       .select('propiedad_id')
       .eq('user_id', userId)
-    
-    let propiedadesCompartidasData: any[] = []
+
+    let propsCompartidas: any[] = []
+
+    // ✅ QUERY 3: Propiedades compartidas con JOIN a imágenes (solo si hay)
     if (propiedadesCompartidas && propiedadesCompartidas.length > 0) {
       const idsCompartidos = propiedadesCompartidas.map(p => p.propiedad_id)
       const { data: datosCompartidos } = await supabase
         .from('propiedades')
-        .select('*')
+        .select(`
+          *,
+          property_images (
+            url_thumbnail,
+            is_cover
+          )
+        `)
         .in('id', idsCompartidos)
-      propiedadesCompartidasData = datosCompartidos || []
+
+      // Transformar propiedades compartidas con foto de portada
+      propsCompartidas = (datosCompartidos || []).map((prop: any) => ({
+        ...prop,
+        es_propio: false,
+        foto_portada: prop.property_images?.find((img: any) => img.is_cover)?.url_thumbnail || null
+      }))
     }
-    
-    const todasPropiedades = [
-      ...(propiedadesPropias || []).map(p => ({ ...p, es_propio: true })),
-      ...(propiedadesCompartidasData || []).map(p => ({ ...p, es_propio: false }))
-    ]
-    
-    // Cargar foto de portada para cada propiedad
-    for (const prop of todasPropiedades) {
-      const { data: fotoPortada } = await supabase
-        .from('property_images')
-        .select('url_thumbnail')
-        .eq('property_id', prop.id)
-        .eq('is_cover', true)
-        .single()
-      
-      prop.foto_portada = fotoPortada?.url_thumbnail || null
-    }
-    
+
+    // Combinar y ordenar
+    const todasPropiedades = [...propsPropias, ...propsCompartidas]
     todasPropiedades.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
     setPropiedades(todasPropiedades)
+
+    // ✅ Log de optimización
+    console.log(`✅ Market cargado con ${todasPropiedades.length} propiedades usando solo 3 queries (antes: ${todasPropiedades.length + 3})`)
   }
 
   const toggleEstadoAnuncio = async (propiedadId: string, estadoActual: string | null) => {
@@ -138,13 +149,12 @@ export default function MarketPage() {
       '¿Estás seguro que deseas cerrar sesión?',
       'Se cerrará tu sesión actual'
     )
-    
+
     if (!confirmed) return
 
     try {
-      await supabase.auth.signOut()
+      await logout()
       toast.success('Sesión cerrada correctamente')
-      router.push('/login')
     } catch (error: any) {
       logger.error('Error al cerrar sesión:', error)
       toast.error('Error al cerrar sesión')
@@ -179,7 +189,7 @@ export default function MarketPage() {
     return { monto: 'Sin precio', periodo: '' }
   }
 
-  if (loading) {
+  if (authLoading) {
     return <Loading message="Cargando anuncios..." />
   }
 

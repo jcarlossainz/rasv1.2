@@ -44,9 +44,17 @@ export default function CompartirPropiedad({
   const cargarColaboradores = async () => {
     setLoading(true)
     try {
+      // ✅ Usar JOIN para cargar colaboradores con sus perfiles (1 query en lugar de N+1)
       const { data, error } = await supabase
         .from('propiedades_colaboradores')
-        .select('id, user_id')
+        .select(`
+          id,
+          user_id,
+          profiles!user_id (
+            email,
+            full_name
+          )
+        `)
         .eq('propiedad_id', propiedadId)
 
       if (error) {
@@ -55,25 +63,15 @@ export default function CompartirPropiedad({
         return
       }
 
-      // Cargar datos de perfil de cada colaborador
-      const colaboradoresConDatos = await Promise.all(
-        (data || []).map(async (colab) => {
-          const { data: perfil } = await supabase
-            .from('profiles')
-            .select('email, full_name')
-            .eq('id', colab.user_id)
-            .single()
+      // Transformar datos (profiles viene como objeto, no array)
+      const colaboradoresConDatos = (data || []).map((colab: any) => ({
+        id: colab.id,
+        user_id: colab.user_id,
+        email: colab.profiles?.email || 'Sin email',
+        full_name: colab.profiles?.full_name
+      }))
 
-          return {
-            id: colab.id,
-            user_id: colab.user_id,
-            email: perfil?.email || 'Sin email',
-            full_name: perfil?.full_name
-          }
-        })
-      )
-      
-      console.log('Colaboradores cargados:', colaboradoresConDatos)
+      console.log(`✅ Colaboradores cargados: ${colaboradoresConDatos.length} (1 query en lugar de ${colaboradoresConDatos.length + 1})`)
       setColaboradores(colaboradoresConDatos)
     } catch (error) {
       console.error('Error al cargar colaboradores:', error)
