@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
+import { useLogout } from '@/hooks/useLogout';
 import { useConfirm } from '@/components/ui/confirm-modal';
 import { logger } from '@/lib/logger';
 import TopBar from '@/components/ui/topbar';
@@ -40,8 +42,9 @@ export default function InventarioPage() {
   const propertyId = params.id as string;
   const toast = useToast();
   const confirm = useConfirm();
+  const { user, loading: authLoading } = useAuth();
+  const logout = useLogout();
 
-  const [user, setUser] = useState<any>(null);
   const [property, setProperty] = useState<PropertyData | null>(null);
   const [spaces, setSpaces] = useState<SpaceData[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -49,31 +52,16 @@ export default function InventarioPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSpace, setFilterSpace] = useState<string>('all');
-  
+
   // Estados para el modal de edición
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
 
   useEffect(() => {
-    checkUser();
-  }, [propertyId]);
-
-  const checkUser = async () => {
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
-        router.push('/login');
-        return;
-      }
-      const { data: profile } = await supabase.from('profiles').select('*').eq('id', authUser.id).single();
-      setUser({ ...profile, id: authUser.id });
+    if (user?.id) {
       loadData();
-    } catch (error) {
-      console.error('Error en checkUser:', error);
-      toast.error('Error de autenticación');
-      setLoading(false);
     }
-  };
+  }, [user, propertyId]);
 
   const loadData = async () => {
     try {
@@ -206,11 +194,7 @@ export default function InventarioPage() {
   };
 
   const handleLogout = async () => {
-    const confirmed = await confirm.warning('¿Cerrar sesión?');
-    if (!confirmed) return;
-    
-    await supabase.auth.signOut();
-    router.push('/login');
+    await logout();
   };
 
   // Función para obtener el nombre real del espacio
@@ -244,7 +228,7 @@ export default function InventarioPage() {
       .map(item => item.space_type as string)
   ));
 
-  if (loading) {
+  if (authLoading || loading) {
     return <Loading />;
   }
 

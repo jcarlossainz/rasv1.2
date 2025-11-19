@@ -52,14 +52,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#00768E] via-[#00CC99] to-[#00768E] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-ras-azul via-ras-turquesa to-ras-azul flex items-center justify-center p-4">
       {/* Card principal */}
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         
         {/* Header con logo y gradiente */}
-        <div className="bg-gradient-to-r from-[#00768E] to-[#00CC99] p-8 text-center">
+        <div className="bg-gradient-to-r from-ras-azul to-ras-turquesa p-8 text-center">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-2xl shadow-lg mb-4">
-            <svg className="w-12 h-12 text-[#00768E]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg className="w-12 h-12 text-ras-azul" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
               <polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
@@ -90,7 +90,7 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#00768E] focus:border-transparent transition-all outline-none"
+                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ras-azul focus:border-transparent transition-all outline-none"
                   placeholder="correo@ejemplo.com"
                   required
                 />
@@ -113,7 +113,7 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#00768E] focus:border-transparent transition-all outline-none"
+                  className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ras-azul focus:border-transparent transition-all outline-none"
                   placeholder="••••••••"
                   required
                 />
@@ -153,7 +153,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-[#00768E] to-[#00CC99] text-white py-3.5 rounded-xl font-semibold hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              className="w-full bg-gradient-to-r from-ras-azul to-ras-turquesa text-white py-3.5 rounded-xl font-semibold hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -175,7 +175,7 @@ export default function LoginPage() {
               ¿No tienes cuenta?{' '}
               <Link 
                 href="/register" 
-                className="text-[#00768E] font-semibold hover:text-[#00CC99] transition-colors"
+                className="text-ras-azul font-semibold hover:text-ras-turquesa transition-colors"
               >
                 Crear cuenta gratis
               </Link>
@@ -186,7 +186,7 @@ export default function LoginPage() {
           <div className="mt-4 text-center">
             <Link 
               href="/forgot-password" 
-              className="text-xs text-gray-500 hover:text-[#00768E] transition-colors"
+              className="text-xs text-gray-500 hover:text-ras-azul transition-colors"
             >
               ¿Olvidaste tu contraseña?
             </Link>

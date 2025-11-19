@@ -289,77 +289,77 @@ export default function DashboardPage() {
               {metrics ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   
-                  {/* TICKETS - Vencidos (naranja) */}
-                  <div 
+                  {/* TICKETS - Vencidos */}
+                  <div
                     onClick={() => router.push('/dashboard/tickets')}
-                    className="bg-white rounded-xl p-4 border-2 border-[#fb8500]/20 hover:border-[#fb8500]/40 hover:shadow-lg transition-all cursor-pointer"
+                    className="bg-white rounded-xl p-4 border-2 border-semantic-error/20 hover:border-semantic-error/40 hover:shadow-lg transition-all cursor-pointer"
                   >
-                    <div className="text-xs font-semibold mb-2 text-[#fb8500]">Vencidos</div>
-                    <div className="text-4xl font-bold mb-1 text-[#fb8500]">{metrics.tickets.vencidos}</div>
+                    <div className="text-xs font-semibold mb-2 text-semantic-error">Vencidos</div>
+                    <div className="text-4xl font-bold mb-1 text-semantic-error">{metrics.tickets.vencidos}</div>
                     <div className="text-xs text-gray-500">Pagos atrasados</div>
                   </div>
 
-                  {/* TICKETS - Hoy (naranja) */}
-                  <div 
+                  {/* TICKETS - Hoy */}
+                  <div
                     onClick={() => router.push('/dashboard/tickets')}
-                    className="bg-white rounded-xl p-4 border-2 border-[#fb8500]/20 hover:border-[#fb8500]/40 hover:shadow-lg transition-all cursor-pointer"
+                    className="bg-white rounded-xl p-4 border-2 border-semantic-warning/20 hover:border-semantic-warning/40 hover:shadow-lg transition-all cursor-pointer"
                   >
-                    <div className="text-xs font-semibold mb-2 text-[#fb8500]">Vencen Hoy</div>
-                    <div className="text-4xl font-bold mb-1 text-[#fb8500]">{metrics.tickets.hoy}</div>
+                    <div className="text-xs font-semibold mb-2 text-semantic-warning">Vencen Hoy</div>
+                    <div className="text-4xl font-bold mb-1 text-semantic-warning">{metrics.tickets.hoy}</div>
                     <div className="text-xs text-gray-500">Pagos de hoy</div>
                   </div>
 
-                  {/* TICKETS - Esta semana (naranja) */}
-                  <div 
+                  {/* TICKETS - Esta semana */}
+                  <div
                     onClick={() => router.push('/dashboard/tickets')}
-                    className="bg-white rounded-xl p-4 border-2 border-[#fb8500]/20 hover:border-[#fb8500]/40 hover:shadow-lg transition-all cursor-pointer"
+                    className="bg-white rounded-xl p-4 border-2 border-semantic-warning/20 hover:border-semantic-warning/40 hover:shadow-lg transition-all cursor-pointer"
                   >
-                    <div className="text-xs font-semibold mb-2 text-[#fb8500]">Esta Semana</div>
-                    <div className="text-4xl font-bold mb-1 text-[#fb8500]">{metrics.tickets.proximos}</div>
+                    <div className="text-xs font-semibold mb-2 text-semantic-warning">Esta Semana</div>
+                    <div className="text-4xl font-bold mb-1 text-semantic-warning">{metrics.tickets.proximos}</div>
                     <div className="text-xs text-gray-500">Próximos 7 días</div>
                   </div>
 
-                  {/* TICKETS - Total Pendiente (naranja) */}
-                  <div 
+                  {/* TICKETS - Total Pendiente */}
+                  <div
                     onClick={() => router.push('/dashboard/tickets')}
-                    className="bg-white rounded-xl p-4 border-2 border-[#fb8500]/20 hover:border-[#fb8500]/40 hover:shadow-lg transition-all cursor-pointer"
+                    className="bg-white rounded-xl p-4 border-2 border-semantic-warning/20 hover:border-semantic-warning/40 hover:shadow-lg transition-all cursor-pointer"
                   >
-                    <div className="text-xs font-semibold mb-2 text-[#fb8500]">Por Pagar</div>
-                    <div className="text-3xl font-bold mb-1 text-[#fb8500]">
+                    <div className="text-xs font-semibold mb-2 text-semantic-warning">Por Pagar</div>
+                    <div className="text-3xl font-bold mb-1 text-semantic-warning">
                       ${(metrics.tickets.montoTotal / 1000).toFixed(1)}K
                     </div>
                     <div className="text-xs text-gray-500">Monto total</div>
                   </div>
 
-                  {/* ANUNCIOS - Activos (amarillo) */}
-                  <div 
+                  {/* ANUNCIOS - Activos */}
+                  <div
                     onClick={() => router.push('/dashboard/market')}
-                    className="bg-white rounded-xl p-4 border-2 border-[#fbbf24]/20 hover:border-[#fbbf24]/40 hover:shadow-lg transition-all cursor-pointer"
+                    className="bg-white rounded-xl p-4 border-2 border-ras-turquesa/20 hover:border-ras-turquesa/40 hover:shadow-lg transition-all cursor-pointer"
                   >
-                    <div className="text-xs font-semibold mb-2 text-[#fbbf24]">Activos</div>
-                    <div className="text-4xl font-bold mb-1 text-[#fbbf24]">{metrics.anuncios.activos}</div>
+                    <div className="text-xs font-semibold mb-2 text-ras-turquesa">Activos</div>
+                    <div className="text-4xl font-bold mb-1 text-ras-turquesa">{metrics.anuncios.activos}</div>
                     <div className="text-xs text-gray-500">Anuncios</div>
                   </div>
 
-                  {/* ANUNCIOS - Pausados (amarillo) */}
-                  <div 
+                  {/* ANUNCIOS - Pausados */}
+                  <div
                     onClick={() => router.push('/dashboard/market')}
-                    className="bg-white rounded-xl p-4 border-2 border-[#fbbf24]/20 hover:border-[#fbbf24]/40 hover:shadow-lg transition-all cursor-pointer"
+                    className="bg-white rounded-xl p-4 border-2 border-ras-turquesa/20 hover:border-ras-turquesa/40 hover:shadow-lg transition-all cursor-pointer"
                   >
-                    <div className="text-xs font-semibold mb-2 text-[#fbbf24]">Pausados</div>
-                    <div className="text-4xl font-bold mb-1 text-[#fbbf24]">{metrics.anuncios.pausados}</div>
+                    <div className="text-xs font-semibold mb-2 text-ras-turquesa">Pausados</div>
+                    <div className="text-4xl font-bold mb-1 text-ras-turquesa">{metrics.anuncios.pausados}</div>
                     <div className="text-xs text-gray-500">Anuncios</div>
                   </div>
 
-                  {/* CALENDARIO - Próximo Pago (azul calendario) */}
-                  <div 
+                  {/* CALENDARIO - Próximo Pago */}
+                  <div
                     onClick={() => router.push('/dashboard/calendario')}
-                    className="bg-white rounded-xl p-4 border-2 border-[#5f7c8a]/20 hover:border-[#5f7c8a]/40 hover:shadow-lg transition-all cursor-pointer"
+                    className="bg-white rounded-xl p-4 border-2 border-ras-azul/20 hover:border-ras-azul/40 hover:shadow-lg transition-all cursor-pointer"
                   >
-                    <div className="text-xs font-semibold mb-2 text-[#5f7c8a]">Próximo Pago</div>
+                    <div className="text-xs font-semibold mb-2 text-ras-azul">Próximo Pago</div>
                     {metrics.calendario.proximoPago ? (
                       <>
-                        <div className="text-2xl font-bold mb-1 text-[#5f7c8a]">
+                        <div className="text-2xl font-bold mb-1 text-ras-azul">
                           {formatearFecha(metrics.calendario.proximoPago.fecha)}
                         </div>
                         <div className="text-xs text-gray-500 truncate">
@@ -371,13 +371,13 @@ export default function DashboardPage() {
                     )}
                   </div>
 
-                  {/* CUENTAS - Propiedades (verde cuentas) */}
-                  <div 
+                  {/* CUENTAS - Propiedades */}
+                  <div
                     onClick={() => router.push('/dashboard/cuentas')}
-                    className="bg-white rounded-xl p-4 border-2 border-[#6b8e23]/20 hover:border-[#6b8e23]/40 hover:shadow-lg transition-all cursor-pointer"
+                    className="bg-white rounded-xl p-4 border-2 border-semantic-success/20 hover:border-semantic-success/40 hover:shadow-lg transition-all cursor-pointer"
                   >
-                    <div className="text-xs font-semibold mb-2 text-[#6b8e23]">Propiedades</div>
-                    <div className="text-4xl font-bold mb-1 text-[#6b8e23]">{metrics.cuentas.propiedades}</div>
+                    <div className="text-xs font-semibold mb-2 text-semantic-success">Propiedades</div>
+                    <div className="text-4xl font-bold mb-1 text-semantic-success">{metrics.cuentas.propiedades}</div>
                     <div className="text-xs text-gray-500">Total</div>
                   </div>
 

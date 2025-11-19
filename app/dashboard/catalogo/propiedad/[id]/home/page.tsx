@@ -5,6 +5,8 @@ import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
 import { useToast } from '@/hooks/useToast'
+import { useAuth } from '@/hooks/useAuth'
+import { useLogout } from '@/hooks/useLogout'
 import { useConfirm } from '@/components/ui/confirm-modal'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
@@ -274,12 +276,13 @@ export default function HomePropiedad() {
   const params = useParams()
   const toast = useToast()
   const confirm = useConfirm()
+  const { user, loading: authLoading } = useAuth()
+  const logout = useLogout()
   const propiedadId = params?.id as string
-  
+
   const [loading, setLoading] = useState(true)
   const [propiedad, setPropiedad] = useState<PropiedadData | null>(null)
-  const [user, setUser] = useState<any>(null)
-  
+
   // Estados para modales
   const [showCompartir, setShowCompartir] = useState(false)
   const [showDuplicarModal, setShowDuplicarModal] = useState(false)
@@ -287,31 +290,10 @@ export default function HomePropiedad() {
   const [duplicando, setDuplicando] = useState(false)
 
   useEffect(() => {
-    checkUser()
-  }, [])
-
-  const checkUser = async () => {
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (!authUser) {
-        router.push('/login')
-        return
-      }
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authUser.id)
-        .single()
-
-      setUser({ ...profile, id: authUser.id })
-      await cargarPropiedad()
-    } catch (error) {
-      console.error('Error en checkUser:', error)
-      toast.error('Error de autenticación')
-      setLoading(false) // CRÍTICO: Siempre quitar el loading
+    if (user?.id) {
+      cargarPropiedad()
     }
-  }
+  }, [user])
 
   const cargarPropiedad = async () => {
     try {
@@ -386,21 +368,7 @@ export default function HomePropiedad() {
   }
 
   const handleLogout = async () => {
-    const confirmed = await confirm.warning(
-      '¿Estás seguro que deseas cerrar sesión?',
-      'Se cerrará tu sesión actual'
-    )
-    
-    if (!confirmed) return
-
-    try {
-      await supabase.auth.signOut()
-      toast.success('Sesión cerrada correctamente')
-      router.push('/login')
-    } catch (error: any) {
-      logger.error('Error al cerrar sesión:', error)
-      toast.error('Error al cerrar sesión')
-    }
+    await logout()
   }
 
   const volverCatalogo = () => {
@@ -477,7 +445,7 @@ export default function HomePropiedad() {
     }
   }
 
-  if (loading) {
+  if (authLoading || loading) {
     return <Loading />
   }
 
