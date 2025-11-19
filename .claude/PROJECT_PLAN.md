@@ -379,7 +379,7 @@ interface Propiedad {
 **Objetivo:** Asegurar consistencia visual y de UX en todas las páginas.
 
 **Estado:** ✅ COMPLETADO (100%) - 19 Nov 2025
-**Última revisión:** 19 Nov 2025 - Correcciones aplicadas
+**Última revisión:** 19 Nov 2025 - Colores hardcodeados eliminados (59 reemplazos)
 
 #### Checklist
 
@@ -454,7 +454,20 @@ interface Propiedad {
 - ✅ Fuentes Roboto (cuerpo) y Poppins (títulos) correctamente integradas
 - ✅ Paleta de colores RAS aplicada consistentemente
 - ✅ Tailwind configurado con todos los design tokens (19 Nov 2025)
-- ✅ Código limpio sin hardcoding de valores (19 Nov 2025)
+- ✅ **Colores hardcodeados ELIMINADOS** (19 Nov 2025):
+  - ✅ app/dashboard/page.tsx - 32 colores reemplazados
+    - `[#fb8500]` (naranja) → `semantic-error` / `semantic-warning`
+    - `[#fbbf24]` (amarillo) → `ras-turquesa`
+    - `[#5f7c8a]` (gris azul) → `ras-azul`
+    - `[#6b8e23]` (verde olivo) → `semantic-success`
+  - ✅ app/(auth)/login/page.tsx - 13 colores reemplazados
+    - `[#00768E]` → `ras-azul`
+    - `[#00CC99]` → `ras-turquesa`
+  - ✅ app/(auth)/register/page.tsx - 14 colores reemplazados
+    - `[#00768E]` → `ras-azul`
+    - `[#00CC99]` → `ras-turquesa`
+  - ✅ **Total: 59 colores hardcodeados eliminados**
+  - ✅ **100% de archivos ahora usan colores oficiales RAS**
 
 **📄 Documentación:** Ver `.claude/FASE3_UNIFORMIDAD_AUDIT.md` para análisis completo
 
