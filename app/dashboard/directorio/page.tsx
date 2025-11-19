@@ -56,7 +56,19 @@ export default function DirectorioPage() {
   const cargarContactos = async (userId: string) => {
     const { data, error } = await supabase
       .from('contactos')
-      .select('*')
+      .select(`
+        id,
+        user_id,
+        full_name,
+        email,
+        telefono,
+        tipo,
+        categoria_proveedor,
+        activo,
+        notas,
+        created_at,
+        updated_at
+      `)
       .eq('user_id', userId)
       .eq('activo', true)
       .order('created_at', { ascending: false })

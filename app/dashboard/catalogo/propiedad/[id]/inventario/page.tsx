@@ -94,7 +94,16 @@ export default function InventarioPage() {
     try {
       const { data, error } = await supabase
         .from('property_inventory')
-        .select('*')
+        .select(`
+          id,
+          object_name,
+          confidence,
+          space_type,
+          labels,
+          image_url,
+          image_id,
+          created_at
+        `)
         .eq('property_id', propertyId)
         .order('created_at', { ascending: false });
 

@@ -119,11 +119,24 @@ export default function TicketsGlobalPage() {
         return
       }
 
-      // Cargar todos los tickets pendientes
+      // Cargar todos los tickets pendientes - SELECT ESPECÍFICO
       const propIds = todasPropiedades.map(p => p.id)
       const { data: ticketsData, error: ticketsError } = await supabase
         .from('tickets')
-        .select('*')
+        .select(`
+          id,
+          titulo,
+          fecha_programada,
+          monto_estimado,
+          pagado,
+          servicio_id,
+          tipo_ticket,
+          estado,
+          prioridad,
+          responsable,
+          proveedor,
+          propiedad_id
+        `)
         .in('propiedad_id', propIds)
         .eq('pagado', false)
         .order('fecha_programada', { ascending: true })
