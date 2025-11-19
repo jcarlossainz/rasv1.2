@@ -54,55 +54,71 @@ export default function MarketPage() {
   }
 
   const cargarPropiedades = async (userId: string) => {
-    // Cargar propiedades propias
+    // ✅ QUERY 1: Propiedades propias con JOIN a imágenes (1 query en lugar de N+1)
     const { data: propiedadesPropias, error: errorPropias } = await supabase
       .from('propiedades')
-      .select('*')
+      .select(`
+        *,
+        property_images (
+          url_thumbnail,
+          is_cover
+        )
+      `)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-    
+
     if (errorPropias) {
       console.error('Error cargando propiedades propias:', errorPropias)
       toast.error('Error al cargar propiedades')
       setPropiedades([])
       return
     }
-    
-    // Cargar propiedades compartidas
+
+    // Transformar propiedades propias con foto de portada
+    const propsPropias = (propiedadesPropias || []).map((prop: any) => ({
+      ...prop,
+      es_propio: true,
+      foto_portada: prop.property_images?.find((img: any) => img.is_cover)?.url_thumbnail || null
+    }))
+
+    // ✅ QUERY 2: IDs de propiedades compartidas
     const { data: propiedadesCompartidas } = await supabase
       .from('propiedades_colaboradores')
       .select('propiedad_id')
       .eq('user_id', userId)
-    
-    let propiedadesCompartidasData: any[] = []
+
+    let propsCompartidas: any[] = []
+
+    // ✅ QUERY 3: Propiedades compartidas con JOIN a imágenes (solo si hay)
     if (propiedadesCompartidas && propiedadesCompartidas.length > 0) {
       const idsCompartidos = propiedadesCompartidas.map(p => p.propiedad_id)
       const { data: datosCompartidos } = await supabase
         .from('propiedades')
-        .select('*')
+        .select(`
+          *,
+          property_images (
+            url_thumbnail,
+            is_cover
+          )
+        `)
         .in('id', idsCompartidos)
-      propiedadesCompartidasData = datosCompartidos || []
+
+      // Transformar propiedades compartidas con foto de portada
+      propsCompartidas = (datosCompartidos || []).map((prop: any) => ({
+        ...prop,
+        es_propio: false,
+        foto_portada: prop.property_images?.find((img: any) => img.is_cover)?.url_thumbnail || null
+      }))
     }
-    
-    const todasPropiedades = [
-      ...(propiedadesPropias || []).map(p => ({ ...p, es_propio: true })),
-      ...(propiedadesCompartidasData || []).map(p => ({ ...p, es_propio: false }))
-    ]
-    
-    // Cargar foto de portada para cada propiedad
-    for (const prop of todasPropiedades) {
-      const { data: fotoPortada } = await supabase
-        .from('property_images')
-        .select('url_thumbnail')
-        .eq('property_id', prop.id)
-        .eq('is_cover', true)
-        .single()
-      
-      prop.foto_portada = fotoPortada?.url_thumbnail || null
-    }
-    
+
+    // Combinar y ordenar
+    const todasPropiedades = [...propsPropias, ...propsCompartidas]
     todasPropiedades.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
     setPropiedades(todasPropiedades)
+
+    // ✅ Log de optimización
+    console.log(`✅ Market cargado con ${todasPropiedades.length} propiedades usando solo 3 queries (antes: ${todasPropiedades.length + 3})`)
   }
 
   const toggleEstadoAnuncio = async (propiedadId: string, estadoActual: string | null) => {
