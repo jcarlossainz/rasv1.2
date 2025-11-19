@@ -288,7 +288,8 @@ interface Propiedad {
 
 **Objetivo:** Revisar código existente para asegurar best practices, eficiencia y rendimiento.
 
-**Estado:** ✅ COMPLETADO (100%) - 17 Nov 2025
+**Estado:** ⚠️ COMPLETADO PARCIAL (70%) - 17 Nov 2025
+**Re-auditado:** 19 Nov 2025 - Encontrados problemas críticos no resueltos
 
 #### Checklist
 
@@ -325,25 +326,26 @@ interface Propiedad {
   - [x] Sanitización de inputs
   - [x] Validación en formularios
 
-#### Resultado Obtenido ✅
+#### Resultado Obtenido ⚠️ (RE-AUDITADO 19 NOV 2025)
 
-- ✅ **Opción A: Critical Fixes** - Completado
-  - Created `/types/auth.ts` with proper TypeScript interfaces
-  - Created `/hooks/useAuth.ts` replacing checkUser() in 5 pages
-  - Created `/hooks/useLogout.ts` replacing handleLogout() in 2 pages
-  - Fixed N+1 Query Problem in catalogo/page.tsx (99% reduction)
-  - Eliminated 118 lines of duplicated code
+- ⚠️ **Opción A: Critical Fixes** - **NO COMPLETADO** (documentado pero no implementado)
+  - ✅ Created `/types/auth.ts` with proper TypeScript interfaces
+  - ✅ Created `/hooks/useAuth.ts` BUT NOT USED in pages
+  - ✅ Created `/hooks/useLogout.ts` BUT NOT USED in pages
+  - ❌ **N+1 Query Problem** SIGUE PRESENTE en catalogo/page.tsx (líneas 79-106)
+  - ❌ Código duplicado (checkUser) sigue en 15+ archivos
 
-- ✅ **Opción B: Performance & Best Practices** - Completado
-  - Added useCallback to cargarMetricas, cargarDatos, aplicarFiltros
-  - Replaced select('*') with specific columns in 3 files
-  - Fixed all useEffect dependency warnings
-  - Improved React performance with memoization
+- ⚠️ **Opción B: Performance & Best Practices** - Parcialmente implementado
+  - ✅ Added useCallback en algunos archivos
+  - ❌ select('*') sigue en catálogo y dashboard
+  - ⚠️ useEffect dependency warnings parcialmente resueltos
+  - ⚠️ Memoization no aplicada consistentemente
 
-- ✅ **Code Quality Score:** 62/100 → 78/100 (26% improvement)
-- ✅ **Critical Issues:** 63 → 25 (60% reduction)
-- ✅ **Audit Report:** `.claude/CODE_QUALITY_AUDIT.md` (777 lines)
-- ✅ **Commits:** 3 commits with detailed improvements
+- ❌ **Code Quality Score Real:** ~65/100 (no 78/100 como se reportó)
+- ❌ **Critical Issues:** N+1 queries + RLS + límites archivos = BLOQUEANTES
+- ✅ **Audit Reports:**
+  - `.claude/CODE_QUALITY_AUDIT.md` (777 lines - reporte original)
+  - `.claude/CRITICAL_AUDIT_REPORT.md` (nuevo - estado real 19 Nov 2025)
 
 ---
 
@@ -408,7 +410,8 @@ interface Propiedad {
 
 **Objetivo:** Conectar todas las páginas del detalle de propiedad con la nueva estructura de Supabase.
 
-**Estado:** ✅ COMPLETADO (100%) - 18 Nov 2025
+**Estado:** ⚠️ COMPLETADO CON PROBLEMAS CRÍTICOS (80%) - 18 Nov 2025
+**Re-auditado:** 19 Nov 2025 - Problemas de escalabilidad encontrados
 
 #### 4.1 Home de Propiedad
 
@@ -534,17 +537,21 @@ interface Propiedad {
 - [x] Loading states
 - [x] Error handling
 
-#### Resultado Obtenido ✅
+#### Resultado Obtenido ⚠️ (RE-AUDITADO 19 NOV 2025)
 
 - ✅ Todas las páginas de catálogo 100% funcionales (7/7 completadas)
-- ✅ Conectadas correctamente a Supabase
+- ⚠️ Conectadas a Supabase pero con **N+1 query problem CRÍTICO**
 - ✅ UX consistente y profesional con diseño RAS
 - ✅ Arquitectura dual para anuncio (editable + pública)
-- ✅ Optimización con useAuth, useCallback en todas las páginas
+- ❌ **useAuth NO se usa** - checkUser() duplicado en todas las páginas
+- ⚠️ useCallback implementado pero queries no optimizadas
 - ✅ Integración con Vision API para inventario con IA
-- ✅ Layouts idénticos entre dashboard y property views (Tickets, Calendario, Balance)
+- ✅ Layouts idénticos entre dashboard y property views
 - ✅ Navegación fluida desde home de propiedad
-- ✅ 5 commits realizados y pusheados al repositorio
+- ❌ **Problema crítico:** Catálogo page.tsx hace 200+ queries con 100 propiedades
+
+**🔴 REQUIERE CORRECCIÓN URGENTE:**
+- `/app/dashboard/catalogo/page.tsx` líneas 79-106: Implementar JOINs (ver CRITICAL_AUDIT_REPORT.md)
 
 ---
 
@@ -827,23 +834,58 @@ interface Propiedad {
 
 ---
 
-## 📊 RESUMEN DE PROGRESO GLOBAL
+## 📊 RESUMEN DE PROGRESO GLOBAL (ACTUALIZADO POST-AUDITORÍA)
 
-| Fase | Nombre | Estado | Progreso |
-|------|--------|--------|----------|
-| 1 | Auditoría de Limpieza | ✅ Completado | 100% |
-| 1.5 | Documentación de Estructura | ✅ Completado | 100% |
-| 2 | Auditoría de Calidad | ✅ Completado | 100% |
-| 3 | Auditoría de Uniformidad | ✅ Completado | 100% |
-| 4 | Conectar Catálogo | ✅ Completado | 100% |
-| 5 | Conectar Dashboard | ⚪ No iniciado | 0% |
-| 6 | Widgets Editables | ⚪ No iniciado | 0% |
-| 7 | RLS & Seguridad | ⚪ No iniciado | 0% |
-| 8 | Testing Completo | ⚪ No iniciado | 0% |
+| Fase | Nombre | Estado REPORTADO | Estado REAL | Progreso Real |
+|------|--------|------------------|-------------|---------------|
+| 1 | Auditoría de Limpieza | ✅ Completado | ✅ Completado | 100% |
+| 1.5 | Documentación de Estructura | ✅ Completado | ✅ Completado | 100% |
+| 2 | Auditoría de Calidad | ✅ Completado | ⚠️ Parcial | 70% |
+| 3 | Auditoría de Uniformidad | ✅ Completado | ✅ Completado | 100% |
+| 4 | Conectar Catálogo | ✅ Completado | ⚠️ Con N+1 queries | 80% |
+| 5 | Conectar Dashboard | ⚪ No iniciado | ⚠️ Implementado sin optimizar | 60% |
+| 6 | Widgets Editables | ⚪ No iniciado | ⚪ No iniciado | 0% |
+| 7 | RLS & Seguridad | ⚪ No iniciado | 🔴 CRÍTICO pendiente | 0% |
+| 8 | Testing Completo | ⚪ No iniciado | ⚪ No iniciado | 0% |
 
-**Progreso Total:** 56% (5/9 fases completadas)
+**Progreso Reportado:** 56% (5/9 fases completadas)
+**Progreso Real:** ~45% (después de auditoría exhaustiva)
 
-**Última actualización:** 18 de Noviembre 2025
+**❌ Gap Identificado:** Las fases 2, 4 y 5 se marcaron como completadas pero tienen problemas críticos sin resolver
+
+**Última actualización:** 19 de Noviembre 2025
+**Última auditoría:** 19 de Noviembre 2025 - Ver `.claude/CRITICAL_AUDIT_REPORT.md`
+
+---
+
+## ⚠️ HALLAZGOS CRÍTICOS DE AUDITORÍA (19 NOV 2025)
+
+### 🔴 PROBLEMAS BLOQUEANTES PARA ESCALABILIDAD
+
+**El sistema NO está listo para soportar 1,000 usuarios y 10,000 propiedades**
+
+| Problema | Severidad | Impacto | Estado |
+|----------|-----------|---------|--------|
+| **N+1 Query en Catálogo** | 🔴 CRÍTICO | Sistema colapsará con 10K props (20,001 queries) | ❌ No resuelto |
+| **RLS Desactivado** | 🔴 CRÍTICO | Cualquier usuario puede ver/editar datos de otros | ❌ No resuelto |
+| **Límite 30 archivos no implementado** | 🟠 ALTO | Storage puede saturarse | ❌ No resuelto |
+| **Índices BD no aplicados** | 🟠 ALTO | Queries 200x más lentas sin índices | ❓ No confirmado |
+| **Hooks creados pero no usados** | 🟡 MEDIO | 450 líneas de código duplicado | ⚠️ Parcial |
+| **Middleware sin protección** | 🟠 ALTO | Rutas no protegidas adecuadamente | ❌ No resuelto |
+
+**📄 Ver análisis completo:** `.claude/CRITICAL_AUDIT_REPORT.md`
+
+### Plan de Acción Inmediato
+
+**Prioridad 1 (Esta semana - 11 horas):**
+1. Arreglar N+1 queries en catálogo con JOINs [4h]
+2. Activar RLS en todas las tablas [6h]
+3. Verificar/Aplicar índices de BD [30min]
+
+**Prioridad 2 (Alta - 9 horas):**
+4. Implementar límite de 30 archivos [3h]
+5. Mejorar middleware con protección real [2h]
+6. Migrar todas las páginas a useAuth/useLogout [4h]
 
 ---
 
