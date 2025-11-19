@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
+import { useAuth } from '@/hooks/useAuth'
+import { useLogout } from '@/hooks/useLogout'
 import TopBar from '@/components/ui/topbar'
 import Input from '@/components/ui/input'
 import Button from '@/components/ui/button'
@@ -11,15 +13,15 @@ import Modal from '@/components/ui/modal'
 
 export default function PerfilPage() {
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const { user, loading: authLoading } = useAuth()
+  const logout = useLogout()
   const [guardando, setGuardando] = useState(false)
-  
+
   // Estados para el formulario de información personal
   const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
   const [telefono, setTelefono] = useState('')
-  
+
   // Estados para modal de cambio de contraseña
   const [showModalPassword, setShowModalPassword] = useState(false)
   const [passwordActual, setPasswordActual] = useState('')
@@ -28,31 +30,12 @@ export default function PerfilPage() {
   const [cambiandoPassword, setCambiandoPassword] = useState(false)
 
   useEffect(() => {
-    checkUser()
-  }, [])
-
-  const checkUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push('/login')
-      return
+    if (user) {
+      setNombre(user.nombre || user.full_name || '')
+      setEmail(user.email || '')
+      setTelefono(user.telefono || '')
     }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-
-    if (profile) {
-      setUser({ ...profile, id: user.id })
-      setNombre(profile.full_name || '')
-      setEmail(profile.email || user.email || '')
-      setTelefono(profile.telefono || '')
-    }
-    
-    setLoading(false)
-  }
+  }, [user])
 
   const handleGuardarInfo = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -115,12 +98,11 @@ export default function PerfilPage() {
 
   const handleLogout = async () => {
     if (confirm('¿Estás seguro que deseas cerrar sesión?')) {
-      await supabase.auth.signOut()
-      router.push('/login')
+      await logout()
     }
   }
 
-  if (loading) {
+  if (authLoading) {
     return <Loading message="Cargando perfil..." />
   }
 

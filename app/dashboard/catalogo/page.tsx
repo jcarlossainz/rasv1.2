@@ -6,6 +6,8 @@ import useSWR from 'swr'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/useToast'
 import { useConfirm } from '@/components/ui/confirm-modal'
+import { useAuth } from '@/hooks/useAuth'
+import { useLogout } from '@/hooks/useLogout'
 import { logger } from '@/lib/logger'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
@@ -30,33 +32,26 @@ export default function CatalogoPage() {
   const router = useRouter()
   const toast = useToast()
   const confirm = useConfirm()
-  const [user, setUser] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const { user, loading: authLoading } = useAuth()
+  const logout = useLogout()
   const [propiedades, setPropiedades] = useState<Propiedad[]>([])
   const [showWizard, setShowWizard] = useState(false)
   const [showCompartir, setShowCompartir] = useState(false)
   const [propiedadSeleccionada, setPropiedadSeleccionada] = useState<Propiedad | null>(null)
-  
+
   const [busqueda, setBusqueda] = useState('')
   const [filtroPropiedad, setFiltroPropiedad] = useState<'todos' | 'propios' | 'compartidos'>('todos')
 
-  useEffect(() => { 
-    checkUser()
-    
+  useEffect(() => {
+    if (user?.id) {
+      cargarPropiedades(user.id)
+    }
+
     const handleOpenWizard = () => setShowWizard(true)
     window.addEventListener('openWizard', handleOpenWizard)
-    
-    return () => window.removeEventListener('openWizard', handleOpenWizard)
-  }, [])
 
-  const checkUser = async () => {
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    if (!authUser) { router.push('/login'); return }
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', authUser.id).single()
-    setUser({ ...profile, id: authUser.id })
-    cargarPropiedades(authUser.id)
-    setLoading(false)
-  }
+    return () => window.removeEventListener('openWizard', handleOpenWizard)
+  }, [user])
 
   // ⚡ OPTIMIZADO: Usa JOINs de Supabase para eliminar N+1 queries
   const cargarPropiedades = async (userId: string) => {
@@ -216,9 +211,8 @@ export default function CatalogoPage() {
     const confirmed = await confirm.warning('¿Cerrar sesión?')
     if (!confirmed) return
 
-    await supabase.auth.signOut()
-    router.push('/login')
-  }, [confirm, router])
+    await logout()
+  }, [confirm, logout])
 
   const handleCloseWizard = useCallback(() => {
     setShowWizard(false)
@@ -238,7 +232,7 @@ export default function CatalogoPage() {
     })
   }, [propiedades, busqueda, filtroPropiedad])
 
-  if (loading) {
+  if (authLoading) {
     return <Loading message="Cargando propiedades..." />
   }
 

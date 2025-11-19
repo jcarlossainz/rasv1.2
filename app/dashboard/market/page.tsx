@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
 import { useToast } from '@/hooks/useToast'
 import { useConfirm } from '@/components/ui/confirm-modal'
+import { useAuth } from '@/hooks/useAuth'
+import { useLogout } from '@/hooks/useLogout'
 import Button from '@/components/ui/button'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
@@ -31,27 +33,20 @@ export default function MarketPage() {
   const router = useRouter()
   const toast = useToast()
   const confirm = useConfirm()
-  const [user, setUser] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const { user, loading: authLoading } = useAuth()
+  const logout = useLogout()
   const [propiedades, setPropiedades] = useState<Propiedad[]>([])
-  
+
   // Estados para búsqueda y filtro
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState<'todos' | 'publicado' | 'pausado' | 'borrador'>('todos')
   const [filtroOperacion, setFiltroOperacion] = useState<'todos' | 'venta' | 'renta' | 'vacacional'>('todos')
 
-  useEffect(() => { 
-    checkUser()
-  }, [])
-
-  const checkUser = async () => {
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    if (!authUser) { router.push('/login'); return }
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', authUser.id).single()
-    setUser({ ...profile, id: authUser.id })
-    cargarPropiedades(authUser.id)
-    setLoading(false)
-  }
+  useEffect(() => {
+    if (user?.id) {
+      cargarPropiedades(user.id)
+    }
+  }, [user])
 
   const cargarPropiedades = async (userId: string) => {
     // Cargar propiedades propias
@@ -138,13 +133,12 @@ export default function MarketPage() {
       '¿Estás seguro que deseas cerrar sesión?',
       'Se cerrará tu sesión actual'
     )
-    
+
     if (!confirmed) return
 
     try {
-      await supabase.auth.signOut()
+      await logout()
       toast.success('Sesión cerrada correctamente')
-      router.push('/login')
     } catch (error: any) {
       logger.error('Error al cerrar sesión:', error)
       toast.error('Error al cerrar sesión')
@@ -179,7 +173,7 @@ export default function MarketPage() {
     return { monto: 'Sin precio', periodo: '' }
   }
 
-  if (loading) {
+  if (authLoading) {
     return <Loading message="Cargando anuncios..." />
   }
 
