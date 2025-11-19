@@ -11,6 +11,8 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/useToast'
 import { useConfirm } from '@/components/ui/confirm-modal'
+import { useAuth } from '@/hooks/useAuth'
+import { useLogout } from '@/hooks/useLogout'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
 import EmptyState from '@/components/ui/emptystate'
@@ -46,21 +48,21 @@ export default function TicketsGlobalPage() {
   const router = useRouter()
   const toast = useToast()
   const confirm = useConfirm()
+  const { user, loading: authLoading } = useAuth()
+  const logout = useLogout()
 
-  const [user, setUser] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [ticketsFiltrados, setTicketsFiltrados] = useState<Ticket[]>([])
   const [propiedades, setPropiedades] = useState<Propiedad[]>([])
-  
+
   // Filtro de búsqueda
   const [busqueda, setBusqueda] = useState('')
-  
+
   // Filtro de fechas para la tabla (default = mes actual)
   const hoy = new Date()
   const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
   const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0)
-  
+
   const [fechaDesdeTabla, setFechaDesdeTabla] = useState(primerDiaMes.toISOString().split('T')[0])
   const [fechaHastaTabla, setFechaHastaTabla] = useState(ultimoDiaMes.toISOString().split('T')[0])
 
@@ -72,31 +74,16 @@ export default function TicketsGlobalPage() {
   const [showNuevoTicketModal, setShowNuevoTicketModal] = useState(false)
 
   useEffect(() => {
-    checkUser()
-  }, [])
+    if (user?.id) {
+      cargarDatos(user.id)
+    }
+  }, [user])
 
   useEffect(() => {
     if (tickets.length > 0) {
       aplicarFiltros()
     }
   }, [tickets, busqueda, fechaDesdeTabla, fechaHastaTabla])
-
-  const checkUser = async () => {
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    if (!authUser) {
-      router.push('/login')
-      return
-    }
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', authUser.id)
-      .single()
-    
-    setUser({ ...profile, id: authUser.id })
-    await cargarDatos(authUser.id)
-    setLoading(false)
-  }
 
   const cargarDatos = async (userId: string) => {
     try {
@@ -303,7 +290,7 @@ ${ticket.proveedor ? `🏢 Proveedor: ${ticket.proveedor}` : ''}
     }
   }
 
-  if (loading) {
+  if (authLoading) {
     return <Loading message="Cargando tickets..." />
   }
 

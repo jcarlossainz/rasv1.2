@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
 import { useToast } from '@/hooks/useToast'
 import { useConfirm } from '@/components/ui/confirm-modal'
+import { useAuth } from '@/hooks/useAuth'
+import { useLogout } from '@/hooks/useLogout'
 import TopBar from '@/components/ui/topbar'
 import Card from '@/components/ui/card'
 import Loading from '@/components/ui/loading'
@@ -38,40 +40,15 @@ export default function DashboardPage() {
   const router = useRouter()
   const toast = useToast()
   const confirm = useConfirm()
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const { user, loading: authLoading } = useAuth()
+  const logout = useLogout()
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
 
   useEffect(() => {
-    checkUser()
-  }, [])
-
-  const checkUser = async () => {
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      
-      if (!authUser) {
-        router.push('/login')
-        return
-      }
-
-      setUser(authUser)
-
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authUser.id)
-        .single()
-
-      setProfile(profileData)
-      await cargarMetricas(authUser.id)
-      setLoading(false)
-    } catch (error) {
-      logger.error('Error en checkUser:', error)
-      router.push('/login')
+    if (user?.id) {
+      cargarMetricas(user.id)
     }
-  }
+  }, [user])
 
   const cargarMetricas = async (userId: string) => {
     try {
@@ -174,13 +151,12 @@ export default function DashboardPage() {
       '¿Estás seguro que deseas cerrar sesión?',
       'Se cerrará tu sesión actual'
     )
-    
+
     if (!confirmed) return
 
     try {
-      await supabase.auth.signOut()
+      await logout()
       toast.success('Sesión cerrada correctamente')
-      router.push('/login')
     } catch (error: any) {
       logger.error('Error al cerrar sesión:', error)
       toast.error('Error al cerrar sesión')
@@ -195,7 +171,7 @@ export default function DashboardPage() {
     })
   }
 
-  if (loading) {
+  if (authLoading) {
     return <Loading message="Cargando dashboard..." />
   }
 

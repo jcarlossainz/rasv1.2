@@ -15,6 +15,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/useToast'
+import { useAuth } from '@/hooks/useAuth'
+import { useLogout } from '@/hooks/useLogout'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
 
@@ -55,15 +57,15 @@ type VistaCalendario = 'calendario' | 'semana' | 'listado'
 export default function CalendarioGlobalPage() {
   const router = useRouter()
   const toast = useToast()
+  const { user, loading: authLoading } = useAuth()
+  const logout = useLogout()
 
-  const [user, setUser] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
   const [pagos, setPagos] = useState<Pago[]>([])
   const [pagosFiltrados, setPagosFiltrados] = useState<Pago[]>([])
   const [mesActual, setMesActual] = useState(new Date())
   const [diasCalendario, setDiasCalendario] = useState<DiaCalendario[]>([])
   const [pagoSeleccionado, setPagoSeleccionado] = useState<Pago | null>(null)
-  
+
   // Estados para vistas y filtros MULTI-SELECCIÓN
   const [vista, setVista] = useState<VistaCalendario>('calendario')
   const [propiedades, setPropiedades] = useState<Propiedad[]>([])
@@ -74,8 +76,10 @@ export default function CalendarioGlobalPage() {
   const [showPropiedadDropdown, setShowPropiedadDropdown] = useState(false)
 
   useEffect(() => {
-    checkUser()
-  }, [])
+    if (user?.id) {
+      cargarDatos(user.id)
+    }
+  }, [user])
 
   useEffect(() => {
     if (pagos.length > 0) {
@@ -88,23 +92,6 @@ export default function CalendarioGlobalPage() {
       generarCalendario()
     }
   }, [mesActual, pagosFiltrados])
-
-  const checkUser = async () => {
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    if (!authUser) {
-      router.push('/login')
-      return
-    }
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', authUser.id)
-      .single()
-    
-    setUser({ ...profile, id: authUser.id })
-    await cargarDatos(authUser.id)
-    setLoading(false)
-  }
 
   const cargarDatos = async (userId: string) => {
     try {
@@ -354,7 +341,7 @@ export default function CalendarioGlobalPage() {
 
   const pagosSemana = obtenerPagosSemanaActual()
 
-  if (loading) {
+  if (authLoading) {
     return <Loading message="Cargando calendario..." />
   }
 
