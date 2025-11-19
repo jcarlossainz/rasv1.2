@@ -9,6 +9,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/useToast'
+import { useAuth } from '@/hooks/useAuth'
+import { useLogout } from '@/hooks/useLogout'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
 import EmptyState from '@/components/ui/emptystate'
@@ -31,41 +33,25 @@ interface Contacto {
 export default function DirectorioPage() {
   const router = useRouter()
   const toast = useToast()
-  
-  const [user, setUser] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const { user, loading: authLoading } = useAuth()
+  const logout = useLogout()
+
   const [contactos, setContactos] = useState<Contacto[]>([])
   const [showModal, setShowModal] = useState(false)
   const [contactoEditar, setContactoEditar] = useState<Contacto | null>(null)
-  
+
   // Filtros
   const [busqueda, setBusqueda] = useState('')
   const [filtroTipo, setFiltroTipo] = useState<string[]>([])
-  
+
   // Vista: lista o tarjetas
   const [vistaActual, setVistaActual] = useState<'lista' | 'tarjetas'>('lista')
 
   useEffect(() => {
-    checkUser()
-  }, [])
-
-  const checkUser = async () => {
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    if (!authUser) { 
-      router.push('/login')
-      return 
+    if (user?.id) {
+      cargarContactos(user.id)
     }
-    
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', authUser.id)
-      .single()
-    
-    setUser({ ...profile, id: authUser.id })
-    cargarContactos(authUser.id)
-    setLoading(false)
-  }
+  }, [user])
 
   const cargarContactos = async (userId: string) => {
     const { data, error } = await supabase
@@ -190,7 +176,7 @@ export default function DirectorioPage() {
   })
 
 
-  if (loading) {
+  if (authLoading) {
     return <Loading message="Cargando directorio..." />
   }
 

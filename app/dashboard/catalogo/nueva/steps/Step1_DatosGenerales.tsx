@@ -5,6 +5,7 @@ import { PropertyFormData } from '@/types/property';
 import Input from '@/components/ui/input';
 import { supabase } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Step1Props {
   data: PropertyFormData;
@@ -142,18 +143,20 @@ function ModalAgregarCorreo({ isOpen, onClose, onAgregar, tipo }: ModalAgregarCo
 }
 
 export default function Step1_DatosGenerales({ data, onUpdate }: Step1Props) {
+  const { user } = useAuth();
   const [propietarios, setPropietarios] = useState<Profile[]>([]);
   const [supervisores, setSupervisores] = useState<Profile[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [tipoModal, setTipoModal] = useState<'propietario' | 'supervisor' | null>(null);
 
   useEffect(() => {
-    cargarDatos();
-  }, []);
+    if (user?.id) {
+      cargarDatos();
+    }
+  }, [user]);
 
   const cargarDatos = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       // Obtener empresa_id del usuario actual
