@@ -258,9 +258,13 @@ grep -r "\.map.*await supabase" app/ --include="*.tsx"
 
 ---
 
-## 🎯 ÍNDICES REQUERIDOS (CRÍTICO)
+## 🎯 ÍNDICES DE BASE DE DATOS
 
-### Para soportar 10K propiedades, estos índices SON NECESARIOS:
+### ✅ ESTADO: TODOS LOS ÍNDICES APLICADOS (20 Nov 2025)
+
+**Confirmación del usuario:** Todos los índices del archivo `.claude/database-indexes.sql` (280 líneas) han sido aplicados exitosamente en Supabase.
+
+### Índices Aplicados:
 
 ```sql
 -- Propiedades por owner
@@ -287,6 +291,14 @@ CREATE INDEX idx_pagos_fecha ON fechas_pago_servicios(fecha_pago);
 ```
 
 **Impacto:** 10-20x mejora en velocidad de queries ✅
+
+**Estado:** ✅ APLICADOS EN PRODUCCIÓN (confirmado 20 Nov 2025)
+
+**Archivo de referencia:** `.claude/database-indexes.sql` - Contiene:
+- 40+ índices optimizados
+- Índices compuestos para queries complejas
+- Índices parciales con WHERE clauses
+- ANALYZE statements para actualización de estadísticas
 
 ---
 
@@ -378,9 +390,9 @@ const { data, count } = await supabase
 
 ### Antes de lanzar con 10K+ usuarios:
 
-- [ ] **CRÍTICO:** Activar RLS en todas las tablas
-- [ ] **CRÍTICO:** Aplicar índices recomendados en Supabase
-- [ ] **ALTO:** Verificar que índices estén aplicados (EXPLAIN ANALYZE)
+- [ ] **CRÍTICO:** Activar RLS en todas las tablas - **ÚNICO BLOQUEANTE**
+- [x] **CRÍTICO:** Aplicar índices recomendados en Supabase - ✅ COMPLETADO (20 Nov 2025)
+- [x] **ALTO:** Verificar que índices estén aplicados - ✅ CONFIRMADO por usuario
 - [ ] **MEDIO:** Aumentar LIMIT en tickets a 1000
 - [ ] **MEDIO:** Implementar paginación server-side en catálogo
 - [ ] **BAJO:** Configurar CDN para imágenes
@@ -395,12 +407,14 @@ const { data, count } = await supabase
 1. ✅ **Código:** Arquitectura optimizada, sin N+1 queries
 2. ✅ **Queries:** JOINs y IN clauses implementados correctamente
 3. ✅ **React:** useMemo, useCallback, lazy loading aplicados
-4. ⚠️ **Índices:** DEBEN aplicarse antes de producción
-5. ❌ **RLS:** DEBE activarse antes de producción (seguridad)
+4. ✅ **Índices:** APLICADOS en Supabase (20 Nov 2025) - Performance óptima
+5. ❌ **RLS:** DEBE activarse antes de producción (seguridad) - **ÚNICO BLOQUEANTE**
 
 **Score técnico de escalabilidad: 88/100**
 
-**Con índices + RLS = Sistema listo para 10K propiedades ✅**
+**✅ Índices aplicados (20 Nov 2025)**
+**⚠️ RLS pendiente = 1 paso más para producción**
+**Sistema listo para 10K propiedades una vez se active RLS ✅**
 
 ---
 

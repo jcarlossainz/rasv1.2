@@ -1009,8 +1009,10 @@ interface Propiedad {
 - **Documentación completa de escalabilidad** (SCALABILITY_AUDIT_FINAL.md)
 
 **⚠️ Bloqueantes para Producción:**
-1. **RLS Desactivado** [6h] - Seguridad crítica
-2. **Índices de BD sin aplicar** [30min] - Performance para 10K props
+1. **RLS Desactivado** [6h] - Seguridad crítica - **ÚNICO BLOQUEANTE RESTANTE**
+
+**✅ Requerimientos Técnicos COMPLETADOS:**
+2. **Índices de BD** - ✅ APLICADOS (20 Nov 2025) - Performance optimizada para 10K props
 
 **Última actualización:** 20 de Noviembre 2025 - Post auditoría de escalabilidad
 **Última auditoría:** 20 de Noviembre 2025 - Ver `.claude/SCALABILITY_AUDIT_FINAL.md`
@@ -1029,7 +1031,7 @@ interface Propiedad {
 | **Arquitectura Queries** | ✅ EXCELENTE | 95/100 | 3-4 queries constantes sin importar cantidad de props |
 | **Optimizaciones React** | ✅ EXCELENTE | 90/100 | useMemo, useCallback, lazy loading |
 | **RLS (Seguridad)** | ❌ PENDIENTE | 0/100 | BLOQUEANTE para producción |
-| **Índices BD** | ⚠️ NO VERIFICADO | 70/100 | Funciona sin ellos, pero 10x más lento |
+| **Índices BD** | ✅ APLICADOS | 100/100 | Todos los índices aplicados en Supabase (20 Nov 2025) |
 
 **📄 Ver análisis completo:** `.claude/SCALABILITY_AUDIT_FINAL.md`
 
@@ -1045,10 +1047,12 @@ interface Propiedad {
 ### Plan de Acción para Producción
 
 **CRÍTICO (Antes de lanzar):**
-1. Activar RLS en todas las tablas [6h] - **BLOQUEANTE**
-2. Aplicar índices en Supabase [30min] - **REQUERIDO para 10K props**
+1. Activar RLS en todas las tablas [6h] - **ÚNICO BLOQUEANTE RESTANTE**
 
-**RECOMENDADO:**
+**✅ COMPLETADO:**
+2. ✅ Índices aplicados en Supabase (20 Nov 2025) - Performance optimizada
+
+**RECOMENDADO (No bloqueante):**
 3. Aumentar LIMIT de tickets de 200 a 1000 [10min]
 4. Implementar límite de 30 archivos en storage [3h]
 
