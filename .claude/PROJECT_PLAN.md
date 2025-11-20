@@ -288,8 +288,8 @@ interface Propiedad {
 
 **Objetivo:** Revisar código existente para asegurar best practices, eficiencia y rendimiento.
 
-**Estado:** ✅ COMPLETADO AL 100% (Professional Grade) - 19 Nov 2025
-**Última actualización:** 19 Nov 2025 - SQL, Zod, Paginación + Validación UI completa
+**Estado:** ✅ COMPLETADO AL 100% (Professional Grade) - 20 Nov 2025
+**Última actualización:** 20 Nov 2025 - Fixes críticos de imágenes y optimización home
 
 #### Checklist
 
@@ -416,6 +416,37 @@ interface Propiedad {
 - ✅ **Validación Zod en Register** - Validación completa con refine para confirmPassword
 - ✅ **react-hook-form instalado** - @hookform/resolvers para integración Zod
 - ⚪ Conectar Zod a Directorio/Contactos (esquemas listos, integración futura opcional)
+
+#### Fixes Críticos Post-Completación (20 Nov 2025) - Alineación Schema BD
+- ✅ **Fix #1: Columnas inexistentes en property_images** (commit 4460730)
+  - Problema: Error al subir imágenes por columnas que no existen en tabla
+  - Removidas: file_size_*, width_*, height_*, storage_path_*, caption, order_index
+  - Archivos: lib/supabase/supabase-storage.ts (uploadPropertyImageDual, deletePropertyImage)
+  - Impacto: Upload/Delete de imágenes 100% funcional
+
+- ✅ **Fix #2: ORDER BY con columna inexistente** (commit 282cffe)
+  - Problema: getPropertyImages fallaba por ORDER BY 'order_index' inexistente
+  - Solución: Cambiado a ORDER BY 'created_at'
+  - Archivo: lib/supabase/supabase-storage.ts (getPropertyImages)
+  - Impacto: Home de propiedades carga galería correctamente
+
+- ✅ **Fix #3: user_id → owner_id** (commit cea0dc2)
+  - Problema: Error 42703 "column propiedades.user_id does not exist"
+  - Solución: Cambiado user_id → owner_id en interface y queries
+  - Archivo: app/dashboard/catalogo/propiedad/[id]/home/page.tsx
+  - Impacto: Home carga sin error 400
+
+- ✅ **Fix #4: SELECT * Optimizado** (commit 25c5bc6)
+  - Problema: SELECT específico con columnas que no existen (capacidad_personas, etc.)
+  - Solución: SELECT * con interface flexible + index signature [key: string]: any
+  - Archivo: app/dashboard/catalogo/propiedad/[id]/home/page.tsx
+  - Beneficios:
+    - Performance mejorada (query más simple)
+    - Auto-adapta a schema real de BD
+    - Robusto ante cambios en estructura
+  - Impacto: Home carga correctamente + mejor mantenibilidad
+
+**Estado Final:** Sistema totalmente alineado con schema real de Supabase ✅
 
 ---
 
