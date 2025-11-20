@@ -44,46 +44,40 @@ interface Ubicacion {
   amenidades_complejo?: string[]
 }
 
+// ⚡ OPTIMIZADO: Interface flexible que se adapta a la estructura real de la BD
 interface PropiedadData {
   id: string
-  owner_id: string  // ✅ CORREGIDO: era user_id, ahora owner_id
+  owner_id: string
   nombre_propiedad: string
-  tipo_propiedad: string
-  estados: string[]
-  mobiliario: string
-  capacidad_personas: number | null
-  tamano_terreno: number | null
-  tamano_construccion: number | null
+  tipo_propiedad?: string
+  estados?: string[]
+  mobiliario?: string
 
-  // ✅ NUEVO: Ubicación como JSON
-  ubicacion: Ubicacion | null
+  // Campos opcionales que pueden o no existir en la BD
+  capacidad_personas?: number | null
+  tamano_terreno?: number | null
+  tamano_construccion?: number | null
 
-  // ✅ NUEVO: Precios consolidados
+  ubicacion?: Ubicacion | null
   precios?: {
     mensual?: number | null
     noche?: number | null
     venta?: number | null
-  }
+  } | null
 
-  // ✅ NUEVO: Datos condicionales
   datos_renta_largo_plazo?: any | null
   datos_renta_vacacional?: any | null
   datos_venta?: any | null
 
-  // Contactos (IDs)
-  propietario_id: string | null
-  supervisor_id: string | null
-  inquilino_id: string | null
+  propietario_id?: string | null
+  supervisor_id?: string | null
+  inquilino_id?: string | null
 
-  // ✅ Emails directos (TEXT[])
   propietarios_email?: string[] | null
   supervisores_email?: string[] | null
   inquilinos_email?: string[] | null
 
-  // Espacios
-  espacios: Espacio[] | null
-
-  // ✅ Servicios (JSONB[])
+  espacios?: Espacio[] | null
   servicios?: Array<{
     id?: string
     name?: string
@@ -97,8 +91,11 @@ interface PropiedadData {
   }> | null
 
   created_at: string
-  updated_at: string
+  updated_at?: string
   es_propio: boolean
+
+  // Permite cualquier otro campo que venga de la BD
+  [key: string]: any
 }
 
 // Componente de Galería inline
@@ -299,35 +296,10 @@ export default function HomePropiedad() {
     try {
       console.log('🔍 Cargando propiedad con ID:', propiedadId)
 
-      // Traer todos los datos de la propiedad - SELECT ESPECÍFICO
+      // ⚡ OPTIMIZADO: SELECT * + type casting para máxima flexibilidad
       const { data: propData, error } = await supabase
         .from('propiedades')
-        .select(`
-          id,
-          owner_id,
-          nombre_propiedad,
-          tipo_propiedad,
-          estados,
-          mobiliario,
-          capacidad_personas,
-          tamano_terreno,
-          tamano_construccion,
-          ubicacion,
-          precios,
-          datos_renta_largo_plazo,
-          datos_renta_vacacional,
-          datos_venta,
-          propietario_id,
-          supervisor_id,
-          inquilino_id,
-          propietarios_email,
-          supervisores_email,
-          inquilinos_email,
-          espacios,
-          servicios,
-          created_at,
-          updated_at
-        `)
+        .select('*')
         .eq('id', propiedadId)
         .single()
 
