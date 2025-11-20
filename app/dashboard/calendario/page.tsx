@@ -98,8 +98,8 @@ export default function CalendarioGlobalPage() {
       // Cargar propiedades
       const { data: propsPropias } = await supabase
         .from('propiedades')
-        .select('id, nombre, user_id')
-        .eq('user_id', userId)
+        .select('id, nombre_propiedad, owner_id')
+        .eq('owner_id', userId)
 
       const { data: propsCompartidas } = await supabase
         .from('propiedades_colaboradores')
@@ -111,7 +111,7 @@ export default function CalendarioGlobalPage() {
         const ids = propsCompartidas.map(p => p.propiedad_id)
         const { data } = await supabase
           .from('propiedades')
-          .select('id, nombre, user_id')
+          .select('id, nombre_propiedad, owner_id')
           .in('id', ids)
         propsCompartidasData = data || []
       }

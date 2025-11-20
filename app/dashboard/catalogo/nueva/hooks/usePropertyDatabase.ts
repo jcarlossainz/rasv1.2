@@ -325,7 +325,34 @@ export function usePropertyDatabase() {
       // 2. Cargar propiedad
       const { data, error } = await supabase
         .from('propiedades')
-        .select('*')
+        .select(`
+          id,
+          owner_id,
+          empresa_id,
+          nombre_propiedad,
+          tipo_propiedad,
+          estados,
+          mobiliario,
+          capacidad_personas,
+          dimensiones,
+          ubicacion,
+          espacios,
+          precios,
+          datos_renta_largo_plazo,
+          datos_renta_vacacional,
+          datos_venta,
+          propietario_id,
+          supervisor_id,
+          inquilino_id,
+          propietarios_email,
+          supervisores_email,
+          inquilinos_email,
+          servicios,
+          descripcion_anuncio,
+          estado_anuncio,
+          created_at,
+          updated_at
+        `)
         .eq('id', propertyId)
         .eq('owner_id', user.id)
         .single();
