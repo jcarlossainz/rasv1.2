@@ -92,8 +92,8 @@ export default function CuentasGlobalPage() {
       // Cargar propiedades
       const { data: propsPropias } = await supabase
         .from('propiedades')
-        .select('id, nombre')
-        .eq('user_id', userId)
+        .select('id, nombre_propiedad')
+        .eq('owner_id', userId)
 
       const { data: propsCompartidas } = await supabase
         .from('propiedades_colaboradores')
@@ -105,7 +105,7 @@ export default function CuentasGlobalPage() {
         const ids = propsCompartidas.map(p => p.propiedad_id)
         const { data } = await supabase
           .from('propiedades')
-          .select('id, nombre')
+          .select('id, nombre_propiedad')
           .in('id', ids)
         propsCompartidasData = data || []
       }

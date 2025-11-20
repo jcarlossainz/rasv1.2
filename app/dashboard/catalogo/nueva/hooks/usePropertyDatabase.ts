@@ -328,7 +328,6 @@ export function usePropertyDatabase() {
         .select(`
           id,
           owner_id,
-          user_id,
           empresa_id,
           nombre_propiedad,
           tipo_propiedad,

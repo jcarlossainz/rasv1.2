@@ -63,7 +63,7 @@ export default function MarketPage() {
           is_cover
         )
       `)
-      .eq('user_id', userId)
+      .eq('owner_id', userId)
       .order('created_at', { ascending: false })
 
     if (errorPropias) {

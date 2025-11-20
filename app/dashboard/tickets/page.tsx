@@ -94,8 +94,8 @@ export default function TicketsGlobalPage() {
       // Cargar todas las propiedades del usuario
       const { data: propsPropias } = await supabase
         .from('propiedades')
-        .select('id, nombre')
-        .eq('user_id', userId)
+        .select('id, nombre_propiedad')
+        .eq('owner_id', userId)
 
       const { data: propsCompartidas } = await supabase
         .from('propiedades_colaboradores')
@@ -107,7 +107,7 @@ export default function TicketsGlobalPage() {
         const ids = propsCompartidas.map(p => p.propiedad_id)
         const { data } = await supabase
           .from('propiedades')
-          .select('id, nombre')
+          .select('id, nombre_propiedad')
           .in('id', ids)
         propsCompartidasData = data || []
       }
