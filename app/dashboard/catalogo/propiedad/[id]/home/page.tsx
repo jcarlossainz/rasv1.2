@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
@@ -11,6 +11,9 @@ import Loading from '@/components/ui/loading'
 import CompartirPropiedad from '@/components/CompartirPropiedad'
 import { getPropertyImages } from '@/lib/supabase/supabase-storage'
 import type { PropertyImage } from '@/types/property'
+
+// ⚡ LAZY LOADING: Modal pesado solo se carga cuando se necesita
+const WizardModal = lazy(() => import('@/app/dashboard/catalogo/nueva/components/WizardModal'))
 
 interface Espacio {
   id: string
@@ -44,7 +47,7 @@ interface Ubicacion {
 
 interface PropiedadData {
   id: string
-  user_id: string
+  owner_id: string
   nombre_propiedad: string
   tipo_propiedad: string
   estados: string[]
@@ -283,6 +286,7 @@ export default function HomePropiedad() {
   // Estados para modales
   const [showCompartir, setShowCompartir] = useState(false)
   const [showDuplicarModal, setShowDuplicarModal] = useState(false)
+  const [showEditarModal, setShowEditarModal] = useState(false)
   const [nombreDuplicado, setNombreDuplicado] = useState('')
   const [duplicando, setDuplicando] = useState(false)
 
@@ -340,9 +344,9 @@ export default function HomePropiedad() {
       }
 
       console.log('✅ Propiedad cargada exitosamente:', propData.nombre_propiedad)
-      
+
       const { data: { user: authUser } } = await supabase.auth.getUser()
-      const esPropio = propData.user_id === authUser?.id
+      const esPropio = propData.owner_id === authUser?.id
       
       logger.log('=== DATOS DE PROPIEDAD ===')
       logger.log('Propiedad completa:', propData)
@@ -412,8 +416,7 @@ export default function HomePropiedad() {
   }
 
   const editarPropiedad = () => {
-    toast.info('Función de editar en desarrollo')
-    logger.log('Editar propiedad')
+    setShowEditarModal(true)
   }
 
   const duplicarPropiedad = async () => {
@@ -425,12 +428,23 @@ export default function HomePropiedad() {
     setDuplicando(true)
 
     try {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+
+      if (!authUser) {
+        toast.error('Usuario no autenticado')
+        setDuplicando(false)
+        return
+      }
+
+      // Crear copia sin campos que no deben duplicarse
+      const { id, es_propio, created_at, updated_at, ...datosPropiedad } = propiedad!
+
       const nuevaPropiedad = {
-        ...propiedad,
-        id: undefined,
+        ...datosPropiedad,
         nombre_propiedad: nombreDuplicado,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        owner_id: authUser.id, // Asignar al usuario actual
+        wizard_completed: true,
+        is_draft: false
       }
 
       const { data, error } = await supabase
@@ -444,7 +458,7 @@ export default function HomePropiedad() {
       toast.success('Propiedad duplicada correctamente')
       setShowDuplicarModal(false)
       setNombreDuplicado('')
-      router.push(`/dashboard/propiedad/${data.id}/home`)
+      router.push(`/dashboard/catalogo/propiedad/${data.id}/home`)
     } catch (error: any) {
       logger.error('Error al duplicar propiedad:', error)
       toast.error('Error al duplicar la propiedad')
@@ -1038,7 +1052,7 @@ export default function HomePropiedad() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
             <h3 className="text-xl font-bold text-gray-900 mb-4">Duplicar Propiedad</h3>
-            
+
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Nombre de la nueva propiedad
@@ -1073,6 +1087,23 @@ export default function HomePropiedad() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal Editar - Wizard en modo edición */}
+      {showEditarModal && (
+        <Suspense fallback={<Loading />}>
+          <WizardModal
+            isOpen={showEditarModal}
+            onClose={() => setShowEditarModal(false)}
+            mode="edit"
+            propertyId={propiedadId}
+            onComplete={async (id) => {
+              setShowEditarModal(false)
+              toast.success('Propiedad actualizada correctamente')
+              await cargarPropiedad() // Recargar datos actualizados
+            }}
+          />
+        </Suspense>
       )}
     </div>
   )
