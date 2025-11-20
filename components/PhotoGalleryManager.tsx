@@ -3,12 +3,12 @@
 
 import React, { useState } from 'react';
 import UploadPhotoModal from './UploadPhotoModal';
-import { 
+import {
   deletePropertyImage,
   updateCoverImage,
   updateImageSpace,
-  updateImageCaption 
-} from '@/lib/supabase-storage';
+  updateImageCaption
+} from '@/lib/supabase/supabase-storage';
 import type { PropertyImage, Space } from '@/types/property';
 
 interface PhotoGalleryManagerProps {
