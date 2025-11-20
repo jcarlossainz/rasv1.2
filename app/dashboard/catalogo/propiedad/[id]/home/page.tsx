@@ -1,18 +1,19 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
 import { useToast } from '@/hooks/useToast'
-import { useAuth } from '@/hooks/useAuth'
-import { useLogout } from '@/hooks/useLogout'
 import { useConfirm } from '@/components/ui/confirm-modal'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
 import CompartirPropiedad from '@/components/CompartirPropiedad'
 import { getPropertyImages } from '@/lib/supabase/supabase-storage'
 import type { PropertyImage } from '@/types/property'
+
+// ⚡ LAZY LOADING: Modal pesado solo se carga cuando se necesita
+const WizardModal = lazy(() => import('@/app/dashboard/catalogo/nueva/components/WizardModal'))
 
 interface Espacio {
   id: string
@@ -44,40 +45,46 @@ interface Ubicacion {
   amenidades_complejo?: string[]
 }
 
-// ⚡ OPTIMIZADO: Interface flexible que se adapta a la estructura real de la BD
 interface PropiedadData {
   id: string
   owner_id: string
   nombre_propiedad: string
-  tipo_propiedad?: string
-  estados?: string[]
-  mobiliario?: string
+  tipo_propiedad: string
+  estados: string[]
+  mobiliario: string
+  capacidad_personas: number | null
+  tamano_terreno: number | null
+  tamano_construccion: number | null
 
-  // Campos opcionales que pueden o no existir en la BD
-  capacidad_personas?: number | null
-  tamano_terreno?: number | null
-  tamano_construccion?: number | null
+  // ✅ NUEVO: Ubicación como JSON
+  ubicacion: Ubicacion | null
 
-  ubicacion?: Ubicacion | null
+  // ✅ NUEVO: Precios consolidados
   precios?: {
     mensual?: number | null
     noche?: number | null
     venta?: number | null
-  } | null
+  }
 
+  // ✅ NUEVO: Datos condicionales
   datos_renta_largo_plazo?: any | null
   datos_renta_vacacional?: any | null
   datos_venta?: any | null
 
-  propietario_id?: string | null
-  supervisor_id?: string | null
-  inquilino_id?: string | null
+  // Contactos (IDs)
+  propietario_id: string | null
+  supervisor_id: string | null
+  inquilino_id: string | null
 
+  // ✅ Emails directos (TEXT[])
   propietarios_email?: string[] | null
   supervisores_email?: string[] | null
   inquilinos_email?: string[] | null
 
-  espacios?: Espacio[] | null
+  // Espacios
+  espacios: Espacio[] | null
+
+  // ✅ Servicios (JSONB[])
   servicios?: Array<{
     id?: string
     name?: string
@@ -91,11 +98,8 @@ interface PropiedadData {
   }> | null
 
   created_at: string
-  updated_at?: string
+  updated_at: string
   es_propio: boolean
-
-  // Permite cualquier otro campo que venga de la BD
-  [key: string]: any
 }
 
 // Componente de Galería inline
@@ -105,19 +109,24 @@ function GaleriaPropiedad({ propiedadId, amenidades }: { propiedadId: string, am
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
 
   useEffect(() => {
-    cargarFotos()
-  }, [propiedadId])
-
-  const cargarFotos = async () => {
-    try {
-      const photosData = await getPropertyImages(propiedadId)
-      setPhotos(photosData)
-    } catch (error) {
-      console.error('Error al cargar fotos:', error)
-    } finally {
-      setLoading(false)
+    const cargarFotos = async () => {
+      try {
+        setLoading(true)
+        console.log('📸 Cargando fotos para propiedad:', propiedadId)
+        const photosData = await getPropertyImages(propiedadId)
+        console.log('📸 Fotos cargadas:', photosData.length)
+        setPhotos(photosData)
+      } catch (error) {
+        console.error('❌ Error al cargar fotos:', error)
+      } finally {
+        setLoading(false)
+      }
     }
-  }
+
+    if (propiedadId) {
+      cargarFotos()
+    }
+  }, [propiedadId])
 
   if (loading) {
     return (
@@ -273,30 +282,57 @@ export default function HomePropiedad() {
   const params = useParams()
   const toast = useToast()
   const confirm = useConfirm()
-  const { user, loading: authLoading } = useAuth()
-  const logout = useLogout()
   const propiedadId = params?.id as string
-
+  
   const [loading, setLoading] = useState(true)
   const [propiedad, setPropiedad] = useState<PropiedadData | null>(null)
+  const [user, setUser] = useState<any>(null)
+
+  const [colaboradores, setColaboradores] = useState<Array<{
+    id: string
+    email: string
+    pendiente: boolean
+  }>>([])
 
   // Estados para modales
   const [showCompartir, setShowCompartir] = useState(false)
   const [showDuplicarModal, setShowDuplicarModal] = useState(false)
+  const [showEditarModal, setShowEditarModal] = useState(false)
   const [nombreDuplicado, setNombreDuplicado] = useState('')
   const [duplicando, setDuplicando] = useState(false)
 
   useEffect(() => {
-    if (user?.id) {
-      cargarPropiedad()
+    checkUser()
+  }, [])
+
+  const checkUser = async () => {
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser) {
+        router.push('/login')
+        return
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .single()
+
+      setUser({ ...profile, id: authUser.id })
+      await cargarPropiedad()
+    } catch (error) {
+      console.error('Error en checkUser:', error)
+      toast.error('Error de autenticación')
+      setLoading(false) // CRÍTICO: Siempre quitar el loading
     }
-  }, [user])
+  }
 
   const cargarPropiedad = async () => {
     try {
       console.log('🔍 Cargando propiedad con ID:', propiedadId)
 
-      // ⚡ OPTIMIZADO: SELECT * + type casting para máxima flexibilidad
+      // Traer todos los datos de la propiedad
       const { data: propData, error } = await supabase
         .from('propiedades')
         .select('*')
@@ -350,11 +386,46 @@ export default function HomePropiedad() {
           .eq('propiedad_id', propiedadId)
           .eq('user_id', authUser?.id)
           .single()
-        
+
         esColaborador = !!colabData
       }
-      
+
       setPropiedad({ ...propData, es_propio: esPropio })
+
+      // Cargar colaboradores
+      const { data: colabData } = await supabase
+        .from('propiedades_colaboradores')
+        .select('id, user_id, email_invitado')
+        .eq('propiedad_id', propiedadId)
+
+      if (colabData && colabData.length > 0) {
+        const colaboradoresConDatos = await Promise.all(
+          colabData.map(async (colab: any) => {
+            if (colab.user_id) {
+              // Usuario registrado
+              const { data: perfil } = await supabase
+                .from('profiles')
+                .select('email')
+                .eq('id', colab.user_id)
+                .maybeSingle()
+
+              return {
+                id: colab.id,
+                email: perfil?.email || colab.email_invitado || 'Sin email',
+                pendiente: false
+              }
+            } else {
+              // Invitación pendiente
+              return {
+                id: colab.id,
+                email: colab.email_invitado || 'Sin email',
+                pendiente: true
+              }
+            }
+          })
+        )
+        setColaboradores(colaboradoresConDatos)
+      }
 
     } catch (error: any) {
       logger.error('Error al cargar propiedad:', error)
@@ -365,7 +436,21 @@ export default function HomePropiedad() {
   }
 
   const handleLogout = async () => {
-    await logout()
+    const confirmed = await confirm.warning(
+      '¿Estás seguro que deseas cerrar sesión?',
+      'Se cerrará tu sesión actual'
+    )
+    
+    if (!confirmed) return
+
+    try {
+      await supabase.auth.signOut()
+      toast.success('Sesión cerrada correctamente')
+      router.push('/login')
+    } catch (error: any) {
+      logger.error('Error al cerrar sesión:', error)
+      toast.error('Error al cerrar sesión')
+    }
   }
 
   const volverCatalogo = () => {
@@ -377,8 +462,7 @@ export default function HomePropiedad() {
   }
 
   const editarPropiedad = () => {
-    toast.info('Función de editar en desarrollo')
-    logger.log('Editar propiedad')
+    setShowEditarModal(true)
   }
 
   const duplicarPropiedad = async () => {
@@ -390,12 +474,23 @@ export default function HomePropiedad() {
     setDuplicando(true)
 
     try {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+
+      if (!authUser) {
+        toast.error('Usuario no autenticado')
+        setDuplicando(false)
+        return
+      }
+
+      // Crear copia sin campos que no deben duplicarse
+      const { id, es_propio, created_at, updated_at, ...datosPropiedad } = propiedad!
+
       const nuevaPropiedad = {
-        ...propiedad,
-        id: undefined,
+        ...datosPropiedad,
         nombre_propiedad: nombreDuplicado,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        owner_id: authUser.id, // Asignar al usuario actual
+        wizard_completed: true,
+        is_draft: false
       }
 
       const { data, error } = await supabase
@@ -409,7 +504,7 @@ export default function HomePropiedad() {
       toast.success('Propiedad duplicada correctamente')
       setShowDuplicarModal(false)
       setNombreDuplicado('')
-      router.push(`/dashboard/propiedad/${data.id}/home`)
+      router.push(`/dashboard/catalogo/propiedad/${data.id}/home`)
     } catch (error: any) {
       logger.error('Error al duplicar propiedad:', error)
       toast.error('Error al duplicar la propiedad')
@@ -442,7 +537,7 @@ export default function HomePropiedad() {
     }
   }
 
-  if (authLoading || loading) {
+  if (loading) {
     return <Loading />
   }
 
@@ -933,6 +1028,36 @@ export default function HomePropiedad() {
               </div>
             </div>
 
+            {/* Colaboradores */}
+            {colaboradores.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Compartido con:</h3>
+                <div className="flex flex-wrap gap-2">
+                  {colaboradores.map((colab) => (
+                    <div
+                      key={colab.id}
+                      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${
+                        colab.pendiente
+                          ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                          : 'bg-blue-100 text-blue-800 border border-blue-200'
+                      }`}
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                      </svg>
+                      <span>{colab.email}</span>
+                      {colab.pendiente && (
+                        <span className="text-xs px-1.5 py-0.5 bg-yellow-200 text-yellow-900 rounded-full">
+                          Pendiente
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Botones de acción */}
             <div className="mt-6 pt-6 border-t border-gray-200">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -990,7 +1115,10 @@ export default function HomePropiedad() {
       {showCompartir && (
         <CompartirPropiedad
           isOpen={showCompartir}
-          onClose={() => setShowCompartir(false)}
+          onClose={async () => {
+            setShowCompartir(false)
+            await cargarPropiedad() // ✅ Recargar colaboradores al cerrar
+          }}
           propiedadId={propiedadId}
           propiedadNombre={propiedad.nombre_propiedad}
           userId={user.id}
@@ -1003,7 +1131,7 @@ export default function HomePropiedad() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
             <h3 className="text-xl font-bold text-gray-900 mb-4">Duplicar Propiedad</h3>
-            
+
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Nombre de la nueva propiedad
@@ -1038,6 +1166,24 @@ export default function HomePropiedad() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal Editar - Wizard en modo edición */}
+      {showEditarModal && (
+        <Suspense fallback={<Loading />}>
+          <WizardModal
+            key={`edit-wizard-${propiedadId}`}
+            isOpen={showEditarModal}
+            onClose={() => setShowEditarModal(false)}
+            mode="edit"
+            propertyId={propiedadId}
+            onComplete={async (id) => {
+              setShowEditarModal(false)
+              toast.success('Propiedad actualizada correctamente')
+              await cargarPropiedad() // Recargar datos actualizados
+            }}
+          />
+        </Suspense>
       )}
     </div>
   )
