@@ -109,19 +109,24 @@ function GaleriaPropiedad({ propiedadId, amenidades }: { propiedadId: string, am
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
 
   useEffect(() => {
-    cargarFotos()
-  }, [propiedadId])
-
-  const cargarFotos = async () => {
-    try {
-      const photosData = await getPropertyImages(propiedadId)
-      setPhotos(photosData)
-    } catch (error) {
-      console.error('Error al cargar fotos:', error)
-    } finally {
-      setLoading(false)
+    const cargarFotos = async () => {
+      try {
+        setLoading(true)
+        console.log('📸 Cargando fotos para propiedad:', propiedadId)
+        const photosData = await getPropertyImages(propiedadId)
+        console.log('📸 Fotos cargadas:', photosData.length)
+        setPhotos(photosData)
+      } catch (error) {
+        console.error('❌ Error al cargar fotos:', error)
+      } finally {
+        setLoading(false)
+      }
     }
-  }
+
+    if (propiedadId) {
+      cargarFotos()
+    }
+  }, [propiedadId])
 
   if (loading) {
     return (
