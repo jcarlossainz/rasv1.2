@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase/client'
 import Modal from '@/components/ui/modal'
 import Input from '@/components/ui/input'
 import Button from '@/components/ui/button'
+import { useToast } from '@/hooks/useToast'
+import { useConfirm } from '@/components/ui/confirm-modal'
 
 interface CompartirPropiedadProps {
   isOpen: boolean
@@ -32,6 +34,9 @@ export default function CompartirPropiedad({
   userId,
   esPropio
 }: CompartirPropiedadProps) {
+  const toast = useToast()
+  const confirm = useConfirm()
+
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([])
   const [emailColaborador, setEmailColaborador] = useState('')
   const [agregando, setAgregando] = useState(false)
@@ -99,7 +104,7 @@ export default function CompartirPropiedad({
       // Validar que no sea el mismo usuario
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (authUser?.email?.toLowerCase() === emailBuscar) {
-        alert('❌ No puedes agregarte a ti mismo')
+        toast.error('No puedes agregarte a ti mismo')
         setAgregando(false)
         return
       }
@@ -130,31 +135,36 @@ export default function CompartirPropiedad({
 
       if (insertError) {
         if (insertError.code === '23505') {
-          alert('⚠️ Este email ya fue invitado o ya es colaborador')
+          toast.warning('Este email ya fue invitado o ya es colaborador')
         } else {
-          alert('❌ Error: ' + insertError.message)
+          toast.error('Error: ' + insertError.message)
         }
         setAgregando(false)
       } else {
         setEmailColaborador('')
         if (perfilData) {
-          alert('✅ Colaborador agregado correctamente')
+          toast.success('Colaborador agregado correctamente')
         } else {
-          alert('✅ Invitación enviada. El usuario tendrá acceso cuando se registre.')
+          toast.success('Invitación enviada. El usuario tendrá acceso cuando se registre.')
         }
         // Recargar colaboradores después de agregar
         await cargarColaboradores()
         setAgregando(false)
       }
     } catch (err) {
-      alert('❌ Error: ' + (err as Error).message)
+      toast.error('Error: ' + (err as Error).message)
     } finally {
       setAgregando(false)
     }
   }
 
   const eliminarColaborador = async (colaboradorId: string, emailColab: string) => {
-    if (!confirm(`¿Eliminar a ${emailColab} de esta propiedad?`)) return
+    const confirmed = await confirm.warning(
+      `¿Eliminar a ${emailColab}?`,
+      'Esta persona perderá el acceso a esta propiedad'
+    )
+
+    if (!confirmed) return
 
     try {
       const { error } = await supabase
@@ -164,10 +174,10 @@ export default function CompartirPropiedad({
 
       if (error) throw error
 
-      alert('✅ Colaborador eliminado')
+      toast.success('Colaborador eliminado correctamente')
       cargarColaboradores()
     } catch (err) {
-      alert('❌ Error al eliminar colaborador')
+      toast.error('Error al eliminar colaborador')
       console.error(err)
     }
   }
