@@ -112,8 +112,7 @@ export default function CompartirPropiedad({
         .maybeSingle() // maybeSingle permite que no exista sin error
 
       let dataToInsert: any = {
-        propiedad_id: propiedadId,
-        agregado_por: userId
+        propiedad_id: propiedadId
       }
 
       if (perfilData) {

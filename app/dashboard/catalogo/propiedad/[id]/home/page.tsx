@@ -282,7 +282,13 @@ export default function HomePropiedad() {
   const [loading, setLoading] = useState(true)
   const [propiedad, setPropiedad] = useState<PropiedadData | null>(null)
   const [user, setUser] = useState<any>(null)
-  
+
+  const [colaboradores, setColaboradores] = useState<Array<{
+    id: string
+    email: string
+    pendiente: boolean
+  }>>([])
+
   // Estados para modales
   const [showCompartir, setShowCompartir] = useState(false)
   const [showDuplicarModal, setShowDuplicarModal] = useState(false)
@@ -375,11 +381,46 @@ export default function HomePropiedad() {
           .eq('propiedad_id', propiedadId)
           .eq('user_id', authUser?.id)
           .single()
-        
+
         esColaborador = !!colabData
       }
-      
+
       setPropiedad({ ...propData, es_propio: esPropio })
+
+      // Cargar colaboradores
+      const { data: colabData } = await supabase
+        .from('propiedades_colaboradores')
+        .select('id, user_id, email_invitado')
+        .eq('propiedad_id', propiedadId)
+
+      if (colabData && colabData.length > 0) {
+        const colaboradoresConDatos = await Promise.all(
+          colabData.map(async (colab: any) => {
+            if (colab.user_id) {
+              // Usuario registrado
+              const { data: perfil } = await supabase
+                .from('profiles')
+                .select('email')
+                .eq('id', colab.user_id)
+                .maybeSingle()
+
+              return {
+                id: colab.id,
+                email: perfil?.email || colab.email_invitado || 'Sin email',
+                pendiente: false
+              }
+            } else {
+              // Invitación pendiente
+              return {
+                id: colab.id,
+                email: colab.email_invitado || 'Sin email',
+                pendiente: true
+              }
+            }
+          })
+        )
+        setColaboradores(colaboradoresConDatos)
+      }
 
     } catch (error: any) {
       logger.error('Error al cargar propiedad:', error)
@@ -982,6 +1023,36 @@ export default function HomePropiedad() {
               </div>
             </div>
 
+            {/* Colaboradores */}
+            {colaboradores.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Compartido con:</h3>
+                <div className="flex flex-wrap gap-2">
+                  {colaboradores.map((colab) => (
+                    <div
+                      key={colab.id}
+                      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${
+                        colab.pendiente
+                          ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                          : 'bg-blue-100 text-blue-800 border border-blue-200'
+                      }`}
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                      </svg>
+                      <span>{colab.email}</span>
+                      {colab.pendiente && (
+                        <span className="text-xs px-1.5 py-0.5 bg-yellow-200 text-yellow-900 rounded-full">
+                          Pendiente
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Botones de acción */}
             <div className="mt-6 pt-6 border-t border-gray-200">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1093,6 +1164,7 @@ export default function HomePropiedad() {
       {showEditarModal && (
         <Suspense fallback={<Loading />}>
           <WizardModal
+            key={`edit-wizard-${propiedadId}`}
             isOpen={showEditarModal}
             onClose={() => setShowEditarModal(false)}
             mode="edit"

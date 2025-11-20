@@ -10,7 +10,7 @@
 
 'use client';
 
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { PropertyFormData, INITIAL_PROPERTY_DATA } from '@/types/property';
 import { usePropertyDatabase } from '../hooks/usePropertyDatabase';
 import { useToast } from '@/hooks/useToast';
@@ -55,7 +55,10 @@ export default function WizardContainer({
   const [formData, setFormData] = useState<PropertyFormData>(INITIAL_PROPERTY_DATA);
   const [propertyId, setPropertyId] = useState<string | null>(initialPropertyId || null);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
-  
+
+  // ✅ Ref para evitar múltiples cargas
+  const hasLoadedRef = useRef(false);
+
   const totalSteps = 5;
   const isFirstStep = currentStep === 1;
   const isLastStep = currentStep === totalSteps;
@@ -65,34 +68,50 @@ export default function WizardContainer({
   // ============================================================================
   
   useEffect(() => {
-    if (mode === 'edit' && initialPropertyId) {
+    // ✅ Evitar cargas múltiples usando ref
+    if (mode === 'edit' && initialPropertyId && !hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+
       const loadData = async () => {
         console.log(`📖 Cargando propiedad en modo edición: ${initialPropertyId}`);
-        
+
         const result = await loadProperty(initialPropertyId);
-        
+
         if (result.success && result.data) {
           setFormData(result.data);
           setPropertyId(initialPropertyId);
-          
+
           // Marcar steps completados basado en wizard_step
           const stepNumber = result.data.wizard_step || 1;
           const completed = new Set<number>();
-          for (let i = 1; i < stepNumber; i++) {
-            completed.add(i);
+
+          // ✅ FIX: Si wizard_step > totalSteps, significa que está completado
+          const actualStep = Math.min(stepNumber, totalSteps);
+
+          // Marcar todos los steps como completados si está finalizado
+          if (stepNumber >= totalSteps) {
+            for (let i = 1; i <= totalSteps; i++) {
+              completed.add(i);
+            }
+          } else {
+            for (let i = 1; i < actualStep; i++) {
+              completed.add(i);
+            }
           }
+
           setCompletedSteps(completed);
-          setCurrentStep(stepNumber);
-          
-          toast.success('✅ Propiedad cargada correctamente');
+          setCurrentStep(actualStep);
+
+          console.log('✅ Propiedad cargada en step:', actualStep);
+          // ✅ NO mostrar toast - puede causar bucles
         } else {
           toast.error(`❌ Error al cargar: ${result.error}`);
         }
       };
-      
+
       loadData();
     }
-  }, [mode, initialPropertyId, loadProperty, toast]);
+  }, [mode, initialPropertyId, loadProperty, totalSteps, toast]);
   
   // ============================================================================
   // ACTUALIZAR DATOS DEL FORMULARIO
