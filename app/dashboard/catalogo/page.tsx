@@ -16,6 +16,7 @@ import EmptyState from '@/components/ui/emptystate'
 // ⚡ LAZY LOADING: Modales pesados solo se cargan cuando se necesitan
 const WizardModal = lazy(() => import('./nueva/components/WizardModal'))
 const CompartirPropiedad = lazy(() => import('@/components/CompartirPropiedad'))
+const AñadirCuentaModal = lazy(() => import('@/components/AñadirCuentaModal'))
 
 interface Propiedad {
   id: string
@@ -37,6 +38,7 @@ export default function CatalogoPage() {
   const [propiedades, setPropiedades] = useState<Propiedad[]>([])
   const [showWizard, setShowWizard] = useState(false)
   const [showCompartir, setShowCompartir] = useState(false)
+  const [showAñadirCuenta, setShowAñadirCuenta] = useState(false)
   const [propiedadSeleccionada, setPropiedadSeleccionada] = useState<Propiedad | null>(null)
 
   const [busqueda, setBusqueda] = useState('')
@@ -255,6 +257,17 @@ export default function CatalogoPage() {
               </svg>
             ),
             onClick: () => setShowWizard(true)
+          },
+          {
+            label: 'Añadir cuenta',
+            icon: (
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2C6.5 2 2 4.5 2 7.5v1C2 11.5 6.5 14 12 14s10-2.5 10-5.5v-1C22 4.5 17.5 2 12 2z"/>
+                <path d="M2 12c0 3 4.5 5.5 10 5.5S22 15 22 12"/>
+                <path d="M2 16.5c0 3 4.5 5.5 10 5.5s10-2.5 10-5.5"/>
+              </svg>
+            ),
+            onClick: () => setShowAñadirCuenta(true)
           }
         ]}
       />
@@ -485,6 +498,20 @@ export default function CatalogoPage() {
               // Mostrar toast de éxito
               toast.success('✅ Propiedad creada exitosamente');
             }}
+          />
+        </Suspense>
+      )}
+
+      {showAñadirCuenta && user && (
+        <Suspense fallback={<Loading message="Cargando formulario..." />}>
+          <AñadirCuentaModal
+            isOpen={showAñadirCuenta}
+            onClose={() => setShowAñadirCuenta(false)}
+            onSuccess={(cuenta) => {
+              logger.log('💰 Cuenta creada con ID:', cuenta.id);
+              setShowAñadirCuenta(false);
+            }}
+            userId={user.id}
           />
         </Suspense>
       )}
