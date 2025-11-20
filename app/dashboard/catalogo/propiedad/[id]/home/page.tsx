@@ -46,7 +46,7 @@ interface Ubicacion {
 
 interface PropiedadData {
   id: string
-  user_id: string
+  owner_id: string  // ✅ CORREGIDO: era user_id, ahora owner_id
   nombre_propiedad: string
   tipo_propiedad: string
   estados: string[]
@@ -304,7 +304,7 @@ export default function HomePropiedad() {
         .from('propiedades')
         .select(`
           id,
-          user_id,
+          owner_id,
           nombre_propiedad,
           tipo_propiedad,
           estados,
@@ -347,9 +347,9 @@ export default function HomePropiedad() {
       }
 
       console.log('✅ Propiedad cargada exitosamente:', propData.nombre_propiedad)
-      
+
       const { data: { user: authUser } } = await supabase.auth.getUser()
-      const esPropio = propData.user_id === authUser?.id
+      const esPropio = propData.owner_id === authUser?.id
       
       logger.log('=== DATOS DE PROPIEDAD ===')
       logger.log('Propiedad completa:', propData)
