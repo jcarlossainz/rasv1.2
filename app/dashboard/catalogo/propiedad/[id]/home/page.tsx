@@ -1115,7 +1115,10 @@ export default function HomePropiedad() {
       {showCompartir && (
         <CompartirPropiedad
           isOpen={showCompartir}
-          onClose={() => setShowCompartir(false)}
+          onClose={async () => {
+            setShowCompartir(false)
+            await cargarPropiedad() // ✅ Recargar colaboradores al cerrar
+          }}
           propiedadId={propiedadId}
           propiedadNombre={propiedad.nombre_propiedad}
           userId={user.id}
