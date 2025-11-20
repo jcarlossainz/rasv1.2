@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
@@ -41,6 +41,10 @@ export default function MarketPage() {
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState<'todos' | 'publicado' | 'pausado' | 'borrador'>('todos')
   const [filtroOperacion, setFiltroOperacion] = useState<'todos' | 'venta' | 'renta' | 'vacacional'>('todos')
+
+  // Estados para paginación
+  const [paginaActual, setPaginaActual] = useState(1)
+  const ITEMS_POR_PAGINA = 12
 
   useEffect(() => {
     if (user?.id) {
@@ -161,6 +165,44 @@ export default function MarketPage() {
     }
   }
 
+  // Filtrar propiedades con useMemo para optimización
+  const propiedadesFiltradas = useMemo(() => {
+    return propiedades.filter(prop => {
+      // Filtro búsqueda
+      const matchBusqueda = busqueda === '' ||
+        prop.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+        (prop.codigo_postal && prop.codigo_postal.includes(busqueda))
+
+      // Filtro estado
+      const matchEstado =
+        filtroEstado === 'todos' ||
+        (filtroEstado === 'borrador' && !prop.estado_anuncio) ||
+        prop.estado_anuncio === filtroEstado
+
+      // Filtro operación
+      const operaciones = getOperacionTipo(prop)
+      const matchOperacion =
+        filtroOperacion === 'todos' ||
+        operaciones.includes(filtroOperacion)
+
+      return matchBusqueda && matchEstado && matchOperacion
+    })
+  }, [propiedades, busqueda, filtroEstado, filtroOperacion])
+
+  // Paginar propiedades con useMemo
+  const propiedadesPaginadas = useMemo(() => {
+    const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA
+    const fin = inicio + ITEMS_POR_PAGINA
+    return propiedadesFiltradas.slice(inicio, fin)
+  }, [propiedadesFiltradas, paginaActual])
+
+  const totalPaginas = Math.ceil(propiedadesFiltradas.length / ITEMS_POR_PAGINA)
+
+  // Auto-reset página cuando cambian filtros
+  useEffect(() => {
+    setPaginaActual(1)
+  }, [busqueda, filtroEstado, filtroOperacion])
+
   const getOperacionTipo = (prop: Propiedad): string[] => {
     const tipos: string[] = []
     if (prop.precio_venta) tipos.push('venta')
@@ -253,44 +295,9 @@ export default function MarketPage() {
         </div>
 
         {/* Grid de tarjetas - 3 COLUMNAS */}
-        {propiedades.filter(prop => {
-          // Filtro búsqueda
-          const matchBusqueda = busqueda === '' || 
-            prop.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-            (prop.codigo_postal && prop.codigo_postal.includes(busqueda))
-          
-          // Filtro estado
-          const matchEstado = 
-            filtroEstado === 'todos' ||
-            (filtroEstado === 'borrador' && !prop.estado_anuncio) ||
-            prop.estado_anuncio === filtroEstado
-          
-          // Filtro operación
-          const operaciones = getOperacionTipo(prop)
-          const matchOperacion = 
-            filtroOperacion === 'todos' ||
-            operaciones.includes(filtroOperacion)
-          
-          return matchBusqueda && matchEstado && matchOperacion
-        }).length > 0 ? (
+        {propiedadesFiltradas.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {propiedades.filter(prop => {
-              const matchBusqueda = busqueda === '' || 
-                prop.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-                (prop.codigo_postal && prop.codigo_postal.includes(busqueda))
-              
-              const matchEstado = 
-                filtroEstado === 'todos' ||
-                (filtroEstado === 'borrador' && !prop.estado_anuncio) ||
-                prop.estado_anuncio === filtroEstado
-              
-              const operaciones = getOperacionTipo(prop)
-              const matchOperacion = 
-                filtroOperacion === 'todos' ||
-                operaciones.includes(filtroOperacion)
-              
-              return matchBusqueda && matchEstado && matchOperacion
-            }).map((prop) => {
+            {propiedadesPaginadas.map((prop) => {
               const precio = getPrecioDisplay(prop)
               const operacion = getOperacionLabel(prop)
               const isActivo = prop.estado_anuncio === 'publicado'
@@ -392,7 +399,78 @@ export default function MarketPage() {
               )
             })}
           </div>
-        ) : (
+        ) : null}
+
+        {/* Paginación profesional */}
+        {totalPaginas > 1 && (
+          <div className="bg-white rounded-xl shadow-md border border-gray-200 px-6 py-4 mt-6">
+            <div className="flex items-center justify-between">
+              {/* Contador de resultados */}
+              <div className="text-sm text-gray-600">
+                Mostrando <span className="font-semibold text-gray-900">
+                  {(paginaActual - 1) * ITEMS_POR_PAGINA + 1}
+                </span> - <span className="font-semibold text-gray-900">
+                  {Math.min(paginaActual * ITEMS_POR_PAGINA, propiedadesFiltradas.length)}
+                </span> de <span className="font-semibold text-gray-900">
+                  {propiedadesFiltradas.length}
+                </span> anuncios
+              </div>
+
+              {/* Controles de navegación */}
+              <div className="flex items-center gap-2">
+                {/* Botón Anterior */}
+                <button
+                  onClick={() => setPaginaActual(prev => Math.max(1, prev - 1))}
+                  disabled={paginaActual === 1}
+                  className="px-4 py-2 rounded-lg border-2 border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-gray-700 transition-all"
+                >
+                  ← Anterior
+                </button>
+
+                {/* Números de página con smart ellipsis */}
+                <div className="flex gap-1">
+                  {Array.from({ length: totalPaginas }, (_, i) => i + 1)
+                    .filter(num => {
+                      return (
+                        num === 1 ||
+                        num === totalPaginas ||
+                        (num >= paginaActual - 1 && num <= paginaActual + 1)
+                      )
+                    })
+                    .map((num, idx, arr) => (
+                      <div key={num} className="flex items-center">
+                        {idx > 0 && arr[idx - 1] !== num - 1 && (
+                          <span className="px-2 text-gray-400">...</span>
+                        )}
+                        <button
+                          onClick={() => setPaginaActual(num)}
+                          className={`w-10 h-10 rounded-lg font-semibold transition-all ${
+                            paginaActual === num
+                              ? 'bg-ras-azul text-white shadow-lg'
+                              : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {num}
+                        </button>
+                      </div>
+                    ))}
+                </div>
+
+                {/* Botón Siguiente */}
+                <button
+                  onClick={() => setPaginaActual(prev => Math.min(totalPaginas, prev + 1))}
+                  disabled={paginaActual === totalPaginas}
+                  className="px-4 py-2 rounded-lg border-2 border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-gray-700 transition-all"
+                >
+                  Siguiente →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {propiedadesFiltradas.length === 0 && (
           <EmptyState 
             icon={
               <svg className="w-12 h-12 text-purple-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
