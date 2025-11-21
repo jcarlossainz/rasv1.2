@@ -196,14 +196,14 @@ export default function CalendarioGlobalPage() {
 
         return {
           id: ticket.id,
-          titulo: servicio?.nombre || ticket.descripcion || 'Ticket sin título',
+          titulo: servicio?.nombre || ticket.notas || 'Ticket sin título',
           fecha_programada: ticket.fecha_pago,
           monto_estimado: ticket.monto_estimado || 0,
           pagado: ticket.pagado || false,
           servicio_id: ticket.servicio_id,
-          tipo_ticket: ticket.tipo_ticket || 'Pago',
-          estado: ticket.estado || 'Pendiente',
-          prioridad: ticket.prioridad || 'Media',
+          tipo_ticket: 'Pago',
+          estado: 'Pendiente',
+          prioridad: 'Media',
           propiedad_id: ticket.propiedad_id,
           propiedad_nombre: propiedad?.nombre_propiedad || 'Sin nombre',
           propietario_id: propiedad?.owner_id || '',

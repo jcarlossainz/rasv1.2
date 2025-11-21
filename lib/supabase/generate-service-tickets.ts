@@ -196,10 +196,7 @@ export async function generateServiceTickets({
             fecha_pago: fecha.toISOString().split('T')[0],
             monto_estimado: service.cost || 0,
             pagado: false,
-            tipo_ticket: 'Pago',
-            estado: 'Pendiente',
-            prioridad: 'Media',
-            descripcion: `Pago de ${service.name}`
+            notas: `Pago de ${service.name}`
           });
         }
       }
