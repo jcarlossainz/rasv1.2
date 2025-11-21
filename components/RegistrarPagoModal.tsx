@@ -9,6 +9,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { obtenerCuentasPropiedad } from '@/services/cuentas-api'
+import { useToast } from '@/hooks/useToast'
 import type { CuentaBancaria } from '@/types/property'
 
 interface RegistrarPagoModalProps {
@@ -33,6 +34,7 @@ export default function RegistrarPagoModal({
   pagoExistente
 }: RegistrarPagoModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const toast = useToast()
 
   // Estados del formulario
   const [fechaPago, setFechaPago] = useState(
@@ -113,14 +115,14 @@ export default function RegistrarPagoModal({
     if (file) {
       // Validar tamaño (máx 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert('El archivo no debe superar 5MB')
+        toast.error('El archivo no debe superar 5MB')
         return
       }
 
       // Validar tipo
       const tiposPermitidos = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf']
       if (!tiposPermitidos.includes(file.type)) {
-        alert('Solo se permiten imágenes (JPG, PNG) o PDF')
+        toast.error('Solo se permiten imágenes (JPG, PNG) o PDF')
         return
       }
 
@@ -181,17 +183,17 @@ export default function RegistrarPagoModal({
   const handleGuardar = async () => {
     // Validaciones
     if (!fechaPago) {
-      alert('La fecha de pago es obligatoria')
+      toast.error('La fecha de pago es obligatoria')
       return
     }
 
     if (!monto || parseFloat(monto) <= 0) {
-      alert('El monto debe ser mayor a 0')
+      toast.error('El monto debe ser mayor a 0')
       return
     }
 
     if (cuentas.length > 0 && !cuentaId) {
-      alert('Debes seleccionar una cuenta para registrar el pago')
+      toast.error('Debes seleccionar una cuenta para registrar el pago')
       return
     }
 
@@ -201,13 +203,13 @@ export default function RegistrarPagoModal({
       const montoEsperado = pagoExistente.monto_estimado
 
       if (!notas.trim()) {
-        alert(`El monto difiere del esperado ($${montoEsperado.toFixed(2)} vs $${montoPagado.toFixed(2)}). Por favor, agrega una nota explicando la diferencia.`)
+        toast.error(`El monto difiere del esperado ($${montoEsperado.toFixed(2)} vs $${montoPagado.toFixed(2)}). Agrega una nota explicando la diferencia.`)
         return
       }
     }
 
     if (tieneFactura && !numeroFactura.trim()) {
-      alert('Si tiene factura, debes indicar el número')
+      toast.error('Si tiene factura, debes indicar el número')
       return
     }
 
@@ -257,7 +259,9 @@ export default function RegistrarPagoModal({
         // Mensaje según si es completo o anticipo
         if (!esPagoCompleto) {
           const montoRestante = pagoExistente.monto_estimado - montoPagado
-          alert(`💰 Anticipo registrado ($${montoPagado.toFixed(2)}).\n\nEl ticket permanece pendiente.\nMonto restante: $${montoRestante.toFixed(2)}`)
+          toast.warning(`💰 Anticipo registrado: $${montoPagado.toFixed(2)}. El ticket permanece pendiente. Monto restante: $${montoRestante.toFixed(2)}`)
+        } else {
+          toast.success('✅ Pago registrado correctamente')
         }
       } else {
         // Crear nuevo registro de pago
@@ -270,7 +274,7 @@ export default function RegistrarPagoModal({
       onClose()
     } catch (error: any) {
       console.error('Error guardando pago:', error)
-      alert(error.message || 'Error al guardar el pago')
+      toast.error(error.message || 'Error al guardar el pago')
     } finally {
       setGuardando(false)
     }
