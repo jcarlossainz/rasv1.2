@@ -38,15 +38,15 @@ export default function RegistrarPagoModal({
   const [fechaPago, setFechaPago] = useState(
     pagoExistente?.fecha_pago || new Date().toISOString().split('T')[0]
   )
-  const [tipo, setTipo] = useState<'egreso' | 'ingreso'>('egreso')
   const [propiedadId, setPropiedadId] = useState(pagoExistente?.propiedad_id || '')
   const [concepto, setConcepto] = useState(pagoExistente?.servicio_nombre || '')
   const [monto, setMonto] = useState(pagoExistente?.monto_estimado.toString() || '')
-  const [metodoPago, setMetodoPago] = useState('') // Nuevo: efectivo, transferencia, etc
-  const [referenciaPago, setReferenciaPago] = useState('') // Nuevo: número de referencia
+  const [metodoPago, setMetodoPago] = useState('')
+  const [referenciaPago, setReferenciaPago] = useState('')
+  const [responsable, setResponsable] = useState('') // Quién realizó el pago
   const [tieneFactura, setTieneFactura] = useState(false)
   const [numeroFactura, setNumeroFactura] = useState('')
-  const [notas, setNotas] = useState('') // Nuevo: notas adicionales
+  const [notas, setNotas] = useState('')
   const [archivo, setArchivo] = useState<File | null>(null)
   const [archivoPreview, setArchivoPreview] = useState<string | null>(null)
 
@@ -174,6 +174,11 @@ export default function RegistrarPagoModal({
       return
     }
 
+    if (cuentas.length > 0 && !cuentaId) {
+      alert('Debes seleccionar una cuenta para registrar el pago')
+      return
+    }
+
     if (tieneFactura && !numeroFactura.trim()) {
       alert('Si tiene factura, debes indicar el número')
       return
@@ -196,21 +201,24 @@ export default function RegistrarPagoModal({
 
       // Si es un pago existente (marcar como pagado)
       if (pagoExistente) {
+        const updateData: any = {
+          pagado: true,
+          fecha_pago_real: fechaPago,
+          monto_real: parseFloat(monto),
+          cuenta_id: cuentaId || null,
+          metodo_pago: metodoPago || null,
+          referencia_pago: referenciaPago || null,
+          responsable: responsable || null,
+          tiene_factura: tieneFactura,
+          numero_factura: tieneFactura ? numeroFactura : null,
+          comprobante_url: urlComprobante,
+          notas: notas || null,
+          updated_at: new Date().toISOString()
+        }
+
         const { error } = await supabase
           .from('fechas_pago_servicios')
-          .update({
-            pagado: true,
-            fecha_pago_real: fechaPago,
-            monto_real: parseFloat(monto),
-            cuenta_id: cuentaId || null,
-            metodo_pago: metodoPago || null,
-            referencia_pago: referenciaPago || null,
-            tiene_factura: tieneFactura,
-            numero_factura: tieneFactura ? numeroFactura : null,
-            comprobante_url: urlComprobante,
-            notas: notas || null,
-            updated_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('id', pagoExistente.id)
 
         if (error) throw error
@@ -278,35 +286,6 @@ export default function RegistrarPagoModal({
               />
             </div>
 
-            {/* Tipo */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
-                Tipo de Movimiento <span className="text-red-500">*</span>
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => setTipo('egreso')}
-                  className={`py-3 px-4 rounded-lg font-semibold text-sm transition-all ${
-                    tipo === 'egreso'
-                      ? 'bg-red-500 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  ↓ Egreso (Pago)
-                </button>
-                <button
-                  onClick={() => setTipo('ingreso')}
-                  className={`py-3 px-4 rounded-lg font-semibold text-sm transition-all ${
-                    tipo === 'ingreso'
-                      ? 'bg-green-500 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  ↑ Ingreso (Cobro)
-                </button>
-              </div>
-            </div>
-
             {/* Propiedad */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
@@ -328,11 +307,11 @@ export default function RegistrarPagoModal({
               </select>
             </div>
 
-            {/* Cuenta Bancaria (si la propiedad tiene cuentas) */}
+            {/* Cuenta Bancaria */}
             {propiedadId && (
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
-                  Cuenta de origen (Opcional)
+                  Cuenta con la que se pagó {cuentas.length > 0 && <span className="text-red-500">*</span>}
                 </label>
                 <select
                   value={cuentaId}
@@ -340,19 +319,24 @@ export default function RegistrarPagoModal({
                   disabled={cargandoCuentas}
                   className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ras-turquesa text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
-                  <option value="">Sin cuenta específica</option>
+                  <option value="">Seleccionar cuenta...</option>
                   {cuentas.map(cuenta => (
                     <option key={cuenta.id} value={cuenta.id}>
                       {cuenta.nombre} ({cuenta.tipo_moneda}) - {cuenta.tipo_cuenta}
-                      {cuenta.banco ? ` - ${cuenta.banco}` : ''}
+                      {cuenta.banco ? ` - ${cuenta.banco}` : ''} - Balance: ${cuenta.balance_actual?.toFixed(2) || '0.00'}
                     </option>
                   ))}
                 </select>
-                <p className="mt-1 text-xs text-gray-500">
-                  {cuentas.length === 0
-                    ? 'Esta propiedad no tiene cuentas registradas'
-                    : 'El balance de la cuenta se actualizará automáticamente al registrar el pago'}
-                </p>
+                {cuentas.length === 0 ? (
+                  <p className="mt-1 text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                    ⚠️ Esta propiedad no tiene cuentas registradas. <br/>
+                    Ve a Balance para crear una cuenta bancaria.
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs text-gray-500">
+                    El balance de la cuenta se reducirá automáticamente
+                  </p>
+                )}
               </div>
             )}
 
@@ -390,6 +374,23 @@ export default function RegistrarPagoModal({
                   className="w-full pl-8 pr-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ras-turquesa text-sm"
                 />
               </div>
+            </div>
+
+            {/* Pagado por */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
+                Pagado por (Opcional)
+              </label>
+              <input
+                type="text"
+                value={responsable}
+                onChange={(e) => setResponsable(e.target.value)}
+                placeholder="Ej: Juan Pérez, Administrador, etc."
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ras-turquesa text-sm"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Nombre de la persona que realizó el pago
+              </p>
             </div>
 
             {/* Método de Pago */}
