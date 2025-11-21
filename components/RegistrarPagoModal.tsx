@@ -40,10 +40,8 @@ export default function RegistrarPagoModal({
   )
   const [propiedadId] = useState(pagoExistente?.propiedad_id || '')
   const [monto, setMonto] = useState(pagoExistente?.monto_estimado.toString() || '')
-  const [tipoPago, setTipoPago] = useState<'completo' | 'anticipo'>('completo') // Nuevo: tipo de pago
-  const [metodoPago, setMetodoPago] = useState('') // Ahora será forma de pago genérica
   const [referenciaPago, setReferenciaPago] = useState('')
-  const [responsablePago, setResponsablePago] = useState<'Administrador' | 'Propietario' | 'Inquilino' | ''>('') // Responsable del pago
+  const [responsablePago, setResponsablePago] = useState<'Administrador' | 'Propietario' | 'Inquilino' | ''>('')
   const [tieneFactura, setTieneFactura] = useState(false)
   const [numeroFactura, setNumeroFactura] = useState('')
   const [notas, setNotas] = useState('')
@@ -183,16 +181,10 @@ export default function RegistrarPagoModal({
       return
     }
 
-    // Validar diferencia de monto
+    // Validar diferencia de monto (si es diferente, requiere nota)
     if (pagoExistente && mostrarAlertaDiferencia) {
       const montoPagado = parseFloat(monto)
       const montoEsperado = pagoExistente.monto_estimado
-      const diferencia = Math.abs(montoPagado - montoEsperado)
-
-      if (montoPagado < montoEsperado && tipoPago === 'completo') {
-        alert(`El monto es menor al esperado ($${montoEsperado.toFixed(2)}). Si es un pago parcial, selecciona "Pagar Anticipo".`)
-        return
-      }
 
       if (!notas.trim()) {
         alert(`El monto difiere del esperado ($${montoEsperado.toFixed(2)} vs $${montoPagado.toFixed(2)}). Por favor, agrega una nota explicando la diferencia.`)
@@ -223,14 +215,15 @@ export default function RegistrarPagoModal({
       // Si es un pago existente (marcar como pagado)
       if (pagoExistente) {
         const montoPagado = parseFloat(monto)
-        const esPagoCompleto = tipoPago === 'completo' && montoPagado >= pagoExistente.monto_estimado
+        // Determinar automáticamente si es pago completo o anticipo
+        const esPagoCompleto = montoPagado >= pagoExistente.monto_estimado
 
         const updateData: any = {
-          pagado: esPagoCompleto, // Solo se marca como pagado si es pago completo
+          pagado: esPagoCompleto, // Solo se marca como pagado si el monto cubre el total
           fecha_pago_real: fechaPago,
           monto_real: montoPagado,
           cuenta_id: cuentaId || null,
-          metodo_pago: metodoPago || null,
+          metodo_pago: null, // Ya no usamos metodo_pago genérico
           referencia_pago: referenciaPago || null,
           responsable: responsablePago || null,
           tiene_factura: tieneFactura,
@@ -247,9 +240,10 @@ export default function RegistrarPagoModal({
 
         if (error) throw error
 
-        // Mensaje según tipo de pago
+        // Mensaje según si es completo o anticipo
         if (!esPagoCompleto) {
-          alert(`Anticipo registrado. El ticket permanece pendiente.\nMonto restante: $${(pagoExistente.monto_estimado - montoPagado).toFixed(2)}`)
+          const montoRestante = pagoExistente.monto_estimado - montoPagado
+          alert(`💰 Anticipo registrado ($${montoPagado.toFixed(2)}).\n\nEl ticket permanece pendiente.\nMonto restante: $${montoRestante.toFixed(2)}`)
         }
       } else {
         // Crear nuevo registro de pago
@@ -311,44 +305,11 @@ export default function RegistrarPagoModal({
                   <div><strong>Monto Esperado:</strong> ${pagoExistente.monto_estimado.toFixed(2)}</div>
                   <div><strong>Fecha Programada:</strong> {new Date(pagoExistente.fecha_pago).toLocaleDateString('es-MX')}</div>
                 </div>
+                <p className="text-xs text-blue-700 mt-2 font-semibold">
+                  💡 Si pagas menos del monto esperado, se registrará como anticipo
+                </p>
               </div>
             )}
-
-            {/* Tipo de Pago */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
-                Tipo de Pago <span className="text-red-500">*</span>
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setTipoPago('completo')}
-                  className={`py-3 px-4 rounded-lg font-semibold text-sm transition-all ${
-                    tipoPago === 'completo'
-                      ? 'bg-green-500 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  ✓ Pago Completo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTipoPago('anticipo')}
-                  className={`py-3 px-4 rounded-lg font-semibold text-sm transition-all ${
-                    tipoPago === 'anticipo'
-                      ? 'bg-yellow-500 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  💰 Pagar Anticipo
-                </button>
-              </div>
-              {tipoPago === 'anticipo' && (
-                <p className="mt-2 text-xs text-yellow-700 bg-yellow-50 p-2 rounded">
-                  ⚠️ El ticket permanecerá pendiente hasta cubrir el monto total
-                </p>
-              )}
-            </div>
 
             {/* Fecha de Pago */}
             <div>
@@ -363,11 +324,11 @@ export default function RegistrarPagoModal({
               />
             </div>
 
-            {/* Cuenta Bancaria / Método de Pago */}
+            {/* Forma de Pago (Cuentas Bancarias) */}
             {propiedadId && (
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
-                  Método de Pago {cuentas.length > 0 && <span className="text-red-500">*</span>}
+                  Forma de Pago {cuentas.length > 0 && <span className="text-red-500">*</span>}
                 </label>
                 <select
                   value={cuentaId}
@@ -375,7 +336,7 @@ export default function RegistrarPagoModal({
                   disabled={cargandoCuentas}
                   className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ras-turquesa text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
-                  <option value="">Seleccionar método de pago...</option>
+                  <option value="">Seleccionar forma de pago...</option>
                   {cuentas.map(cuenta => (
                     <option key={cuenta.id} value={cuenta.id}>
                       💳 {cuenta.nombre} ({cuenta.tipo_moneda}) - {cuenta.tipo_cuenta}
@@ -452,41 +413,19 @@ export default function RegistrarPagoModal({
               </select>
             </div>
 
-            {/* Forma de Pago (opcional, adicional a cuenta) */}
+            {/* Referencia de Pago */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
-                Forma de Pago (Opcional)
+                Referencia / No. de Operación (Opcional)
               </label>
-              <select
-                value={metodoPago}
-                onChange={(e) => setMetodoPago(e.target.value)}
+              <input
+                type="text"
+                value={referenciaPago}
+                onChange={(e) => setReferenciaPago(e.target.value)}
+                placeholder="Ej: REF123456 o últimos 4 dígitos"
                 className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ras-turquesa text-sm"
-              >
-                <option value="">Seleccionar forma...</option>
-                <option value="Efectivo">💵 Efectivo</option>
-                <option value="Transferencia">🏦 Transferencia</option>
-                <option value="Tarjeta de Débito">💳 Tarjeta de Débito</option>
-                <option value="Tarjeta de Crédito">💳 Tarjeta de Crédito</option>
-                <option value="Cheque">📝 Cheque</option>
-                <option value="Otro">📌 Otro</option>
-              </select>
+              />
             </div>
-
-            {/* Referencia de Pago */}
-            {metodoPago && metodoPago !== 'efectivo' && (
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
-                  Referencia / No. de Operación
-                </label>
-                <input
-                  type="text"
-                  value={referenciaPago}
-                  onChange={(e) => setReferenciaPago(e.target.value)}
-                  placeholder="Ej: REF123456 o últimos 4 dígitos"
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ras-turquesa text-sm"
-                />
-              </div>
-            )}
 
             {/* Factura */}
             <div className="border-t border-gray-200 pt-4">
