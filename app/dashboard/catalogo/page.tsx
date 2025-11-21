@@ -42,6 +42,10 @@ export default function CatalogoPage() {
   const [busqueda, setBusqueda] = useState('')
   const [filtroPropiedad, setFiltroPropiedad] = useState<'todos' | 'propios' | 'compartidos'>('todos')
 
+  // Paginación
+  const [paginaActual, setPaginaActual] = useState(1)
+  const ITEMS_POR_PAGINA = 20
+
   useEffect(() => {
     if (user?.id) {
       cargarPropiedades(user.id)
@@ -232,6 +236,20 @@ export default function CatalogoPage() {
     })
   }, [propiedades, busqueda, filtroPropiedad])
 
+  // ⚡ PAGINACIÓN: Calcular propiedades a mostrar
+  const propiedadesPaginadas = useMemo(() => {
+    const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA
+    const fin = inicio + ITEMS_POR_PAGINA
+    return propiedadesFiltradas.slice(inicio, fin)
+  }, [propiedadesFiltradas, paginaActual])
+
+  const totalPaginas = Math.ceil(propiedadesFiltradas.length / ITEMS_POR_PAGINA)
+
+  // Resetear página cuando cambian los filtros
+  useEffect(() => {
+    setPaginaActual(1)
+  }, [busqueda, filtroPropiedad])
+
   if (authLoading) {
     return <Loading message="Cargando propiedades..." />
   }
@@ -314,7 +332,7 @@ export default function CatalogoPage() {
             </div>
 
             <div className="divide-y divide-gray-100">
-              {propiedadesFiltradas.map((prop) => (
+              {propiedadesPaginadas.map((prop) => (
                 <div 
                   key={prop.id}
                   className="px-6 py-4 hover:bg-gray-50 transition-all"
@@ -433,6 +451,83 @@ export default function CatalogoPage() {
                 </div>
               ))}
             </div>
+
+            {/* Paginación */}
+            {totalPaginas > 1 && (
+              <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                <div className="flex items-center justify-between">
+                  {/* Info de resultados */}
+                  <div className="text-sm text-gray-600">
+                    Mostrando{' '}
+                    <span className="font-semibold text-gray-900">
+                      {(paginaActual - 1) * ITEMS_POR_PAGINA + 1}
+                    </span>
+                    {' - '}
+                    <span className="font-semibold text-gray-900">
+                      {Math.min(paginaActual * ITEMS_POR_PAGINA, propiedadesFiltradas.length)}
+                    </span>
+                    {' de '}
+                    <span className="font-semibold text-gray-900">
+                      {propiedadesFiltradas.length}
+                    </span>
+                    {' propiedades'}
+                  </div>
+
+                  {/* Controles de navegación */}
+                  <div className="flex items-center gap-2">
+                    {/* Botón Anterior */}
+                    <button
+                      onClick={() => setPaginaActual(prev => Math.max(1, prev - 1))}
+                      disabled={paginaActual === 1}
+                      className="px-4 py-2 rounded-lg border-2 border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-gray-700 transition-all"
+                    >
+                      ← Anterior
+                    </button>
+
+                    {/* Números de página */}
+                    <div className="flex gap-1">
+                      {Array.from({ length: totalPaginas }, (_, i) => i + 1)
+                        .filter(num => {
+                          // Mostrar primera, última, actual y vecinas
+                          return (
+                            num === 1 ||
+                            num === totalPaginas ||
+                            (num >= paginaActual - 1 && num <= paginaActual + 1)
+                          )
+                        })
+                        .map((num, idx, arr) => (
+                          <div key={num} className="flex items-center">
+                            {/* Puntos suspensivos si hay salto */}
+                            {idx > 0 && arr[idx - 1] !== num - 1 && (
+                              <span className="px-2 text-gray-400">...</span>
+                            )}
+
+                            <button
+                              onClick={() => setPaginaActual(num)}
+                              className={`w-10 h-10 rounded-lg font-semibold transition-all ${
+                                paginaActual === num
+                                  ? 'bg-ras-azul text-white shadow-lg'
+                                  : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
+                              }`}
+                            >
+                              {num}
+                            </button>
+                          </div>
+                        ))}
+                    </div>
+
+                    {/* Botón Siguiente */}
+                    <button
+                      onClick={() => setPaginaActual(prev => Math.min(totalPaginas, prev + 1))}
+                      disabled={paginaActual === totalPaginas}
+                      className="px-4 py-2 rounded-lg border-2 border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-gray-700 transition-all"
+                    >
+                      Siguiente →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <EmptyState 
