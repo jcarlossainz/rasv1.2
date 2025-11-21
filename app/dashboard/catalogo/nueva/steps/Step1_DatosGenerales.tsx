@@ -47,16 +47,16 @@ const OPCIONES_MOBILIARIO = [
   'Sin amueblar'
 ];
 
-// Modal simple para agregar correo
-interface ModalAgregarCorreoProps {
+// Modal mejorado para agregar persona con rol
+interface ModalAgregarPersonaProps {
   isOpen: boolean;
   onClose: () => void;
-  onAgregar: (email: string) => void;
-  tipo: 'propietario' | 'supervisor';
+  onAgregar: (email: string, rol: 'propietario' | 'supervisor') => void;
 }
 
-function ModalAgregarCorreo({ isOpen, onClose, onAgregar, tipo }: ModalAgregarCorreoProps) {
+function ModalAgregarPersona({ isOpen, onClose, onAgregar }: ModalAgregarPersonaProps) {
   const [email, setEmail] = useState('');
+  const [rol, setRol] = useState<'propietario' | 'supervisor'>('propietario');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -65,7 +65,7 @@ function ModalAgregarCorreo({ isOpen, onClose, onAgregar, tipo }: ModalAgregarCo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
     // Validar que el campo no esté vacío
     if (!email.trim()) {
       setError('Por favor ingresa un correo');
@@ -74,22 +74,23 @@ function ModalAgregarCorreo({ isOpen, onClose, onAgregar, tipo }: ModalAgregarCo
 
     setLoading(true);
     try {
-      await onAgregar(email);
+      await onAgregar(email, rol);
       setEmail('');
+      setRol('propietario');
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Error al agregar correo');
+      setError(err.message || 'Error al agregar persona');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50 pb-8">
-      <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mb-4 animate-slide-up">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md animate-slide-up">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-gray-900">
-            Agregar {tipo}
+            👤 Agregar Persona
           </h3>
           <button
             onClick={onClose}
@@ -120,6 +121,20 @@ function ModalAgregarCorreo({ isOpen, onClose, onAgregar, tipo }: ModalAgregarCo
             )}
           </div>
 
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Rol
+            </label>
+            <select
+              value={rol}
+              onChange={(e) => setRol(e.target.value as 'propietario' | 'supervisor')}
+              className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ras-azul focus:border-transparent font-roboto"
+            >
+              <option value="propietario">Propietario</option>
+              <option value="supervisor">Supervisor</option>
+            </select>
+          </div>
+
           <div className="flex gap-3 justify-end">
             <button
               type="button"
@@ -142,113 +157,72 @@ function ModalAgregarCorreo({ isOpen, onClose, onAgregar, tipo }: ModalAgregarCo
   );
 }
 
+interface PersonaAsignada {
+  email: string;
+  rol: 'propietario' | 'supervisor';
+}
+
 export default function Step1_DatosGenerales({ data, onUpdate }: Step1Props) {
   const { user } = useAuth();
-  const [propietarios, setPropietarios] = useState<Profile[]>([]);
-  const [supervisores, setSupervisores] = useState<Profile[]>([]);
+  const [personasAsignadas, setPersonasAsignadas] = useState<PersonaAsignada[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [tipoModal, setTipoModal] = useState<'propietario' | 'supervisor' | null>(null);
 
+  // Sincronizar personasAsignadas con data al iniciar y cuando data cambia
   useEffect(() => {
-    if (user?.id) {
-      cargarDatos();
+    const propietarios = Array.isArray(data.propietarios_email)
+      ? data.propietarios_email.map(email => ({ email, rol: 'propietario' as const }))
+      : [];
+    const supervisores = Array.isArray(data.supervisores_email)
+      ? data.supervisores_email.map(email => ({ email, rol: 'supervisor' as const }))
+      : [];
+    setPersonasAsignadas([...propietarios, ...supervisores]);
+  }, [data.propietarios_email, data.supervisores_email]);
+
+  const handleAgregarPersona = async (email: string, rol: 'propietario' | 'supervisor') => {
+    // Verificar que no esté duplicado
+    if (personasAsignadas.some(p => p.email === email)) {
+      throw new Error('Esta persona ya fue agregada');
     }
-  }, [user]);
 
-  const cargarDatos = async () => {
-    try {
-      if (!user) return;
+    // Agregar a la lista
+    const nuevasPersonas = [...personasAsignadas, { email, rol }];
+    setPersonasAsignadas(nuevasPersonas);
 
-      // Obtener empresa_id del usuario actual
-      const { data: miProfile } = await supabase
-        .from('profiles')
-        .select('empresa_id')
-        .eq('id', user.id)
-        .single();
-
-      if (!miProfile?.empresa_id) {
-        logger.warn('Usuario sin empresa_id asignada');
-        return;
-      }
-
-      // Cargar propietarios de mi empresa
-      await cargarPropietarios(miProfile.empresa_id);
-
-      // Cargar supervisores de mi empresa
-      await cargarSupervisores(miProfile.empresa_id);
-
-    } catch (error) {
-      logger.error('Error al cargar datos:', error);
+    // Actualizar el data según el rol
+    if (rol === 'propietario') {
+      const propietariosEmails = nuevasPersonas
+        .filter(p => p.rol === 'propietario')
+        .map(p => p.email);
+      handleChange('propietarios_email', propietariosEmails);
+    } else {
+      const supervisoresEmails = nuevasPersonas
+        .filter(p => p.rol === 'supervisor')
+        .map(p => p.email);
+      handleChange('supervisores_email', supervisoresEmails);
     }
+
+    logger.log(`Persona agregada: ${email} como ${rol}`);
   };
 
-  const cargarPropietarios = async (empresaId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, nombre, email, rol')
-        .eq('empresa_id', empresaId)
-        .eq('rol', 'propietario')
-        .order('nombre');
+  const handleEliminarPersona = (email: string) => {
+    const personaEliminar = personasAsignadas.find(p => p.email === email);
+    if (!personaEliminar) return;
 
-      if (error) throw error;
+    const nuevasPersonas = personasAsignadas.filter(p => p.email !== email);
+    setPersonasAsignadas(nuevasPersonas);
 
-      setPropietarios(data || []);
-      logger.log('Propietarios cargados:', data?.length || 0);
-    } catch (error) {
-      logger.error('Error al cargar propietarios:', error);
+    // Actualizar el data según el rol
+    if (personaEliminar.rol === 'propietario') {
+      const propietariosEmails = nuevasPersonas
+        .filter(p => p.rol === 'propietario')
+        .map(p => p.email);
+      handleChange('propietarios_email', propietariosEmails);
+    } else {
+      const supervisoresEmails = nuevasPersonas
+        .filter(p => p.rol === 'supervisor')
+        .map(p => p.email);
+      handleChange('supervisores_email', supervisoresEmails);
     }
-  };
-
-  const cargarSupervisores = async (empresaId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, nombre, email, rol')
-        .eq('empresa_id', empresaId)
-        .in('rol', ['admin', 'supervisor'])
-        .order('nombre');
-
-      if (error) throw error;
-
-      setSupervisores(data || []);
-      logger.log('Supervisores cargados:', data?.length || 0);
-    } catch (error) {
-      logger.error('Error al cargar supervisores:', error);
-    }
-  };
-
-  const handleAbrirModal = (tipo: 'propietario' | 'supervisor') => {
-    setTipoModal(tipo);
-    setShowModal(true);
-  };
-
-  const handleAgregarCorreo = async (email: string) => {
-    // Agregar el correo temporalmente a la lista
-    const nuevoItem: Profile = {
-      id: `temp_${Date.now()}`, // ID temporal
-      nombre: email.split('@')[0],
-      email: email,
-      rol: tipoModal || 'propietario'
-    };
-
-    if (tipoModal === 'propietario') {
-      setPropietarios([...propietarios, nuevoItem]);
-      // Agregarlo a la selección actual usando emails
-      const currentEmails = Array.isArray(data.propietarios_email) 
-        ? data.propietarios_email 
-        : [];
-      handleChange('propietarios_email', [...currentEmails, email]);
-    } else if (tipoModal === 'supervisor') {
-      setSupervisores([...supervisores, nuevoItem]);
-      // Agregarlo a la selección actual usando emails
-      const currentEmails = Array.isArray(data.supervisores_email) 
-        ? data.supervisores_email 
-        : [];
-      handleChange('supervisores_email', [...currentEmails, email]);
-    }
-
-    logger.log(`Correo agregado: ${email}`);
   };
 
   const handleChange = (field: keyof PropertyFormData, value: any) => {
@@ -415,140 +389,86 @@ export default function Step1_DatosGenerales({ data, onUpdate }: Step1Props) {
 
         {/* SECCIÓN: Asignaciones */}
         <div className="border-t-2 border-gray-100 pt-6">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">
-            📋 Asignaciones
-          </h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Propietario */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Propietario(s)
-              </label>
-              <div className="flex gap-2">
-                <div className="flex-1 border-2 border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-ras-azul focus-within:border-transparent">
-                  <div className="max-h-40 overflow-y-auto p-2">
-                    {propietarios.length === 0 ? (
-                      <p className="text-gray-400 text-sm py-2 px-2">No hay propietarios disponibles</p>
-                    ) : (
-                      propietarios.map((prop) => (
-                        <label
-                          key={prop.email}
-                          className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={Array.isArray(data.propietarios_email) 
-                              ? data.propietarios_email.includes(prop.email)
-                              : false
-                            }
-                            onChange={(e) => {
-                              const currentEmails = Array.isArray(data.propietarios_email) 
-                                ? data.propietarios_email 
-                                : [];
-                              
-                              const newEmails = e.target.checked
-                                ? [...currentEmails, prop.email]
-                                : currentEmails.filter(email => email !== prop.email);
-                              
-                              handleChange('propietarios_email', newEmails);
-                            }}
-                            className="rounded text-ras-azul focus:ring-ras-azul"
-                          />
-                          <span className="text-sm">{prop.email}</span>
-                        </label>
-                      ))
-                    )}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleAbrirModal('propietario')}
-                  className="px-4 py-2.5 bg-ras-azul text-white rounded-lg hover:bg-ras-azul/90 transition-colors font-semibold whitespace-nowrap"
-                  title="Agregar propietario"
-                >
-                  + Propietario
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {propietarios.length === 0 
-                  ? 'No hay propietarios. Agrega uno nuevo.' 
-                  : `${Array.isArray(data.propietarios_email) ? data.propietarios_email.length : 0} seleccionado(s) de ${propietarios.length}`
-                }
-              </p>
-            </div>
-
-            {/* Supervisor */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Supervisor(es)
-              </label>
-              <div className="flex gap-2">
-                <div className="flex-1 border-2 border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-ras-azul focus-within:border-transparent">
-                  <div className="max-h-40 overflow-y-auto p-2">
-                    {supervisores.length === 0 ? (
-                      <p className="text-gray-400 text-sm py-2 px-2">No hay supervisores disponibles</p>
-                    ) : (
-                      supervisores.map((sup) => (
-                        <label
-                          key={sup.email}
-                          className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={Array.isArray(data.supervisores_email) 
-                              ? data.supervisores_email.includes(sup.email)
-                              : false
-                            }
-                            onChange={(e) => {
-                              const currentEmails = Array.isArray(data.supervisores_email) 
-                                ? data.supervisores_email 
-                                : [];
-                              
-                              const newEmails = e.target.checked
-                                ? [...currentEmails, sup.email]
-                                : currentEmails.filter(email => email !== sup.email);
-                              
-                              handleChange('supervisores_email', newEmails);
-                            }}
-                            className="rounded text-ras-azul focus:ring-ras-azul"
-                          />
-                          <span className="text-sm">{sup.email}</span>
-                        </label>
-                      ))
-                    )}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleAbrirModal('supervisor')}
-                  className="px-4 py-2.5 bg-ras-azul text-white rounded-lg hover:bg-ras-azul/90 transition-colors font-semibold whitespace-nowrap"
-                  title="Agregar supervisor"
-                >
-                  + Supervisor
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {supervisores.length === 0 
-                  ? 'No hay supervisores. Agrega uno nuevo.' 
-                  : `${Array.isArray(data.supervisores_email) ? data.supervisores_email.length : 0} seleccionado(s) de ${supervisores.length}`
-                }
-              </p>
-            </div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+              👥 Asignaciones
+            </h3>
+            <button
+              type="button"
+              onClick={() => setShowModal(true)}
+              className="px-4 py-2 bg-ras-azul text-white rounded-lg hover:bg-ras-azul/90 transition-colors font-semibold flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              Agregar Persona
+            </button>
           </div>
+
+          {/* Listado de personas asignadas */}
+          {personasAsignadas.length === 0 ? (
+            <div className="text-center py-8 text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
+              <svg className="w-12 h-12 mx-auto mb-2 opacity-30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              <p className="text-sm">No hay personas asignadas aún</p>
+              <p className="text-xs mt-1">Haz click en "Agregar Persona" para comenzar</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {personasAsignadas.map((persona, index) => (
+                <div
+                  key={`${persona.email}-${index}`}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-ras-azul transition-colors"
+                >
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="w-10 h-10 bg-gradient-to-br from-ras-azul to-ras-turquesa rounded-full flex items-center justify-center text-white font-bold text-sm">
+                      {persona.email.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-800">{persona.email}</div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          persona.rol === 'propietario'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-purple-100 text-purple-700'
+                        }`}>
+                          {persona.rol === 'propietario' ? '🏠 Propietario' : '👤 Supervisor'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleEliminarPersona(persona.email)}
+                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Eliminar persona"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p className="text-xs text-gray-500 mt-3">
+            💡 Total: {personasAsignadas.length} persona(s) asignada(s)
+            ({personasAsignadas.filter(p => p.rol === 'propietario').length} propietario(s), {personasAsignadas.filter(p => p.rol === 'supervisor').length} supervisor(es))
+          </p>
         </div>
       </div>
 
-      {/* Modal simple para agregar correo */}
-      {showModal && tipoModal && (
-        <ModalAgregarCorreo
+      {/* Modal para agregar persona con rol */}
+      {showModal && (
+        <ModalAgregarPersona
           isOpen={showModal}
-          onClose={() => {
-            setShowModal(false);
-            setTipoModal(null);
-          }}
-          onAgregar={handleAgregarCorreo}
-          tipo={tipoModal}
+          onClose={() => setShowModal(false)}
+          onAgregar={handleAgregarPersona}
         />
       )}
     </>
