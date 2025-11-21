@@ -110,7 +110,7 @@ export default function DirectorioPage() {
     const { data: propiedades, error: errorProps } = await supabase
       .from('propiedades')
       .select('id')
-      .eq('user_id', userId)
+      .eq('owner_id', userId)
 
     if (errorProps) {
       console.error('Error cargando propiedades:', errorProps)
@@ -320,7 +320,7 @@ export default function DirectorioPage() {
     const { data: propiedades, error: errorProps } = await supabase
       .from('propiedades')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('owner_id', user.id)
       .limit(1)
 
     if (errorProps || !propiedades || propiedades.length === 0) {
