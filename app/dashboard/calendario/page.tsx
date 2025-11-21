@@ -20,6 +20,7 @@ import { useLogout } from '@/hooks/useLogout'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
 import NuevoTicket from '@/app/dashboard/tickets/NuevoTicket'
+import { autoRegenerateTickets } from '@/lib/supabase/generate-service-tickets'
 
 interface Ticket {
   id: string
@@ -111,7 +112,11 @@ export default function CalendarioGlobalPage() {
 
   const cargarDatos = async (userId: string) => {
     try {
-      // Cargar propiedades
+      // 1. Primero regenerar tickets automáticamente para asegurar 1 año de cobertura
+      console.log('🔄 Regenerando tickets automáticamente...')
+      await autoRegenerateTickets(userId)
+
+      // 2. Cargar propiedades
       const { data: propsPropias } = await supabase
         .from('propiedades')
         .select('id, nombre_propiedad, owner_id')
@@ -158,10 +163,10 @@ export default function CalendarioGlobalPage() {
         return
       }
 
-      // Cargar TODOS los tickets de los próximos 3 meses
+      // Cargar TODOS los tickets del próximo año
       const hoy = new Date()
-      const fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)
-      const fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 3, 0)
+      const fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1) // Incluir mes anterior
+      const fechaFin = new Date(hoy.getFullYear() + 1, hoy.getMonth(), hoy.getDate()) // Hasta 1 año adelante
 
       const propIds = todasPropiedades.map(p => p.id)
       const { data: ticketsData, error: ticketsError } = await supabase

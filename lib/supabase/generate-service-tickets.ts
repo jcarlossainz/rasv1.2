@@ -5,7 +5,8 @@
  * Esta función genera tickets recurrentes en la tabla fechas_pago_servicios
  * basándose en los servicios configurados en una propiedad.
  *
- * Genera tickets para los próximos 3 meses a partir de la fecha actual.
+ * Genera tickets para el próximo 1 año a partir de la fecha actual.
+ * Se regenera automáticamente para mantener siempre 1 año de tickets disponibles.
  */
 
 import { supabase } from './client';
@@ -151,11 +152,12 @@ export async function generateServiceTickets({
       console.log('🗑️ Tickets existentes eliminados');
     }
 
-    // 3. Generar tickets para los próximos 3 meses
+    // 3. Generar tickets para el próximo 1 año
     const ticketsParaInsertar: any[] = [];
     const hoy = new Date();
-    const tresMesesDespues = new Date();
-    tresMesesDespues.setMonth(hoy.getMonth() + 3);
+    hoy.setHours(0, 0, 0, 0); // Normalizar a inicio del día
+    const unAnoDespues = new Date(hoy);
+    unAnoDespues.setFullYear(hoy.getFullYear() + 1);
 
     for (const service of serviciosValidos) {
       const servicioId = serviceIdMap.get(service.id);
@@ -164,17 +166,17 @@ export async function generateServiceTickets({
         continue;
       }
 
-      // Calcular cuántas fechas necesitamos generar (aprox 3 meses)
+      // Calcular cuántas fechas necesitamos generar (1 año completo)
       const frecuencia = service.frecuenciaCantidad || 1;
       const unidad = service.frecuenciaUnidad || 'mes';
 
-      let cantidadFechas = 3; // Por defecto 3 pagos
+      let cantidadFechas = 12; // Por defecto 12 pagos (1 año mensual)
       if (unidad === 'mes') {
-        cantidadFechas = Math.ceil(3 / frecuencia); // Ajustar según frecuencia
+        cantidadFechas = Math.ceil(12 / frecuencia); // Ajustar según frecuencia
       } else if (unidad === 'dia') {
-        cantidadFechas = Math.ceil(90 / frecuencia); // ~90 días = 3 meses
+        cantidadFechas = Math.ceil(365 / frecuencia); // ~365 días = 1 año
       } else if (unidad === 'año') {
-        cantidadFechas = 1; // Solo 1 pago para servicios anuales
+        cantidadFechas = Math.ceil(1 / frecuencia); // 1 o más pagos según frecuencia
       }
 
       // Generar las fechas
@@ -182,12 +184,12 @@ export async function generateServiceTickets({
         service.lastPaymentDate,
         frecuencia,
         unidad,
-        Math.min(cantidadFechas, 12) // Máximo 12 tickets por servicio
+        Math.min(cantidadFechas, 365) // Máximo 365 tickets por servicio (1 por día)
       );
 
-      // Crear tickets solo para fechas dentro de los próximos 3 meses
+      // Crear tickets solo para fechas dentro del próximo año
       for (const fecha of proximasFechas) {
-        if (fecha <= tresMesesDespues) {
+        if (fecha >= hoy && fecha <= unAnoDespues) {
           ticketsParaInsertar.push({
             propiedad_id: propertyId,
             servicio_id: servicioId,
@@ -226,7 +228,7 @@ export async function generateServiceTickets({
         ticketsCreated: ticketsInsertados?.length || 0
       };
     } else {
-      console.log('ℹ️ No se generaron tickets (todas las fechas están fuera del rango de 3 meses)');
+      console.log('ℹ️ No se generaron tickets (todas las fechas están fuera del rango de 1 año)');
       return {
         success: true,
         ticketsCreated: 0
@@ -238,6 +240,100 @@ export async function generateServiceTickets({
     return {
       success: false,
       ticketsCreated: 0,
+      error: error?.message || 'Error desconocido'
+    };
+  }
+}
+
+/**
+ * Regenera automáticamente tickets para todas las propiedades del usuario
+ * Asegura que siempre haya tickets hasta 1 año en el futuro
+ */
+export async function autoRegenerateTickets(userId: string): Promise<{
+  success: boolean;
+  propertiesProcessed: number;
+  totalTicketsCreated: number;
+  error?: string;
+}> {
+  try {
+    console.log('🔄 ========================================');
+    console.log('🔄 AUTO-REGENERANDO TICKETS');
+    console.log(`🔄 Usuario: ${userId}`);
+    console.log('🔄 ========================================');
+
+    // 1. Obtener todas las propiedades del usuario (propias y compartidas)
+    const { data: propsPropias } = await supabase
+      .from('propiedades')
+      .select('id, servicios')
+      .eq('owner_id', userId);
+
+    const { data: propsCompartidas } = await supabase
+      .from('propiedades_colaboradores')
+      .select('propiedad_id, propiedades!inner(id, servicios)')
+      .eq('user_id', userId);
+
+    // Combinar propiedades
+    const propiedadesPropias = propsPropias || [];
+    const propiedadesCompartidas = (propsCompartidas || []).map(pc => ({
+      id: pc.propiedades.id,
+      servicios: pc.propiedades.servicios
+    }));
+
+    const todasPropiedades = [...propiedadesPropias, ...propiedadesCompartidas];
+
+    console.log(`📋 Propiedades encontradas: ${todasPropiedades.length}`);
+
+    if (todasPropiedades.length === 0) {
+      return {
+        success: true,
+        propertiesProcessed: 0,
+        totalTicketsCreated: 0
+      };
+    }
+
+    // 2. Regenerar tickets para cada propiedad que tenga servicios
+    let propertiesProcessed = 0;
+    let totalTicketsCreated = 0;
+
+    for (const propiedad of todasPropiedades) {
+      const servicios = propiedad.servicios as Service[] || [];
+
+      if (servicios.length > 0) {
+        console.log(`🔄 Regenerando tickets para propiedad ${propiedad.id}...`);
+
+        const result = await generateServiceTickets({
+          propertyId: propiedad.id,
+          services: servicios
+        });
+
+        if (result.success) {
+          propertiesProcessed++;
+          totalTicketsCreated += result.ticketsCreated;
+          console.log(`✅ ${result.ticketsCreated} tickets creados para propiedad ${propiedad.id}`);
+        } else {
+          console.error(`❌ Error en propiedad ${propiedad.id}: ${result.error}`);
+        }
+      }
+    }
+
+    console.log('✅ ========================================');
+    console.log(`✅ REGENERACIÓN COMPLETADA`);
+    console.log(`✅ Propiedades procesadas: ${propertiesProcessed}`);
+    console.log(`✅ Tickets totales creados: ${totalTicketsCreated}`);
+    console.log('✅ ========================================');
+
+    return {
+      success: true,
+      propertiesProcessed,
+      totalTicketsCreated
+    };
+
+  } catch (error: any) {
+    console.error('❌ Error en auto-regeneración:', error);
+    return {
+      success: false,
+      propertiesProcessed: 0,
+      totalTicketsCreated: 0,
       error: error?.message || 'Error desconocido'
     };
   }
