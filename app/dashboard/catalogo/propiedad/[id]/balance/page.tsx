@@ -624,9 +624,6 @@ export default function BalancePropiedadPage() {
                     {/* Header CUENTA */}
                     <th className="px-6 py-3 text-left text-xs font-semibold font-poppins uppercase">Cuenta</th>
 
-                    {/* Header MÉTODO */}
-                    <th className="px-6 py-3 text-left text-xs font-semibold font-poppins uppercase">Método</th>
-
                     <th className="px-6 py-3 text-right text-xs font-semibold font-poppins uppercase">Monto</th>
                   </tr>
                 </thead>
@@ -680,11 +677,6 @@ export default function BalancePropiedadPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-700">
                           {mov.cuenta_nombre || <span className="text-gray-400">Sin cuenta</span>}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-700 capitalize">
-                          {mov.metodo_pago ? mov.metodo_pago.replace('_', ' ') : <span className="text-gray-400">-</span>}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
