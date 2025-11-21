@@ -575,7 +575,7 @@ interface Ticket {
 
 ### TABLA: `propiedades_colaboradores`
 
-**Descripción:** Relación N:N entre propiedades y colaboradores (usuarios que pueden ver/editar propiedades).
+**Descripción:** Relación N:N entre propiedades y colaboradores. Soporta usuarios registrados (user_id) e invitaciones pendientes (email_invitado).
 
 #### Estructura de Campos
 
@@ -585,15 +585,20 @@ CREATE TABLE propiedades_colaboradores (
   id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   propiedad_id    UUID REFERENCES propiedades(id) ON DELETE CASCADE,
   user_id         UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  email_invitado  TEXT, -- Para invitar usuarios no registrados
 
   -- ===== PERMISOS =====
-  rol             TEXT DEFAULT 'viewer', -- 'viewer' | 'editor' | 'admin'
+  rol             TEXT NOT NULL, -- 'supervisor' | 'propietario' | 'promotor'
 
   -- ===== TIMESTAMPS =====
   created_at      TIMESTAMPTZ DEFAULT NOW(),
 
-  -- ===== CONSTRAINT =====
-  UNIQUE(propiedad_id, user_id)
+  -- ===== CONSTRAINTS =====
+  -- user_id y email_invitado son mutuamente exclusivos
+  CONSTRAINT check_user_or_email CHECK (
+    (user_id IS NOT NULL AND email_invitado IS NULL) OR
+    (user_id IS NULL AND email_invitado IS NOT NULL)
+  )
 );
 ```
 
@@ -602,7 +607,24 @@ CREATE TABLE propiedades_colaboradores (
 ```sql
 CREATE INDEX idx_colaboradores_propiedad ON propiedades_colaboradores(propiedad_id);
 CREATE INDEX idx_colaboradores_user ON propiedades_colaboradores(user_id);
+
+-- Índices UNIQUE parciales para evitar duplicados
+CREATE UNIQUE INDEX idx_unique_propiedad_user
+ON propiedades_colaboradores (propiedad_id, user_id)
+WHERE user_id IS NOT NULL;
+
+CREATE UNIQUE INDEX idx_unique_propiedad_email
+ON propiedades_colaboradores (propiedad_id, email_invitado)
+WHERE email_invitado IS NOT NULL;
 ```
+
+#### Roles Explicados
+
+| Rol | Permisos | Uso |
+|-----|----------|-----|
+| `supervisor` | Ver y gestionar todo excepto: compartir, duplicar, editar configuración | Para administradores de la propiedad |
+| `propietario` | Solo visualización. NO puede crear/editar tickets | Para dueños que solo quieren ver |
+| `promotor` | Acceso únicamente a sección de Anuncios | Para agentes de ventas/rentas |
 
 #### Contrato TypeScript
 
@@ -610,11 +632,27 @@ CREATE INDEX idx_colaboradores_user ON propiedades_colaboradores(user_id);
 interface PropiedadColaborador {
   id: string;
   propiedad_id: string;
-  user_id: string;
-  rol: 'viewer' | 'editor' | 'admin';
+  user_id?: string | null; // NULL si es invitación pendiente
+  email_invitado?: string | null; // Se usa cuando user_id es NULL
+  rol: 'supervisor' | 'propietario' | 'promotor';
   created_at?: string;
 }
+
+interface Colaborador {
+  id: string;
+  user_id: string | null;
+  email: string;
+  full_name?: string;
+  email_invitado?: string | null;
+  esPendiente?: boolean; // true si email_invitado está presente
+}
 ```
+
+#### Notas Importantes
+
+- **Invitaciones pendientes:** Cuando se invita a un email no registrado, se crea un registro con `email_invitado` y `user_id = NULL`
+- **Conversión automática:** Cuando el usuario se registra, se puede actualizar el registro para usar `user_id` en lugar de `email_invitado`
+- **Migración:** Los roles antiguos (`admin`, `editor`, `viewer`) fueron migrados a los nuevos valores
 
 ---
 
