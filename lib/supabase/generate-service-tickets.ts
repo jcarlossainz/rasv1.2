@@ -61,19 +61,19 @@ async function crearRegistrosServicios(
     await supabase
       .from('servicios_inmueble')
       .delete()
-      .eq('inmueble_id', propertyId);
+      .eq('propiedad_id', propertyId);
 
     console.log(`🗑️ Servicios existentes eliminados para propiedad ${propertyId}`);
 
     // Crear registros en servicios_inmueble
     const serviciosParaInsertar = services.map(service => ({
-      inmueble_id: propertyId,
+      propiedad_id: propertyId,
       nombre: service.name,
       tipo_servicio: service.type,
       proveedor: service.provider || null,
-      numero_cuenta: service.accountNumber || null,
-      costo_promedio: service.cost || 0,
-      tipo_monto: service.montoTipo || 'fijo',
+      numero_contrato: service.accountNumber || null,
+      monto: service.cost || 0,
+      es_fijo: service.montoTipo === 'fijo' || !service.montoTipo,
       frecuencia_cantidad: service.frecuenciaCantidad || 1,
       frecuencia_unidad: service.frecuenciaUnidad || 'mes',
       notas: service.notes || null
