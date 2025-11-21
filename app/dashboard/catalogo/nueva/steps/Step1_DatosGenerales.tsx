@@ -69,15 +69,18 @@ export default function Step1_DatosGenerales({ data, onUpdate }: Step1Props) {
     setPersonasAsignadas([...propietarios, ...supervisores]);
   }, [data.propietarios_email, data.supervisores_email]);
 
-  const handleAgregarPersona = async (email: string, rol: 'propietario' | 'supervisor' | 'promotor') => {
+  const handleAgregarPersona = async (email: string, rol: 'propietario' | 'supervisor' | 'promotor' | 'inquilino') => {
     // Verificar que no esté duplicado
     if (personasAsignadas.some(p => p.email === email)) {
       throw new Error('Esta persona ya fue agregada');
     }
 
-    // En wizard solo manejamos propietario y supervisor (promotor no aplica aquí)
+    // En wizard step1 solo manejamos propietario y supervisor (promotor e inquilino no aplican aquí)
     if (rol === 'promotor') {
       throw new Error('No se puede asignar rol de Promotor en el wizard');
+    }
+    if (rol === 'inquilino') {
+      throw new Error('El rol de Inquilino se asigna en el Paso 4');
     }
 
     // Agregar a la lista

@@ -3,110 +3,11 @@
 import React, { useState } from 'react';
 import { PropertyFormData } from '@/types/property';
 import Input from '@/components/ui/input';
+import ModalAgregarPersona from '@/components/ModalAgregarPersona';
 
 interface Step4Props {
   data: PropertyFormData;
   onUpdate: (data: Partial<PropertyFormData>) => void;
-  inquilinos?: Array<{
-    id: string;
-    nombre: string;
-    email: string;
-  }>;
-  onAgregarInquilino?: (email: string) => Promise<void>;
-}
-
-// Modal para agregar inquilino
-interface ModalAgregarInquilinoProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onAgregar: (email: string) => Promise<void>;
-}
-
-function ModalAgregarInquilino({ isOpen, onClose, onAgregar }: ModalAgregarInquilinoProps) {
-  const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  if (!isOpen) return null;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    
-    // Validar que el campo no esté vacío
-    if (!email.trim()) {
-      setError('Por favor ingresa un correo');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await onAgregar(email);
-      setEmail('');
-      onClose();
-    } catch (err: any) {
-      setError(err.message || 'Error al agregar inquilino');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
-      <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-gray-900">
-            Agregar inquilino
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Correo electrónico
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="ejemplo@correo.com"
-              className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ras-azul focus:border-transparent"
-              required
-              autoFocus
-            />
-            {error && (
-              <p className="text-red-500 text-sm mt-1">{error}</p>
-            )}
-          </div>
-
-          <div className="flex gap-3 justify-end">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-semibold"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-6 py-2 bg-ras-azul text-white rounded-lg hover:bg-ras-azul/90 transition-colors font-semibold disabled:opacity-50"
-            >
-              {loading ? 'Agregando...' : 'Agregar'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
 }
 
 const AMENIDADES_VACACIONAL = [
@@ -138,17 +39,12 @@ const DURACION_CONTRATO_UNIDAD = [
   { value: 'años', label: 'Años' }
 ];
 
-export default function Step4_Condicionales({ 
-  data, 
-  onUpdate, 
-  inquilinos = [],
-  onAgregarInquilino
+export default function Step4_Condicionales({
+  data,
+  onUpdate
 }: Step4Props) {
   const [estaRentado, setEstaRentado] = useState(false);
   const [showModal, setShowModal] = useState(false);
-
-  // Debug
-  console.log('Step4 - showModal:', showModal);
 
   // Sincronizar el estado cuando cambie el inquilino_email desde fuera
   React.useEffect(() => {
@@ -198,14 +94,26 @@ export default function Step4_Condicionales({
     }
   };
 
-  const handleAgregarInquilinoModal = async (email: string) => {
-    if (onAgregarInquilino) {
-      await onAgregarInquilino(email);
-    } else {
-      // Comportamiento por defecto: solo cerrar el modal
-      // El padre debe implementar onAgregarInquilino para guardar en BD
-      console.warn('onAgregarInquilino no está implementado');
+  const handleAgregarInquilino = async (email: string, rol: 'propietario' | 'supervisor' | 'promotor' | 'inquilino') => {
+    // Verificar que el rol sea inquilino (el modal debe venir con rolFijo='inquilino')
+    if (rol !== 'inquilino') {
+      throw new Error('Solo se pueden agregar inquilinos en esta sección');
     }
+
+    // Verificar que no esté duplicado
+    const currentEmails = Array.isArray(data.inquilinos_email) ? data.inquilinos_email : [];
+    if (currentEmails.includes(email)) {
+      throw new Error('Este inquilino ya fue agregado');
+    }
+
+    // Agregar al array de inquilinos_email
+    handleChange('inquilinos_email', [...currentEmails, email]);
+  };
+
+  const handleEliminarInquilino = (email: string) => {
+    const currentEmails = Array.isArray(data.inquilinos_email) ? data.inquilinos_email : [];
+    const newEmails = currentEmails.filter(e => e !== email);
+    handleChange('inquilinos_email', newEmails);
   };
 
   const renderSection = (estado: string) => {
@@ -257,63 +165,55 @@ export default function Step4_Condicionales({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Inquilino */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Inquilino(s) *
-                    </label>
-                    <div className="flex gap-2">
-                      <div className="flex-1 border-2 border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-ras-azul focus-within:border-transparent">
-                        <div className="max-h-40 overflow-y-auto p-2">
-                          {inquilinos.length === 0 ? (
-                            <p className="text-gray-400 text-sm py-2 px-2">No hay inquilinos disponibles</p>
-                          ) : (
-                            inquilinos.map((inq) => (
-                              <label
-                                key={inq.email}
-                                className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={Array.isArray(data.inquilinos_email) 
-                                    ? data.inquilinos_email.includes(inq.email)
-                                    : false
-                                  }
-                                  onChange={(e) => {
-                                    const currentEmails = Array.isArray(data.inquilinos_email) 
-                                      ? data.inquilinos_email 
-                                      : [];
-                                    
-                                    const newEmails = e.target.checked
-                                      ? [...currentEmails, inq.email]
-                                      : currentEmails.filter(email => email !== inq.email);
-                                    
-                                    handleChange('inquilinos_email', newEmails);
-                                  }}
-                                  className="rounded text-ras-azul focus:ring-ras-azul"
-                                />
-                                <span className="text-sm">{inq.email}</span>
-                              </label>
-                            ))
-                          )}
-                        </div>
-                      </div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Inquilino(s) *
+                      </label>
                       <button
                         type="button"
-                        onClick={() => {
-                          console.log('Abriendo modal de inquilino');
-                          setShowModal(true);
-                        }}
-                        className="px-4 py-2.5 bg-ras-azul text-white rounded-lg hover:bg-ras-azul/90 transition-colors font-semibold"
+                        onClick={() => setShowModal(true)}
+                        className="px-3 py-1.5 bg-ras-azul text-white rounded-lg hover:bg-ras-azul/90 transition-colors font-semibold text-sm flex items-center gap-1"
                         title="Agregar inquilino"
                       >
-                        +
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Agregar
                       </button>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {inquilinos.length === 0 
-                        ? 'No hay inquilinos. Agrega uno nuevo.' 
-                        : `${Array.isArray(data.inquilinos_email) ? data.inquilinos_email.length : 0} seleccionado(s) de ${inquilinos.length}`
-                      }
-                    </p>
+
+                    {/* Lista de inquilinos */}
+                    {(!data.inquilinos_email || data.inquilinos_email.length === 0) ? (
+                      <div className="text-center py-4 text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
+                        <p className="text-sm">No hay inquilinos asignados</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {data.inquilinos_email.map((email, index) => (
+                          <div
+                            key={`${email}-${index}`}
+                            className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-200"
+                          >
+                            <div className="flex items-center gap-2 flex-1">
+                              <div className="w-8 h-8 bg-gradient-to-br from-ras-azul to-ras-turquesa rounded-full flex items-center justify-center text-white font-bold text-xs">
+                                {email.charAt(0).toUpperCase()}
+                              </div>
+                              <span className="text-sm font-medium text-gray-800">{email}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleEliminarInquilino(email)}
+                              className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Eliminar inquilino"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Día de pago */}
@@ -527,13 +427,13 @@ export default function Step4_Condicionales({
       </div>
 
       {/* Modal para agregar inquilino */}
-      {showModal && (
-        <ModalAgregarInquilino
-          isOpen={showModal}
-          onClose={() => setShowModal(false)}
-          onAgregar={handleAgregarInquilinoModal}
-        />
-      )}
+      <ModalAgregarPersona
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onAgregar={handleAgregarInquilino}
+        rolFijo="inquilino"
+        mostrarInquilino={true}
+      />
     </>
   );
 }

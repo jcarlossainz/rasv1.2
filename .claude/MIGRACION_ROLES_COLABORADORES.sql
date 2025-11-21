@@ -54,6 +54,7 @@ END $$;
 -- Mapeo de roles:
 -- 'admin' | 'editor' -> 'supervisor'
 -- 'viewer' -> 'propietario'
+-- Nuevos roles válidos: supervisor, propietario, promotor, inquilino
 
 DO $$
 DECLARE
@@ -101,13 +102,13 @@ END $$;
 -- PASO 5: Actualizar comentarios de la tabla
 -- ----------------------------------------------------------------------------
 COMMENT ON COLUMN propiedades_colaboradores.rol IS
-  'Rol del colaborador: supervisor | propietario | promotor';
+  'Rol del colaborador: supervisor | propietario | promotor | inquilino';
 
 COMMENT ON COLUMN propiedades_colaboradores.email_invitado IS
   'Email de invitación para usuarios no registrados. Se usa cuando user_id es NULL';
 
 COMMENT ON TABLE propiedades_colaboradores IS
-  'Colaboradores de propiedades. Soporta usuarios registrados (user_id) y invitaciones pendientes (email_invitado)';
+  'Colaboradores de propiedades. Soporta usuarios registrados (user_id) y invitaciones pendientes (email_invitado). Roles: supervisor, propietario, promotor, inquilino';
 
 DO $$
 BEGIN

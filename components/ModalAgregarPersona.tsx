@@ -5,18 +5,24 @@ import { useState } from 'react'
 interface ModalAgregarPersonaProps {
   isOpen: boolean
   onClose: () => void
-  onAgregar: (email: string, rol: 'propietario' | 'supervisor' | 'promotor') => void
+  onAgregar: (email: string, rol: 'propietario' | 'supervisor' | 'promotor' | 'inquilino') => void
   mostrarPromotor?: boolean // Para controlar si mostrar opción promotor (wizard no lo muestra)
+  mostrarInquilino?: boolean // Para controlar si mostrar opción inquilino
+  rolFijo?: 'propietario' | 'supervisor' | 'promotor' | 'inquilino' // Si se pasa, el rol queda fijo y no se puede cambiar
 }
 
 export default function ModalAgregarPersona({
   isOpen,
   onClose,
   onAgregar,
-  mostrarPromotor = false
+  mostrarPromotor = false,
+  mostrarInquilino = false,
+  rolFijo
 }: ModalAgregarPersonaProps) {
   const [email, setEmail] = useState('')
-  const [rol, setRol] = useState<'propietario' | 'supervisor' | 'promotor'>('propietario')
+  const [rol, setRol] = useState<'propietario' | 'supervisor' | 'promotor' | 'inquilino'>(
+    rolFijo || 'propietario'
+  )
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -87,13 +93,20 @@ export default function ModalAgregarPersona({
             </label>
             <select
               value={rol}
-              onChange={(e) => setRol(e.target.value as 'propietario' | 'supervisor' | 'promotor')}
-              className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ras-azul focus:border-transparent font-roboto"
+              onChange={(e) => setRol(e.target.value as 'propietario' | 'supervisor' | 'promotor' | 'inquilino')}
+              disabled={!!rolFijo}
+              className={`w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ras-azul focus:border-transparent font-roboto ${
+                rolFijo ? 'bg-gray-100 cursor-not-allowed' : ''
+              }`}
             >
               <option value="propietario">Propietario</option>
               <option value="supervisor">Supervisor</option>
               {mostrarPromotor && <option value="promotor">Promotor</option>}
+              {mostrarInquilino && <option value="inquilino">Inquilino</option>}
             </select>
+            {rolFijo && (
+              <p className="text-xs text-gray-500 mt-1">Este rol no se puede cambiar</p>
+            )}
           </div>
 
           <div className="flex gap-3 justify-end">
