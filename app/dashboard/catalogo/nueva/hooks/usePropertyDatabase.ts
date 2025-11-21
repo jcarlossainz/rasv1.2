@@ -12,6 +12,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { PropertyFormData } from '@/types/property';
+import { generateServiceTickets } from '@/lib/supabase/generate-service-tickets';
 
 // ============================================================================
 // TIPOS
@@ -364,6 +365,20 @@ export function usePropertyDatabase() {
           data.inquilinos_email || []
         );
 
+        // Generar tickets automáticos desde los servicios
+        if (data.servicios && data.servicios.length > 0) {
+          const ticketResult = await generateServiceTickets({
+            propertyId,
+            services: data.servicios
+          });
+
+          if (ticketResult.success) {
+            console.log(`✅ ${ticketResult.ticketsCreated} tickets automáticos generados`);
+          } else {
+            console.error(`❌ Error generando tickets: ${ticketResult.error}`);
+          }
+        }
+
         return {
           success: true,
           propertyId: propertyId
@@ -407,6 +422,20 @@ export function usePropertyDatabase() {
           data.supervisores_email || [],
           data.inquilinos_email || []
         );
+
+        // Generar tickets automáticos desde los servicios
+        if (data.servicios && data.servicios.length > 0) {
+          const ticketResult = await generateServiceTickets({
+            propertyId: newProperty.id,
+            services: data.servicios
+          });
+
+          if (ticketResult.success) {
+            console.log(`✅ ${ticketResult.ticketsCreated} tickets automáticos generados`);
+          } else {
+            console.error(`❌ Error generando tickets: ${ticketResult.error}`);
+          }
+        }
 
         return {
           success: true,
