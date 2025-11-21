@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import Modal from '@/components/ui/modal'
-import Input from '@/components/ui/input'
 import Button from '@/components/ui/button'
 import { useToast } from '@/hooks/useToast'
 import { useConfirm } from '@/components/ui/confirm-modal'
+import ModalAgregarPersona from '@/components/ModalAgregarPersona'
 
 interface CompartirPropiedadProps {
   isOpen: boolean
@@ -38,9 +38,7 @@ export default function CompartirPropiedad({
   const confirm = useConfirm()
 
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([])
-  const [emailColaborador, setEmailColaborador] = useState('')
-  const [rolSeleccionado, setRolSeleccionado] = useState<'supervisor' | 'propietario' | 'promotor'>('supervisor')
-  const [agregando, setAgregando] = useState(false)
+  const [showModalAgregar, setShowModalAgregar] = useState(false)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -95,69 +93,56 @@ export default function CompartirPropiedad({
     }
   }
 
-  const agregarColaborador = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setAgregando(true)
+  const agregarColaborador = async (email: string, rol: 'propietario' | 'supervisor' | 'promotor') => {
+    const emailBuscar = email.trim().toLowerCase()
 
-    try {
-      const emailBuscar = emailColaborador.trim().toLowerCase()
-
-      // Validar que no sea el mismo usuario
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (authUser?.email?.toLowerCase() === emailBuscar) {
-        toast.error('No puedes agregarte a ti mismo')
-        setAgregando(false)
-        return
-      }
-
-      // Buscar si el usuario ya está registrado
-      const { data: perfilData } = await supabase
-        .from('profiles')
-        .select('id, email')
-        .eq('email', emailBuscar)
-        .maybeSingle() // maybeSingle permite que no exista sin error
-
-      let dataToInsert: any = {
-        propiedad_id: propiedadId,
-        rol: rolSeleccionado
-      }
-
-      if (perfilData) {
-        // ✅ Usuario registrado: usar user_id
-        dataToInsert.user_id = perfilData.id
-      } else {
-        // ✅ Usuario NO registrado: usar email_invitado (invitación abierta)
-        dataToInsert.email_invitado = emailBuscar
-      }
-
-      // Agregar colaborador o invitación
-      const { error: insertError } = await supabase
-        .from('propiedades_colaboradores')
-        .insert(dataToInsert)
-
-      if (insertError) {
-        if (insertError.code === '23505') {
-          toast.warning('Este email ya fue invitado o ya es colaborador')
-        } else {
-          toast.error('Error: ' + insertError.message)
-        }
-        setAgregando(false)
-      } else {
-        setEmailColaborador('')
-        if (perfilData) {
-          toast.success('Colaborador agregado correctamente')
-        } else {
-          toast.success('Invitación enviada. El usuario tendrá acceso cuando se registre.')
-        }
-        // Recargar colaboradores después de agregar
-        await cargarColaboradores()
-        setAgregando(false)
-      }
-    } catch (err) {
-      toast.error('Error: ' + (err as Error).message)
-    } finally {
-      setAgregando(false)
+    // Validar que no sea el mismo usuario
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    if (authUser?.email?.toLowerCase() === emailBuscar) {
+      throw new Error('No puedes agregarte a ti mismo')
     }
+
+    // Buscar si el usuario ya está registrado
+    const { data: perfilData } = await supabase
+      .from('profiles')
+      .select('id, email')
+      .eq('email', emailBuscar)
+      .maybeSingle()
+
+    let dataToInsert: any = {
+      propiedad_id: propiedadId,
+      rol: rol
+    }
+
+    if (perfilData) {
+      // ✅ Usuario registrado: usar user_id
+      dataToInsert.user_id = perfilData.id
+    } else {
+      // ✅ Usuario NO registrado: usar email_invitado
+      dataToInsert.email_invitado = emailBuscar
+    }
+
+    // Agregar colaborador o invitación
+    const { error: insertError } = await supabase
+      .from('propiedades_colaboradores')
+      .insert(dataToInsert)
+
+    if (insertError) {
+      if (insertError.code === '23505') {
+        throw new Error('Este email ya fue invitado o ya es colaborador')
+      } else {
+        throw new Error('Error: ' + insertError.message)
+      }
+    }
+
+    if (perfilData) {
+      toast.success('Colaborador agregado correctamente')
+    } else {
+      toast.success('Invitación enviada. El usuario tendrá acceso cuando se registre.')
+    }
+
+    // Recargar colaboradores
+    await cargarColaboradores()
   }
 
   const eliminarColaborador = async (colaboradorId: string, emailColab: string) => {
@@ -195,38 +180,21 @@ export default function CompartirPropiedad({
 
       {esPropio ? (
         <>
-          <h3 className="text-xl font-semibold mb-4 font-poppins text-gray-800">
-            Colaboradores
-          </h3>
-
-          {/* Formulario agregar colaborador */}
-          <form onSubmit={agregarColaborador} className="mb-6">
-            <div className="flex gap-2 mb-3">
-              <Input
-                type="email"
-                value={emailColaborador}
-                onChange={(e) => setEmailColaborador(e.target.value)}
-                placeholder="Email del colaborador"
-                required
-                className="flex-1"
-              />
-              <select
-                value={rolSeleccionado}
-                onChange={(e) => setRolSeleccionado(e.target.value as 'supervisor' | 'propietario' | 'promotor')}
-                className="px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ras-azul focus:border-transparent font-roboto"
-              >
-                <option value="supervisor">Supervisor</option>
-                <option value="propietario">Propietario</option>
-                <option value="promotor">Promotor</option>
-              </select>
-              <Button type="submit" disabled={agregando} size="md">
-                {agregando ? 'Agregando...' : 'Agregar'}
-              </Button>
-            </div>
-            <p className="text-xs text-gray-500 font-roboto">
-              💡 Puedes invitar cualquier email. Si aún no está registrado, tendrá acceso automáticamente cuando se registre.
-            </p>
-          </form>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-semibold font-poppins text-gray-800">
+              Colaboradores
+            </h3>
+            <Button
+              onClick={() => setShowModalAgregar(true)}
+              size="md"
+              className="flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              Agregar Persona
+            </Button>
+          </div>
 
           {/* Lista de colaboradores */}
           {loading ? (
@@ -303,6 +271,14 @@ export default function CompartirPropiedad({
           Cerrar
         </Button>
       </div>
+
+      {/* Modal para agregar colaborador */}
+      <ModalAgregarPersona
+        isOpen={showModalAgregar}
+        onClose={() => setShowModalAgregar(false)}
+        onAgregar={agregarColaborador}
+        mostrarPromotor={true}
+      />
     </Modal>
   )
 }
