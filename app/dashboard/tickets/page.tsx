@@ -125,7 +125,9 @@ export default function TicketsGlobalPage() {
 
       // Cargar todos los tickets pendientes - SELECT ESPECÍFICO
       const propIds = todasPropiedades.map(p => p.id)
-      const { data: ticketsData, error: ticketsError } = await supabase
+
+      // 1. Cargar tickets manuales
+      const { data: ticketsManuales, error: ticketsError } = await supabase
         .from('tickets')
         .select(`
           id,
@@ -148,14 +150,39 @@ export default function TicketsGlobalPage() {
 
       if (ticketsError) {
         console.error('Error cargando tickets:', ticketsError)
-        setTickets([])
-        return
       }
 
-      const ticketsTransformados = (ticketsData || []).map(ticket => {
+      // 2. Cargar tickets de servicios (pagos pendientes)
+      const { data: pagosPendientes, error: pagosError } = await supabase
+        .from('fechas_pago_servicios')
+        .select(`
+          id,
+          fecha_pago,
+          monto_estimado,
+          pagado,
+          propiedad_id,
+          servicio_id,
+          servicios_inmueble (
+            nombre,
+            tipo_servicio,
+            proveedor,
+            responsable
+          )
+        `)
+        .in('propiedad_id', propIds)
+        .eq('pagado', false)
+        .order('fecha_pago', { ascending: true })
+        .limit(200)
+
+      if (pagosError) {
+        console.error('Error cargando pagos de servicios:', pagosError)
+      }
+
+      // Transformar tickets manuales
+      const ticketsManualesTransformados = (ticketsManuales || []).map(ticket => {
         const propiedad = todasPropiedades.find(p => p.id === ticket.propiedad_id)
         const diasRestantes = getDiasRestantes(ticket.fecha_programada)
-        
+
         return {
           id: ticket.id,
           titulo: ticket.titulo,
@@ -163,9 +190,9 @@ export default function TicketsGlobalPage() {
           monto_estimado: ticket.monto_estimado,
           pagado: ticket.pagado,
           servicio_id: ticket.servicio_id,
-          tipo_ticket: ticket.tipo_ticket,
-          estado: ticket.estado,
-          prioridad: ticket.prioridad,
+          tipo_ticket: ticket.tipo_ticket || 'Manual',
+          estado: ticket.estado || 'pendiente',
+          prioridad: ticket.prioridad || 'Media',
           responsable: ticket.responsable,
           proveedor: ticket.proveedor,
           propiedad_id: ticket.propiedad_id,
@@ -174,7 +201,39 @@ export default function TicketsGlobalPage() {
         }
       })
 
-      setTickets(ticketsTransformados)
+      // Transformar pagos de servicios
+      const ticketsServiciosTransformados = (pagosPendientes || []).map(pago => {
+        const propiedad = todasPropiedades.find(p => p.id === pago.propiedad_id)
+        const diasRestantes = getDiasRestantes(pago.fecha_pago)
+        const servicio = (pago.servicios_inmueble as any)
+
+        return {
+          id: pago.id,
+          titulo: `Pago: ${servicio?.nombre || 'Servicio'}`,
+          fecha_programada: pago.fecha_pago,
+          monto_estimado: pago.monto_estimado,
+          pagado: pago.pagado,
+          servicio_id: pago.servicio_id,
+          tipo_ticket: servicio?.tipo_servicio || 'Servicio',
+          estado: 'pendiente',
+          prioridad: diasRestantes < 0 ? 'Urgente' : diasRestantes <= 7 ? 'Alta' : 'Media',
+          responsable: servicio?.responsable,
+          proveedor: servicio?.proveedor,
+          propiedad_id: pago.propiedad_id,
+          propiedad_nombre: propiedad?.nombre || 'Sin nombre',
+          dias_restantes: diasRestantes
+        }
+      })
+
+      // Combinar y ordenar todos los tickets
+      const todosLosTickets = [
+        ...ticketsManualesTransformados,
+        ...ticketsServiciosTransformados
+      ].sort((a, b) => {
+        return new Date(a.fecha_programada).getTime() - new Date(b.fecha_programada).getTime()
+      })
+
+      setTickets(todosLosTickets)
 
     } catch (error) {
       console.error('Error cargando datos:', error)
