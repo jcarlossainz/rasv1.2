@@ -33,12 +33,12 @@ export default function RegistrarPagoModal({
   pagoExistente
 }: RegistrarPagoModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  
+
   // Estados del formulario
   const [fechaPago, setFechaPago] = useState(
     pagoExistente?.fecha_pago || new Date().toISOString().split('T')[0]
   )
-  const [propiedadId] = useState(pagoExistente?.propiedad_id || '')
+  const [propiedadId, setPropiedadId] = useState(pagoExistente?.propiedad_id || '')
   const [monto, setMonto] = useState(pagoExistente?.monto_estimado.toString() || '')
   const [referenciaPago, setReferenciaPago] = useState('')
   const [responsablePago, setResponsablePago] = useState<'Administrador' | 'Propietario' | 'Inquilino' | ''>('')
@@ -57,6 +57,16 @@ export default function RegistrarPagoModal({
   // Estados de UI
   const [guardando, setGuardando] = useState(false)
   const [subiendoArchivo, setSubiendoArchivo] = useState(false)
+
+  // Actualizar valores cuando cambie pagoExistente (cuando se abre el modal con nuevo ticket)
+  useEffect(() => {
+    if (pagoExistente) {
+      console.log('🔄 Actualizando modal con pagoExistente:', pagoExistente)
+      setFechaPago(pagoExistente.fecha_pago || new Date().toISOString().split('T')[0])
+      setPropiedadId(pagoExistente.propiedad_id || '')
+      setMonto(pagoExistente.monto_estimado.toString() || '')
+    }
+  }, [pagoExistente])
 
   // Cargar cuentas cuando cambie la propiedad
   useEffect(() => {
@@ -328,42 +338,62 @@ export default function RegistrarPagoModal({
               />
             </div>
 
-            {/* Forma de Pago (Cuentas Bancarias) */}
-            {propiedadId && (
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
-                  Forma de Pago {cuentas.length > 0 && <span className="text-red-500">*</span>}
-                </label>
-                <select
-                  value={cuentaId}
-                  onChange={(e) => setCuentaId(e.target.value)}
-                  disabled={cargandoCuentas}
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ras-turquesa text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-                >
-                  <option value="">Seleccionar forma de pago...</option>
-                  {cuentas.map(cuenta => (
-                    <option key={cuenta.id} value={cuenta.id}>
-                      💳 {cuenta.nombre} ({cuenta.tipo_moneda}) - {cuenta.tipo_cuenta}
-                      {cuenta.banco ? ` - ${cuenta.banco}` : ''} - Balance: ${cuenta.balance_actual?.toFixed(2) || '0.00'}
-                    </option>
-                  ))}
-                </select>
-                {cuentas.length === 0 ? (
-                  <div className="mt-2 p-3 bg-amber-50 border border-amber-300 rounded-lg">
-                    <p className="text-xs text-amber-800 font-semibold mb-1">
-                      ⚠️ No hay cuentas bancarias vinculadas a esta propiedad
-                    </p>
-                    <p className="text-xs text-amber-700">
-                      Ve a <strong>Balance</strong> para crear y vincular una cuenta bancaria.
-                    </p>
-                  </div>
-                ) : (
-                  <p className="mt-1 text-xs text-gray-500">
-                    💰 El balance de la cuenta se actualizará automáticamente
+            {/* Forma de Pago (Cuentas Bancarias) - SIEMPRE VISIBLE */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
+                Forma de Pago {cuentas.length > 0 && <span className="text-red-500">*</span>}
+              </label>
+
+              {!propiedadId ? (
+                <div className="p-3 bg-red-50 border border-red-300 rounded-lg">
+                  <p className="text-xs text-red-800 font-semibold">
+                    ❌ Error: No se pudo identificar la propiedad del ticket
                   </p>
-                )}
-              </div>
-            )}
+                  <p className="text-xs text-red-700 mt-1">
+                    Por favor cierra este modal e intenta de nuevo. Si el problema persiste, contacta al administrador.
+                  </p>
+                </div>
+              ) : cargandoCuentas ? (
+                <div className="p-3 bg-blue-50 border border-blue-300 rounded-lg">
+                  <p className="text-xs text-blue-800 font-semibold">
+                    ⏳ Cargando cuentas bancarias...
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <select
+                    value={cuentaId}
+                    onChange={(e) => setCuentaId(e.target.value)}
+                    disabled={cuentas.length === 0}
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ras-turquesa text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  >
+                    <option value="">
+                      {cuentas.length === 0 ? 'No hay cuentas disponibles' : 'Seleccionar forma de pago...'}
+                    </option>
+                    {cuentas.map(cuenta => (
+                      <option key={cuenta.id} value={cuenta.id}>
+                        💳 {cuenta.nombre} ({cuenta.tipo_moneda}) - {cuenta.tipo_cuenta}
+                        {cuenta.banco ? ` - ${cuenta.banco}` : ''} - Balance: ${cuenta.balance_actual?.toFixed(2) || '0.00'}
+                      </option>
+                    ))}
+                  </select>
+                  {cuentas.length === 0 ? (
+                    <div className="mt-2 p-3 bg-amber-50 border border-amber-300 rounded-lg">
+                      <p className="text-xs text-amber-800 font-semibold mb-1">
+                        ⚠️ No hay cuentas bancarias vinculadas a esta propiedad
+                      </p>
+                      <p className="text-xs text-amber-700">
+                        Ve a <strong>Balance</strong> de esta propiedad para crear y vincular una cuenta bancaria.
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-xs text-gray-500">
+                      💰 El balance de la cuenta se actualizará automáticamente
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
 
             {/* Monto */}
             <div>
