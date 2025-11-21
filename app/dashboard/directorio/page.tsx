@@ -150,32 +150,48 @@ export default function DirectorioPage() {
     }
 
     // Transformar los datos para incluir email y nombre
+    // Si no hay datos en profiles, simplemente usar email_invitado
     const colaboradoresConDatos = await Promise.all((data || []).map(async (col) => {
       if (col.user_id) {
-        // Si tiene user_id, buscar en profiles
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('nombre, email, telefono')
-          .eq('id', col.user_id)
-          .single()
+        // Si tiene user_id, intentar buscar en profiles (pero no fallar si no existe)
+        try {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('nombre, email, telefono')
+            .eq('id', col.user_id)
+            .maybeSingle()
 
+          if (profile && !profileError) {
+            return {
+              ...col,
+              email: profile.email || col.email_invitado || 'Sin email',
+              nombre: profile.nombre || profile.email || col.email_invitado || 'Sin nombre',
+              telefono: profile.telefono || ''
+            }
+          }
+        } catch (error) {
+          console.warn('Error buscando profile para colaborador:', error)
+        }
+
+        // Si no se encontró profile o hubo error, usar email_invitado como fallback
         return {
           ...col,
-          email: profile?.email || '',
-          nombre: profile?.nombre || '',
-          telefono: profile?.telefono || ''
+          email: col.email_invitado || 'Sin email',
+          nombre: col.email_invitado || 'Sin nombre',
+          telefono: ''
         }
       } else {
         // Si es invitación por email
         return {
           ...col,
-          email: col.email_invitado || '',
-          nombre: col.email_invitado || '',
+          email: col.email_invitado || 'Sin email',
+          nombre: col.email_invitado || 'Sin nombre',
           telefono: ''
         }
       }
     }))
 
+    console.log('Colaboradores cargados:', colaboradoresConDatos)
     setColaboradores(colaboradoresConDatos)
   }
 
