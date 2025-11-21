@@ -269,15 +269,22 @@ export async function autoRegenerateTickets(userId: string): Promise<{
 
     const { data: propsCompartidas } = await supabase
       .from('propiedades_colaboradores')
-      .select('propiedad_id, propiedades!inner(id, servicios)')
+      .select('propiedad_id')
       .eq('user_id', userId);
+
+    // Obtener datos completos de propiedades compartidas
+    let propiedadesCompartidas: any[] = [];
+    if (propsCompartidas && propsCompartidas.length > 0) {
+      const idsCompartidos = propsCompartidas.map(p => p.propiedad_id);
+      const { data } = await supabase
+        .from('propiedades')
+        .select('id, servicios')
+        .in('id', idsCompartidos);
+      propiedadesCompartidas = data || [];
+    }
 
     // Combinar propiedades
     const propiedadesPropias = propsPropias || [];
-    const propiedadesCompartidas = (propsCompartidas || []).map(pc => ({
-      id: pc.propiedades.id,
-      servicios: pc.propiedades.servicios
-    }));
 
     const todasPropiedades = [...propiedadesPropias, ...propiedadesCompartidas];
 
