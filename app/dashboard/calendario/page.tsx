@@ -846,17 +846,16 @@ export default function CalendarioGlobalPage() {
         )}
 
         {/* Modal de Nuevo Ticket */}
-        {showNuevoTicketModal && (
-          <NuevoTicket
-            isOpen={showNuevoTicketModal}
-            onClose={() => setShowNuevoTicketModal(false)}
-            onSuccess={() => {
-              setShowNuevoTicketModal(false)
-              if (user?.id) cargarDatos(user.id)
-            }}
-            propiedades={propiedades}
-          />
-        )}
+        <NuevoTicket
+          isOpen={showNuevoTicketModal}
+          onClose={() => setShowNuevoTicketModal(false)}
+          propiedades={propiedades.map(p => ({ id: p.id, nombre: p.nombre }))}
+          onTicketCreado={() => {
+            if (user?.id) {
+              cargarDatos(user.id)
+            }
+          }}
+        />
       </main>
     </div>
   )
