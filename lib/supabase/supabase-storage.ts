@@ -59,17 +59,27 @@ export async function uploadPropertyImageDual(
     // 6. Obtener dimensiones del display blob
     const dimensions = await getImageDimensions(displayBlob);
 
-    // 7. Guardar metadata en la tabla property_images (solo columnas existentes)
-    const { data: imageRecord, error: dbError } = await supabase
+    // 7. Guardar metadata en la tabla property_images
+    const { data: imageRecord, error: dbError} = await supabase
       .from('property_images')
       .insert({
         id: imageId,
         property_id: propertyId,
         url: displayUrl.publicUrl,
         url_thumbnail: thumbUrl.publicUrl,
+        storage_path_display: displayPath,
+        storage_path_thumbnail: thumbPath,
+        file_size: JSON.stringify({
+          thumbnail: thumbBlob.size,
+          display: displayBlob.size
+        }),
+        dimensions: JSON.stringify({
+          thumbnail: { width: 300, height: 300 },
+          display: dimensions
+        }),
         is_cover: false,
         space_type: null,
-        // Removidas columnas inexistentes: file_size_*, width_*, height_*, storage_path_*
+        order_index: 0
       })
       .select()
       .single();

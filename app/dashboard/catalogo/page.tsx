@@ -338,15 +338,38 @@ export default function CatalogoPage() {
                   className="px-6 py-4 hover:bg-gray-50 transition-all"
                 >
                   <div className="flex items-center gap-4">
-                    <div>
-                      <img 
+                    {/* Thumbnail clickeable con indicador */}
+                    <div
+                      onClick={(e) => { e.stopPropagation(); abrirGaleria(prop.id); }}
+                      className="relative group cursor-pointer"
+                    >
+                      <img
                         src={prop.foto_portada || "https://via.placeholder.com/80x60/f3f4f6/9ca3af?text=Sin+foto"}
                         alt={prop.nombre}
-                        className="w-20 h-16 object-cover rounded-lg border-2 border-gray-200"
+                        className="w-20 h-16 object-cover rounded-lg border-2 border-gray-200 group-hover:border-purple-400 transition-all group-hover:scale-105"
                         onError={(e) => {
                           e.currentTarget.src = "https://via.placeholder.com/80x60/f3f4f6/9ca3af?text=Sin+foto"
                         }}
                       />
+                      {/* Overlay con icono de cámara */}
+                      <div className="absolute inset-0 bg-purple-600 bg-opacity-0 group-hover:bg-opacity-70 rounded-lg transition-all flex items-center justify-center">
+                        <svg
+                          className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                          <circle cx="12" cy="13" r="4"/>
+                        </svg>
+                      </div>
+                      {/* Badge indicador si no hay foto */}
+                      {!prop.foto_portada && (
+                        <div className="absolute -top-1 -right-1 bg-purple-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold animate-pulse">
+                          +
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex-1">
