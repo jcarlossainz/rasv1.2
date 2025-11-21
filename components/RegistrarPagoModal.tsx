@@ -6,8 +6,11 @@
  * Incluye: fecha, tipo, propiedad, monto, archivo, factura
  */
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import { obtenerCuentasPropiedad } from '@/services/cuentas-api'
+import { useToast } from '@/hooks/useToast'
+import type { CuentaBancaria } from '@/types/property'
 
 interface RegistrarPagoModalProps {
   isOpen: boolean
@@ -31,40 +34,95 @@ export default function RegistrarPagoModal({
   pagoExistente
 }: RegistrarPagoModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  
+  const toast = useToast()
+
   // Estados del formulario
   const [fechaPago, setFechaPago] = useState(
     pagoExistente?.fecha_pago || new Date().toISOString().split('T')[0]
   )
-  const [tipo, setTipo] = useState<'egreso' | 'ingreso'>('egreso')
   const [propiedadId, setPropiedadId] = useState(pagoExistente?.propiedad_id || '')
-  const [concepto, setConcepto] = useState(pagoExistente?.servicio_nombre || '')
   const [monto, setMonto] = useState(pagoExistente?.monto_estimado.toString() || '')
-  const [metodoPago, setMetodoPago] = useState('') // Nuevo: efectivo, transferencia, etc
-  const [referenciaPago, setReferenciaPago] = useState('') // Nuevo: número de referencia
+  const [referenciaPago, setReferenciaPago] = useState('')
+  const [responsablePago, setResponsablePago] = useState<'Administrador' | 'Propietario' | 'Inquilino' | ''>('')
   const [tieneFactura, setTieneFactura] = useState(false)
   const [numeroFactura, setNumeroFactura] = useState('')
-  const [notas, setNotas] = useState('') // Nuevo: notas adicionales
+  const [notas, setNotas] = useState('')
   const [archivo, setArchivo] = useState<File | null>(null)
   const [archivoPreview, setArchivoPreview] = useState<string | null>(null)
-  
+  const [mostrarAlertaDiferencia, setMostrarAlertaDiferencia] = useState(false)
+
+  // Estados para cuentas bancarias
+  const [cuentas, setCuentas] = useState<CuentaBancaria[]>([])
+  const [cuentaId, setCuentaId] = useState('')
+  const [cargandoCuentas, setCargandoCuentas] = useState(false)
+
   // Estados de UI
   const [guardando, setGuardando] = useState(false)
   const [subiendoArchivo, setSubiendoArchivo] = useState(false)
+
+  // Actualizar valores cuando cambie pagoExistente (cuando se abre el modal con nuevo ticket)
+  useEffect(() => {
+    if (pagoExistente) {
+      console.log('🔄 Actualizando modal con pagoExistente:', pagoExistente)
+      setFechaPago(pagoExistente.fecha_pago || new Date().toISOString().split('T')[0])
+      setPropiedadId(pagoExistente.propiedad_id || '')
+      setMonto(pagoExistente.monto_estimado.toString() || '')
+    }
+  }, [pagoExistente])
+
+  // Cargar cuentas cuando cambie la propiedad
+  useEffect(() => {
+    console.log('🔍 RegistrarPagoModal - propiedadId:', propiedadId)
+    if (propiedadId) {
+      cargarCuentasPropiedad(propiedadId)
+    } else {
+      console.log('⚠️ No hay propiedadId, limpiando cuentas')
+      setCuentas([])
+      setCuentaId('')
+    }
+  }, [propiedadId])
+
+  // Detectar diferencia en el monto
+  useEffect(() => {
+    if (pagoExistente && monto) {
+      const montoPagado = parseFloat(monto)
+      const montoEsperado = pagoExistente.monto_estimado
+      if (montoPagado !== montoEsperado) {
+        setMostrarAlertaDiferencia(true)
+      } else {
+        setMostrarAlertaDiferencia(false)
+      }
+    }
+  }, [monto, pagoExistente])
+
+  const cargarCuentasPropiedad = async (propId: string) => {
+    try {
+      console.log('📥 Cargando cuentas para propiedad:', propId)
+      setCargandoCuentas(true)
+      const cuentasPropiedad = await obtenerCuentasPropiedad(propId)
+      console.log('✅ Cuentas cargadas:', cuentasPropiedad.length, cuentasPropiedad)
+      setCuentas(cuentasPropiedad)
+    } catch (error) {
+      console.error('❌ Error cargando cuentas:', error)
+      setCuentas([])
+    } finally {
+      setCargandoCuentas(false)
+    }
+  }
 
   const handleArchivoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       // Validar tamaño (máx 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert('El archivo no debe superar 5MB')
+        toast.error('El archivo no debe superar 5MB')
         return
       }
 
       // Validar tipo
       const tiposPermitidos = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf']
       if (!tiposPermitidos.includes(file.type)) {
-        alert('Solo se permiten imágenes (JPG, PNG) o PDF')
+        toast.error('Solo se permiten imágenes (JPG, PNG) o PDF')
         return
       }
 
@@ -125,27 +183,33 @@ export default function RegistrarPagoModal({
   const handleGuardar = async () => {
     // Validaciones
     if (!fechaPago) {
-      alert('La fecha de pago es obligatoria')
-      return
-    }
-
-    if (!propiedadId) {
-      alert('Debes seleccionar una propiedad')
-      return
-    }
-
-    if (!concepto.trim()) {
-      alert('El concepto es obligatorio')
+      toast.error('La fecha de pago es obligatoria')
       return
     }
 
     if (!monto || parseFloat(monto) <= 0) {
-      alert('El monto debe ser mayor a 0')
+      toast.error('El monto debe ser mayor a 0')
       return
     }
 
+    if (cuentas.length > 0 && !cuentaId) {
+      toast.error('Debes seleccionar una cuenta para registrar el pago')
+      return
+    }
+
+    // Validar diferencia de monto (si es diferente, requiere nota)
+    if (pagoExistente && mostrarAlertaDiferencia) {
+      const montoPagado = parseFloat(monto)
+      const montoEsperado = pagoExistente.monto_estimado
+
+      if (!notas.trim()) {
+        toast.error(`El monto difiere del esperado ($${montoEsperado.toFixed(2)} vs $${montoPagado.toFixed(2)}). Agrega una nota explicando la diferencia.`)
+        return
+      }
+    }
+
     if (tieneFactura && !numeroFactura.trim()) {
-      alert('Si tiene factura, debes indicar el número')
+      toast.error('Si tiene factura, debes indicar el número')
       return
     }
 
@@ -166,23 +230,39 @@ export default function RegistrarPagoModal({
 
       // Si es un pago existente (marcar como pagado)
       if (pagoExistente) {
+        const montoPagado = parseFloat(monto)
+        // Determinar automáticamente si es pago completo o anticipo
+        const esPagoCompleto = montoPagado >= pagoExistente.monto_estimado
+
+        const updateData: any = {
+          pagado: esPagoCompleto, // Solo se marca como pagado si el monto cubre el total
+          fecha_pago_real: fechaPago,
+          monto_real: montoPagado,
+          cuenta_id: cuentaId || null,
+          metodo_pago: null, // Ya no usamos metodo_pago genérico
+          referencia_pago: referenciaPago || null,
+          responsable: responsablePago || null,
+          tiene_factura: tieneFactura,
+          numero_factura: tieneFactura ? numeroFactura : null,
+          comprobante_url: urlComprobante,
+          notas: notas || null,
+          updated_at: new Date().toISOString()
+        }
+
         const { error } = await supabase
           .from('fechas_pago_servicios')
-          .update({
-            pagado: true,
-            fecha_pago_real: fechaPago,
-            monto_real: parseFloat(monto),
-            metodo_pago: metodoPago || null,
-            referencia_pago: referenciaPago || null,
-            tiene_factura: tieneFactura,
-            numero_factura: tieneFactura ? numeroFactura : null,
-            comprobante_url: urlComprobante,
-            notas: notas || null,
-            updated_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('id', pagoExistente.id)
 
         if (error) throw error
+
+        // Mensaje según si es completo o anticipo
+        if (!esPagoCompleto) {
+          const montoRestante = pagoExistente.monto_estimado - montoPagado
+          toast.warning(`💰 Anticipo registrado: $${montoPagado.toFixed(2)}. El ticket permanece pendiente. Monto restante: $${montoRestante.toFixed(2)}`)
+        } else {
+          toast.success('✅ Pago registrado correctamente')
+        }
       } else {
         // Crear nuevo registro de pago
         // TODO: Aquí necesitarás definir la estructura para pagos manuales
@@ -194,7 +274,7 @@ export default function RegistrarPagoModal({
       onClose()
     } catch (error: any) {
       console.error('Error guardando pago:', error)
-      alert(error.message || 'Error al guardar el pago')
+      toast.error(error.message || 'Error al guardar el pago')
     } finally {
       setGuardando(false)
     }
@@ -233,7 +313,22 @@ export default function RegistrarPagoModal({
 
           {/* Body */}
           <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-            
+
+            {/* Info del Servicio (solo lectura) */}
+            {pagoExistente && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="text-sm font-bold text-blue-900 mb-2 font-poppins">Información del Servicio</h3>
+                <div className="space-y-1 text-sm text-blue-800">
+                  <div><strong>Servicio:</strong> {pagoExistente.servicio_nombre}</div>
+                  <div><strong>Monto Esperado:</strong> ${pagoExistente.monto_estimado.toFixed(2)}</div>
+                  <div><strong>Fecha Programada:</strong> {new Date(pagoExistente.fecha_pago).toLocaleDateString('es-MX')}</div>
+                </div>
+                <p className="text-xs text-blue-700 mt-2 font-semibold">
+                  💡 Si pagas menos del monto esperado, se registrará como anticipo
+                </p>
+              </div>
+            )}
+
             {/* Fecha de Pago */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
@@ -247,72 +342,67 @@ export default function RegistrarPagoModal({
               />
             </div>
 
-            {/* Tipo */}
+            {/* Forma de Pago (Cuentas Bancarias) - SIEMPRE VISIBLE */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
-                Tipo de Movimiento <span className="text-red-500">*</span>
+                Forma de Pago {cuentas.length > 0 && <span className="text-red-500">*</span>}
               </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => setTipo('egreso')}
-                  className={`py-3 px-4 rounded-lg font-semibold text-sm transition-all ${
-                    tipo === 'egreso'
-                      ? 'bg-red-500 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  ↓ Egreso (Pago)
-                </button>
-                <button
-                  onClick={() => setTipo('ingreso')}
-                  className={`py-3 px-4 rounded-lg font-semibold text-sm transition-all ${
-                    tipo === 'ingreso'
-                      ? 'bg-green-500 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  ↑ Ingreso (Cobro)
-                </button>
-              </div>
-            </div>
 
-            {/* Propiedad */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
-                Propiedad <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={propiedadId}
-                onChange={(e) => setPropiedadId(e.target.value)}
-                disabled={!!pagoExistente}
-                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ras-turquesa text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-              >
-                <option value="">Seleccionar propiedad...</option>
-                {propiedades.map(prop => (
-                  <option key={prop.id} value={prop.id}>{prop.nombre}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Concepto */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
-                Concepto <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={concepto}
-                onChange={(e) => setConcepto(e.target.value)}
-                disabled={!!pagoExistente}
-                placeholder="Ej: Agua, Luz, Renta, etc."
-                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ras-turquesa text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
+              {!propiedadId ? (
+                <div className="p-3 bg-red-50 border border-red-300 rounded-lg">
+                  <p className="text-xs text-red-800 font-semibold">
+                    ❌ Error: No se pudo identificar la propiedad del ticket
+                  </p>
+                  <p className="text-xs text-red-700 mt-1">
+                    Por favor cierra este modal e intenta de nuevo. Si el problema persiste, contacta al administrador.
+                  </p>
+                </div>
+              ) : cargandoCuentas ? (
+                <div className="p-3 bg-blue-50 border border-blue-300 rounded-lg">
+                  <p className="text-xs text-blue-800 font-semibold">
+                    ⏳ Cargando cuentas bancarias...
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <select
+                    value={cuentaId}
+                    onChange={(e) => setCuentaId(e.target.value)}
+                    disabled={cuentas.length === 0}
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ras-turquesa text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  >
+                    <option value="">
+                      {cuentas.length === 0 ? 'No hay cuentas disponibles' : 'Seleccionar forma de pago...'}
+                    </option>
+                    {cuentas.map(cuenta => (
+                      <option key={cuenta.id} value={cuenta.id}>
+                        💳 {cuenta.nombre} ({cuenta.tipo_moneda}) - {cuenta.tipo_cuenta}
+                        {cuenta.banco ? ` - ${cuenta.banco}` : ''} - Balance: ${cuenta.balance_actual?.toFixed(2) || '0.00'}
+                      </option>
+                    ))}
+                  </select>
+                  {cuentas.length === 0 ? (
+                    <div className="mt-2 p-3 bg-amber-50 border border-amber-300 rounded-lg">
+                      <p className="text-xs text-amber-800 font-semibold mb-1">
+                        ⚠️ No hay cuentas bancarias vinculadas a esta propiedad
+                      </p>
+                      <p className="text-xs text-amber-700">
+                        Ve a <strong>Balance</strong> de esta propiedad para crear y vincular una cuenta bancaria.
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-xs text-gray-500">
+                      💰 El balance de la cuenta se actualizará automáticamente
+                    </p>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Monto */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
-                Monto <span className="text-red-500">*</span>
+                Monto a Pagar <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">
@@ -328,43 +418,52 @@ export default function RegistrarPagoModal({
                   className="w-full pl-8 pr-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ras-turquesa text-sm"
                 />
               </div>
+              {/* Alerta de diferencia de monto */}
+              {mostrarAlertaDiferencia && pagoExistente && (
+                <div className="mt-2 p-3 bg-red-50 border border-red-300 rounded-lg">
+                  <p className="text-xs text-red-800 font-semibold mb-1">
+                    ⚠️ El monto difiere del monto esperado
+                  </p>
+                  <p className="text-xs text-red-700">
+                    Esperado: ${pagoExistente.monto_estimado.toFixed(2)} | Ingresado: ${parseFloat(monto || '0').toFixed(2)}
+                  </p>
+                  <p className="text-xs text-red-700 mt-1">
+                    <strong>IMPORTANTE:</strong> Debes agregar una nota explicando la diferencia.
+                  </p>
+                </div>
+              )}
             </div>
 
-            {/* Método de Pago */}
+            {/* Responsable de Pago */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
-                Método de Pago (Opcional)
+                Responsable de Pago (Opcional)
               </label>
               <select
-                value={metodoPago}
-                onChange={(e) => setMetodoPago(e.target.value)}
+                value={responsablePago}
+                onChange={(e) => setResponsablePago(e.target.value as any)}
                 className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ras-turquesa text-sm"
               >
-                <option value="">Seleccionar método...</option>
-                <option value="efectivo">Efectivo</option>
-                <option value="transferencia">Transferencia</option>
-                <option value="tarjeta_debito">Tarjeta de Débito</option>
-                <option value="tarjeta_credito">Tarjeta de Crédito</option>
-                <option value="cheque">Cheque</option>
-                <option value="otro">Otro</option>
+                <option value="">Seleccionar responsable...</option>
+                <option value="Administrador">🏢 Administrador</option>
+                <option value="Propietario">👤 Propietario</option>
+                <option value="Inquilino">🏠 Inquilino</option>
               </select>
             </div>
 
             {/* Referencia de Pago */}
-            {metodoPago && metodoPago !== 'efectivo' && (
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
-                  Referencia / No. de Operación
-                </label>
-                <input
-                  type="text"
-                  value={referenciaPago}
-                  onChange={(e) => setReferenciaPago(e.target.value)}
-                  placeholder="Ej: REF123456 o últimos 4 dígitos"
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ras-turquesa text-sm"
-                />
-              </div>
-            )}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
+                Referencia / No. de Operación (Opcional)
+              </label>
+              <input
+                type="text"
+                value={referenciaPago}
+                onChange={(e) => setReferenciaPago(e.target.value)}
+                placeholder="Ej: REF123456 o últimos 4 dígitos"
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ras-turquesa text-sm"
+              />
+            </div>
 
             {/* Factura */}
             <div className="border-t border-gray-200 pt-4">
@@ -400,15 +499,24 @@ export default function RegistrarPagoModal({
             {/* Notas Adicionales */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
-                Notas / Observaciones (Opcional)
+                Notas / Observaciones {mostrarAlertaDiferencia && <span className="text-red-500">*</span>}
               </label>
               <textarea
                 value={notas}
                 onChange={(e) => setNotas(e.target.value)}
-                placeholder="Agrega cualquier información adicional relevante..."
+                placeholder={mostrarAlertaDiferencia
+                  ? "OBLIGATORIO: Explica la razón de la diferencia en el monto..."
+                  : "Agrega cualquier información adicional relevante..."}
                 rows={3}
-                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ras-turquesa text-sm resize-none"
+                className={`w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-ras-turquesa text-sm resize-none ${
+                  mostrarAlertaDiferencia ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                }`}
               />
+              {mostrarAlertaDiferencia && (
+                <p className="mt-1 text-xs text-red-600">
+                  💡 Ejemplo: "Aumento en tarifa", "Pago con descuento", "Recargo por pago tardío"
+                </p>
+              )}
             </div>
 
             {/* Archivo/Comprobante */}

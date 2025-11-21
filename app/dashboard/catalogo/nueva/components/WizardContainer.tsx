@@ -39,42 +39,45 @@ export default function WizardContainer({
   onComplete,
   onCancel
 }: WizardContainerProps) {
-  
+
   // ============================================================================
   // HOOKS
   // ============================================================================
-  
+
   const toast = useToast();
   const { saveProperty, loadProperty, isSaving, isLoading } = usePropertyDatabase();
-  
+
   // ============================================================================
   // ESTADO
   // ============================================================================
-  
+
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<PropertyFormData>(INITIAL_PROPERTY_DATA);
   const [propertyId, setPropertyId] = useState<string | null>(initialPropertyId || null);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
-  
+  const hasLoadedRef = React.useRef(false);
+
   const totalSteps = 5;
   const isFirstStep = currentStep === 1;
   const isLastStep = currentStep === totalSteps;
-  
+
   // ============================================================================
   // CARGAR PROPIEDAD EN MODO EDICIÓN
   // ============================================================================
-  
+
   useEffect(() => {
-    if (mode === 'edit' && initialPropertyId) {
+    if (mode === 'edit' && initialPropertyId && !hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+
       const loadData = async () => {
         console.log(`📖 Cargando propiedad en modo edición: ${initialPropertyId}`);
-        
+
         const result = await loadProperty(initialPropertyId);
-        
+
         if (result.success && result.data) {
           setFormData(result.data);
           setPropertyId(initialPropertyId);
-          
+
           // Marcar steps completados basado en wizard_step
           const stepNumber = result.data.wizard_step || 1;
           const completed = new Set<number>();
@@ -83,16 +86,17 @@ export default function WizardContainer({
           }
           setCompletedSteps(completed);
           setCurrentStep(stepNumber);
-          
+
           toast.success('✅ Propiedad cargada correctamente');
         } else {
           toast.error(`❌ Error al cargar: ${result.error}`);
         }
       };
-      
+
       loadData();
     }
-  }, [mode, initialPropertyId, loadProperty, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, initialPropertyId]);
   
   // ============================================================================
   // ACTUALIZAR DATOS DEL FORMULARIO

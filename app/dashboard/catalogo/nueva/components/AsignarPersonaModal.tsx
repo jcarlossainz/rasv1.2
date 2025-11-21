@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
 import { useToast } from '@/hooks/useToast'
+import { useAuth } from '@/hooks/useAuth'
 
 interface AsignarPersonaModalProps {
   isOpen: boolean
@@ -19,12 +20,13 @@ interface Profile {
   rol: string
 }
 
-export default function AsignarPersonaModal({ 
-  isOpen, 
-  onClose, 
-  onSelect, 
-  tipo 
+export default function AsignarPersonaModal({
+  isOpen,
+  onClose,
+  onSelect,
+  tipo
 }: AsignarPersonaModalProps) {
+  const { user } = useAuth()
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [busqueda, setBusqueda] = useState('')
@@ -39,8 +41,7 @@ export default function AsignarPersonaModal({
   const cargarProfiles = async () => {
     try {
       setLoading(true)
-      
-      const { data: { user } } = await supabase.auth.getUser()
+
       if (!user) return
 
       // Cargar todos los profiles de la empresa (mismo user_id o empresa_id)

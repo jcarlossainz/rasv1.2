@@ -3,34 +3,42 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { supabase } from '@/lib/supabase/client'
+import { loginSchema, type LoginInput } from '@/lib/validation/schemas'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [apiError, setApiError] = useState('')
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const {
+    register,
+    handleSubmit,
+    formState: { errors }
+  } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema)
+  })
+
+  const onSubmit = async (data: LoginInput) => {
     console.log('🔵 Form submitted')
-    console.log('🔵 Email:', email)
-    console.log('🔵 Password length:', password.length)
-    
-    setError('')
+    console.log('🔵 Email:', data.email)
+    console.log('🔵 Password length:', data.password.length)
+
+    setApiError('')
     setLoading(true)
 
     try {
       console.log('🟡 Intentando login...')
-      
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+
+      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
       })
 
-      console.log('🟢 Respuesta de Supabase:', { data, error: signInError })
+      console.log('🟢 Respuesta de Supabase:', { data: authData, error: signInError })
 
       if (signInError) {
         console.error('🔴 Error de Supabase:', signInError)
@@ -38,28 +46,28 @@ export default function LoginPage() {
       }
 
       console.log('✅ Login exitoso!')
-      console.log('✅ Usuario:', data.user?.email)
-      console.log('✅ Sesión:', data.session ? 'Existe' : 'No existe')
-      
+      console.log('✅ Usuario:', authData.user?.email)
+      console.log('✅ Sesión:', authData.session ? 'Existe' : 'No existe')
+
       console.log('🚀 Redirigiendo a dashboard...')
       router.push('/dashboard')
-      
+
     } catch (err: any) {
       console.error('❌ Error en el catch:', err)
-      setError('Email o contraseña incorrectos')
+      setApiError('Email o contraseña incorrectos')
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#00768E] via-[#00CC99] to-[#00768E] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-ras-azul via-ras-turquesa to-ras-azul flex items-center justify-center p-4">
       {/* Card principal */}
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         
         {/* Header con logo y gradiente */}
-        <div className="bg-gradient-to-r from-[#00768E] to-[#00CC99] p-8 text-center">
+        <div className="bg-gradient-to-r from-ras-azul to-ras-turquesa p-8 text-center">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-2xl shadow-lg mb-4">
-            <svg className="w-12 h-12 text-[#00768E]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg className="w-12 h-12 text-ras-azul" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
               <polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
@@ -73,7 +81,7 @@ export default function LoginPage() {
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Bienvenido</h2>
           <p className="text-gray-600 mb-6 text-sm">Inicia sesión para continuar</p>
 
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {/* Email */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -88,13 +96,16 @@ export default function LoginPage() {
                 </div>
                 <input
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#00768E] focus:border-transparent transition-all outline-none"
+                  {...register('email')}
+                  className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-ras-azul focus:border-transparent transition-all outline-none ${
+                    errors.email ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="correo@ejemplo.com"
-                  required
                 />
               </div>
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+              )}
             </div>
 
             {/* Contraseña */}
@@ -111,11 +122,11 @@ export default function LoginPage() {
                 </div>
                 <input
                   type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#00768E] focus:border-transparent transition-all outline-none"
+                  {...register('password')}
+                  className={`w-full pl-12 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-ras-azul focus:border-transparent transition-all outline-none ${
+                    errors.password ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="••••••••"
-                  required
                 />
                 <button
                   type="button"
@@ -135,17 +146,20 @@ export default function LoginPage() {
                   )}
                 </button>
               </div>
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+              )}
             </div>
 
             {/* Error message */}
-            {error && (
+            {apiError && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
                 <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="10"/>
                   <line x1="12" y1="8" x2="12" y2="12"/>
                   <line x1="12" y1="16" x2="12.01" y2="16"/>
                 </svg>
-                <p className="text-sm text-red-700 font-medium">{error}</p>
+                <p className="text-sm text-red-700 font-medium">{apiError}</p>
               </div>
             )}
 
@@ -153,7 +167,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-[#00768E] to-[#00CC99] text-white py-3.5 rounded-xl font-semibold hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              className="w-full bg-gradient-to-r from-ras-azul to-ras-turquesa text-white py-3.5 rounded-xl font-semibold hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -175,7 +189,7 @@ export default function LoginPage() {
               ¿No tienes cuenta?{' '}
               <Link 
                 href="/register" 
-                className="text-[#00768E] font-semibold hover:text-[#00CC99] transition-colors"
+                className="text-ras-azul font-semibold hover:text-ras-turquesa transition-colors"
               >
                 Crear cuenta gratis
               </Link>
@@ -186,7 +200,7 @@ export default function LoginPage() {
           <div className="mt-4 text-center">
             <Link 
               href="/forgot-password" 
-              className="text-xs text-gray-500 hover:text-[#00768E] transition-colors"
+              className="text-xs text-gray-500 hover:text-ras-azul transition-colors"
             >
               ¿Olvidaste tu contraseña?
             </Link>

@@ -35,13 +35,13 @@ export interface LoadPropertyResult {
 
 function transformFormToDatabase(formData: PropertyFormData): any {
   console.log('📦 Transformando FormData → Database');
-  
+
   return {
     // STEP 1: Datos Generales
     nombre_propiedad: formData.nombre_propiedad || '',
     tipo_propiedad: formData.tipo_propiedad || null,
     mobiliario: formData.mobiliario || null,
-    
+
     dimensiones: {
       terreno: {
         valor: parseFloat(formData.tamano_terreno || '0'),
@@ -52,7 +52,7 @@ function transformFormToDatabase(formData: PropertyFormData): any {
         unidad: formData.tamano_construccion_unit || 'm²'
       }
     },
-    
+
     estados: Array.isArray(formData.estados) ? formData.estados : [],
     propietarios_email: formData.propietarios_email || [],
     supervisores_email: formData.supervisores_email || [],
@@ -113,22 +113,22 @@ function transformFormToDatabase(formData: PropertyFormData): any {
 
 function transformDatabaseToForm(dbData: any): PropertyFormData {
   console.log('📦 Transformando Database → FormData');
-  
+
   return {
     // STEP 1: Datos Generales
     nombre_propiedad: dbData.nombre_propiedad || '',
     tipo_propiedad: dbData.tipo_propiedad || 'Departamento',
     mobiliario: dbData.mobiliario || 'Amueblada',
-    
+
     tamano_terreno: dbData.dimensiones?.terreno?.valor?.toString() || '',
     tamano_terreno_unit: dbData.dimensiones?.terreno?.unidad || 'm²',
     tamano_construccion: dbData.dimensiones?.construccion?.valor?.toString() || '',
     tamano_construccion_unit: dbData.dimensiones?.construccion?.unidad || 'm²',
-    
+
     estados: Array.isArray(dbData.estados) ? dbData.estados : [],
     propietarios_email: dbData.propietarios_email || [],
     supervisores_email: dbData.supervisores_email || [],
-    
+
     // STEP 2: Ubicación
     ubicacion: dbData.ubicacion || {
       google_maps_link: '',
@@ -143,36 +143,39 @@ function transformDatabaseToForm(dbData: any): PropertyFormData {
       nombre_complejo: '',
       amenidades_complejo: []
     },
-    
+
     // STEP 3: Espacios
     espacios: dbData.espacios || [],
-    
+
     // STEP 4: Condicionales
     precios: {
       mensual: dbData.precios?.mensual || null,
       noche: dbData.precios?.noche || null,
       venta: dbData.precios?.venta || null
     },
-    
+
     inquilinos_email: dbData.inquilinos_email || [],
-    fecha_inicio_contrato: dbData.fecha_inicio_contrato || '',
-    duracion_contrato_valor: dbData.duracion_contrato_valor?.toString() || '',
-    duracion_contrato_unidad: dbData.duracion_contrato_unidad || 'meses',
-    frecuencia_pago: dbData.frecuencia_pago || 'mensual',
-    dia_pago: dbData.dia_pago?.toString() || '',
-    
-    precio_renta_disponible: dbData.precio_renta_disponible?.toString() || '',
-    requisitos_renta: dbData.requisitos_renta || [],
-    requisitos_renta_custom: dbData.requisitos_renta_custom || [],
-    
-    amenidades_vacacional: dbData.amenidades_vacacional || [],
-    
+
+    // Datos de renta largo plazo - leer desde JSONB o columnas individuales (compatibilidad)
+    fecha_inicio_contrato: dbData.datos_renta_largo_plazo?.fecha_inicio_contrato || dbData.fecha_inicio_contrato || '',
+    duracion_contrato_valor: (dbData.datos_renta_largo_plazo?.duracion_contrato_valor || dbData.duracion_contrato_valor)?.toString() || '',
+    duracion_contrato_unidad: dbData.datos_renta_largo_plazo?.duracion_contrato_unidad || dbData.duracion_contrato_unidad || 'meses',
+    frecuencia_pago: dbData.datos_renta_largo_plazo?.frecuencia_pago || dbData.frecuencia_pago || 'mensual',
+    dia_pago: (dbData.datos_renta_largo_plazo?.dia_pago || dbData.dia_pago)?.toString() || '',
+
+    precio_renta_disponible: (dbData.precio_renta_disponible || dbData.precios?.mensual)?.toString() || '',
+    requisitos_renta: dbData.datos_renta_largo_plazo?.requisitos_renta || dbData.requisitos_renta || [],
+    requisitos_renta_custom: dbData.datos_renta_largo_plazo?.requisitos_renta_custom || dbData.requisitos_renta_custom || [],
+
+    // Datos de renta vacacional - leer desde JSONB o columnas individuales (compatibilidad)
+    amenidades_vacacional: dbData.datos_renta_vacacional?.amenidades_vacacional || dbData.amenidades_vacacional || [],
+
     // STEP 5: Servicios
     servicios: dbData.servicios || [],
-    
+
     // STEP 6: Galería (vacío por ahora)
     fotos: [],
-    
+
     // Metadata
     wizard_step: dbData.wizard_step || 1,
     wizard_completed: dbData.wizard_completed || false,
@@ -322,7 +325,7 @@ export function usePropertyDatabase() {
         throw new Error('Usuario no autenticado');
       }
       
-      // 2. Cargar propiedad
+      // 2. Cargar propiedad - SELECT * (todas las columnas)
       const { data, error } = await supabase
         .from('propiedades')
         .select('*')

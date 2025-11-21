@@ -58,10 +58,24 @@ export default function AnuncioPublico() {
 
   const cargarPropiedad = async () => {
     try {
-      // Cargar propiedad sin autenticación
+      // Cargar propiedad sin autenticación - SELECT ESPECÍFICO
       const { data: propData, error: propError } = await supabase
         .from('propiedades')
-        .select('*')
+        .select(`
+          id,
+          nombre_propiedad,
+          tipo_propiedad,
+          estados,
+          mobiliario,
+          dimensiones,
+          ubicacion,
+          precios,
+          espacios,
+          descripcion_anuncio,
+          estado_anuncio,
+          propietario_id,
+          amenidades_vacacional
+        `)
         .eq('id', propiedadId)
         .eq('estado_anuncio', 'publicado') // Solo mostrar si está publicado
         .single()

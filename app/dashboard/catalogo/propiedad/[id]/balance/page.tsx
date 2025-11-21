@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
 import EmptyState from '@/components/ui/emptystate'
+import GestionCuentas from '@/components/GestionCuentas'
 
 interface Movimiento {
   id: string
@@ -21,9 +22,15 @@ interface Movimiento {
   tipo: 'egreso' | 'ingreso'
   titulo: string
   monto: number
-  responsable: string
+  responsable: string | null
   fecha: string
   propiedad_id: string
+  metodo_pago?: string | null
+  referencia_pago?: string | null
+  comprobante_url?: string | null
+  cuenta_nombre?: string | null
+  tiene_factura?: boolean
+  numero_factura?: string | null
 }
 
 interface Propiedad {
@@ -103,11 +110,22 @@ export default function BalancePropiedadPage() {
         .select(`
           id,
           fecha_pago,
+          monto_real,
           monto_estimado,
           propiedad_id,
+          metodo_pago,
+          referencia_pago,
+          responsable,
+          tiene_factura,
+          numero_factura,
+          comprobante_url,
+          cuenta_id,
           servicios_inmueble!inner(
             nombre,
             tipo_servicio
+          ),
+          cuentas_bancarias(
+            nombre
           )
         `)
         .eq('propiedad_id', propiedadId)
@@ -115,19 +133,61 @@ export default function BalancePropiedadPage() {
         .limit(500)
 
       // Transformar pagos a movimientos (egresos)
-      const movimientosEgresos: Movimiento[] = (pagos || []).map(pago => ({
+      const movimientosEgresos: Movimiento[] = (pagos || []).map((pago: any) => ({
         id: pago.id,
         propiedad_nombre: propData.nombre_propiedad,
         tipo: 'egreso' as const,
         titulo: pago.servicios_inmueble.nombre,
-        monto: pago.monto_estimado,
-        responsable: 'Sistema',
+        monto: pago.monto_real || pago.monto_estimado,
+        responsable: pago.responsable || null,
         fecha: pago.fecha_pago,
-        propiedad_id: pago.propiedad_id
+        propiedad_id: pago.propiedad_id,
+        metodo_pago: pago.metodo_pago,
+        referencia_pago: pago.referencia_pago,
+        comprobante_url: pago.comprobante_url,
+        cuenta_nombre: pago.cuentas_bancarias?.nombre || null,
+        tiene_factura: pago.tiene_factura,
+        numero_factura: pago.numero_factura
       }))
 
-      // TODO: Aquí agregarás los INGRESOS cuando estén en la BD
-      const movimientosIngresos: Movimiento[] = []
+      // Cargar INGRESOS
+      const { data: ingresos } = await supabase
+        .from('ingresos')
+        .select(`
+          id,
+          concepto,
+          monto,
+          fecha_ingreso,
+          metodo_pago,
+          referencia_pago,
+          tiene_factura,
+          numero_factura,
+          comprobante_url,
+          cuenta_id,
+          propiedad_id,
+          cuentas_bancarias(
+            nombre
+          )
+        `)
+        .eq('propiedad_id', propiedadId)
+        .limit(500)
+
+      const movimientosIngresos: Movimiento[] = (ingresos || []).map((ingreso: any) => ({
+        id: ingreso.id,
+        propiedad_nombre: propData.nombre_propiedad,
+        tipo: 'ingreso' as const,
+        titulo: ingreso.concepto,
+        monto: ingreso.monto,
+        responsable: null,
+        fecha: ingreso.fecha_ingreso,
+        propiedad_id: ingreso.propiedad_id,
+        metodo_pago: ingreso.metodo_pago,
+        referencia_pago: ingreso.referencia_pago,
+        comprobante_url: ingreso.comprobante_url,
+        cuenta_nombre: ingreso.cuentas_bancarias?.nombre || null,
+        tiene_factura: ingreso.tiene_factura,
+        numero_factura: ingreso.numero_factura
+      }))
 
       const todosMovimientos = [...movimientosEgresos, ...movimientosIngresos]
       setMovimientos(todosMovimientos)
@@ -370,6 +430,18 @@ export default function BalancePropiedadPage() {
           </div>
         </div>
 
+        {/* Gestión de Cuentas */}
+        <div className="mb-6">
+          <GestionCuentas
+            propiedadId={propiedadId}
+            propiedadNombre={propiedad?.nombre_propiedad || 'Propiedad'}
+            onCuentaSeleccionada={(cuenta) => {
+              // Opcional: hacer algo cuando se selecciona una cuenta
+              console.log('Cuenta seleccionada:', cuenta)
+            }}
+          />
+        </div>
+
         {/* Filtros - Búsqueda + Fechas */}
         <div className="bg-white rounded-xl shadow-md p-4 mb-6 border border-gray-200">
           <div className="flex flex-col lg:flex-row gap-4">
@@ -549,8 +621,8 @@ export default function BalancePropiedadPage() {
                     {/* Header TÍTULO */}
                     <th className="px-6 py-3 text-left text-xs font-semibold font-poppins uppercase">Título</th>
 
-                    {/* Header RESPONSABLE */}
-                    <th className="px-6 py-3 text-left text-xs font-semibold font-poppins uppercase">Responsable</th>
+                    {/* Header CUENTA */}
+                    <th className="px-6 py-3 text-left text-xs font-semibold font-poppins uppercase">Cuenta</th>
 
                     <th className="px-6 py-3 text-right text-xs font-semibold font-poppins uppercase">Monto</th>
                   </tr>
@@ -582,9 +654,30 @@ export default function BalancePropiedadPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm font-medium text-gray-900">{mov.titulo}</div>
+                        {mov.responsable && (
+                          <div className="text-xs text-gray-500">👤 {mov.responsable}</div>
+                        )}
+                        {mov.referencia_pago && (
+                          <div className="text-xs text-gray-500">Ref: {mov.referencia_pago}</div>
+                        )}
+                        {mov.tiene_factura && mov.numero_factura && (
+                          <div className="text-xs text-blue-600">📄 Factura: {mov.numero_factura}</div>
+                        )}
+                        {mov.comprobante_url && (
+                          <a
+                            href={mov.comprobante_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-ras-turquesa hover:underline inline-flex items-center gap-1"
+                          >
+                            📎 Ver comprobante
+                          </a>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-600">{mov.responsable}</div>
+                        <div className="text-sm text-gray-700">
+                          {mov.cuenta_nombre || <span className="text-gray-400">Sin cuenta</span>}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className={`text-lg font-bold font-poppins ${mov.tipo === 'egreso' ? 'text-red-600' : 'text-green-600'}`}>

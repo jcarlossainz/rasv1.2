@@ -2,7 +2,7 @@
 
 /**
  * CALENDARIO POR PROPIEDAD - Vista Individual
- * Calendario de pagos programados de UNA propiedad específica
+ * Calendario de tickets programados de UNA propiedad específica
  * Diseño alineado con /dashboard/calendario (global)
  */
 
@@ -13,13 +13,18 @@ import { useToast } from '@/hooks/useToast'
 import { useAuth } from '@/hooks/useAuth'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
+import NuevoTicket from '@/app/dashboard/tickets/NuevoTicket'
 
-interface Pago {
+interface Ticket {
   id: string
-  fecha_pago: string
+  titulo: string
+  fecha_programada: string
   monto_estimado: number
-  servicio_nombre: string
-  tipo_servicio: string
+  pagado: boolean
+  servicio_id: string | null
+  tipo_ticket: string
+  estado: string
+  prioridad: string
   propiedad_id: string
   propiedad_nombre: string
 }
@@ -29,7 +34,7 @@ interface DiaCalendario {
   dia: number
   esHoy: boolean
   esMesActual: boolean
-  pagos: Pago[]
+  tickets: Ticket[]
   montoTotal: number
 }
 
@@ -51,13 +56,16 @@ export default function CalendarioPropiedadPage() {
 
   const [loading, setLoading] = useState(true)
   const [propiedad, setPropiedad] = useState<Propiedad | null>(null)
-  const [pagos, setPagos] = useState<Pago[]>([])
+  const [tickets, setTickets] = useState<Ticket[]>([])
   const [mesActual, setMesActual] = useState(new Date())
   const [diasCalendario, setDiasCalendario] = useState<DiaCalendario[]>([])
-  const [pagoSeleccionado, setPagoSeleccionado] = useState<Pago | null>(null)
+  const [ticketSeleccionado, setTicketSeleccionado] = useState<Ticket | null>(null)
 
   // Estados para vistas
   const [vista, setVista] = useState<VistaCalendario>('calendario')
+
+  // Modal de Nuevo Ticket
+  const [showNuevoTicketModal, setShowNuevoTicketModal] = useState(false)
 
   useEffect(() => {
     if (!authLoading) {
@@ -71,10 +79,10 @@ export default function CalendarioPropiedadPage() {
   }, [authLoading, user])
 
   useEffect(() => {
-    if (pagos.length >= 0) {
+    if (tickets.length >= 0) {
       generarCalendario()
     }
-  }, [mesActual, pagos])
+  }, [mesActual, tickets])
 
   const cargarDatos = useCallback(async () => {
     if (!propiedadId) return
@@ -98,46 +106,50 @@ export default function CalendarioPropiedadPage() {
 
       setPropiedad(propData)
 
-      // Cargar pagos de los próximos 3 meses para esta propiedad
+      // Cargar TODOS los tickets de los próximos 3 meses para esta propiedad
       const hoy = new Date()
       const fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)
       const fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 3, 0)
 
-      const { data: pagosData, error: pagosError } = await supabase
+      const { data: ticketsData, error: ticketsError } = await supabase
         .from('fechas_pago_servicios')
         .select(`
-          id,
-          fecha_pago,
-          monto_estimado,
-          propiedad_id,
-          servicios_inmueble!inner(
+          *,
+          servicios_inmueble:servicio_id(
             nombre,
             tipo_servicio
           )
         `)
         .eq('propiedad_id', propiedadId)
-        .eq('pagado', false)
         .gte('fecha_pago', fechaInicio.toISOString().split('T')[0])
         .lte('fecha_pago', fechaFin.toISOString().split('T')[0])
         .order('fecha_pago', { ascending: true })
 
-      if (pagosError) {
-        console.error('Error cargando pagos:', pagosError)
-        toast.error('Error al cargar pagos')
+      if (ticketsError) {
+        console.error('Error cargando tickets:', ticketsError)
+        toast.error('Error al cargar tickets')
         return
       }
 
-      const pagosTransformados = (pagosData || []).map(pago => ({
-        id: pago.id,
-        fecha_pago: pago.fecha_pago,
-        monto_estimado: pago.monto_estimado,
-        servicio_nombre: pago.servicios_inmueble.nombre,
-        tipo_servicio: pago.servicios_inmueble.tipo_servicio,
-        propiedad_id: pago.propiedad_id,
-        propiedad_nombre: propData.nombre_propiedad
-      }))
+      const ticketsTransformados = (ticketsData || []).map(ticket => {
+        const servicio = ticket.servicios_inmueble
 
-      setPagos(pagosTransformados)
+        return {
+          id: ticket.id,
+          titulo: servicio?.nombre || ticket.descripcion || 'Ticket sin título',
+          fecha_programada: ticket.fecha_pago,
+          monto_estimado: ticket.monto_estimado || 0,
+          pagado: ticket.pagado || false,
+          servicio_id: ticket.servicio_id,
+          tipo_ticket: ticket.tipo_ticket || 'Pago',
+          estado: ticket.estado || 'Pendiente',
+          prioridad: ticket.prioridad || 'Media',
+          propiedad_id: ticket.propiedad_id,
+          propiedad_nombre: propData.nombre_propiedad
+        }
+      })
+
+      setTickets(ticketsTransformados)
 
     } catch (error) {
       console.error('Error cargando datos:', error)
@@ -167,27 +179,27 @@ export default function CalendarioPropiedadPage() {
       const esMesActual = fecha.getMonth() === mes
       const esHoy = fecha.getTime() === hoy.getTime()
 
-      const pagosDelDia = pagos.filter(pago => {
-        const fechaPago = new Date(pago.fecha_pago)
-        return fechaPago.getDate() === fecha.getDate() &&
-               fechaPago.getMonth() === fecha.getMonth() &&
-               fechaPago.getFullYear() === fecha.getFullYear()
+      const ticketsDelDia = tickets.filter(ticket => {
+        const fechaTicket = new Date(ticket.fecha_programada)
+        return fechaTicket.getDate() === fecha.getDate() &&
+               fechaTicket.getMonth() === fecha.getMonth() &&
+               fechaTicket.getFullYear() === fecha.getFullYear()
       })
 
-      const montoTotal = pagosDelDia.reduce((sum, p) => sum + p.monto_estimado, 0)
+      const montoTotal = ticketsDelDia.reduce((sum, t) => sum + t.monto_estimado, 0)
 
       dias.push({
         fecha,
         dia: fecha.getDate(),
         esHoy,
         esMesActual,
-        pagos: pagosDelDia,
+        tickets: ticketsDelDia,
         montoTotal
       })
     }
 
     setDiasCalendario(dias)
-  }, [mesActual, pagos])
+  }, [mesActual, tickets])
 
   const cambiarMes = useCallback((incremento: number) => {
     const nuevaFecha = new Date(mesActual)
@@ -247,8 +259,8 @@ export default function CalendarioPropiedadPage() {
     year: 'numeric'
   })
 
-  // Obtener pagos de la semana actual
-  const obtenerPagosSemanaActual = () => {
+  // Obtener tickets de la semana actual
+  const obtenerTicketsSemanaActual = () => {
     const hoy = new Date()
     const diaSemana = hoy.getDay()
     const lunes = new Date(hoy)
@@ -259,13 +271,13 @@ export default function CalendarioPropiedadPage() {
     domingo.setDate(lunes.getDate() + 6)
     domingo.setHours(23, 59, 59, 999)
 
-    return pagos.filter(pago => {
-      const fecha = new Date(pago.fecha_pago)
+    return tickets.filter(ticket => {
+      const fecha = new Date(ticket.fecha_programada)
       return fecha >= lunes && fecha <= domingo
     })
   }
 
-  const pagosSemana = obtenerPagosSemanaActual()
+  const ticketsSemana = obtenerTicketsSemanaActual()
 
   if (loading || authLoading) {
     return <Loading message="Cargando calendario..." />
@@ -276,7 +288,9 @@ export default function CalendarioPropiedadPage() {
       <TopBar
         title={`Calendario - ${propiedad?.nombre_propiedad || 'Propiedad'}`}
         showBackButton
+        showAddButton
         onBackClick={volverCatalogo}
+        onNuevoTicket={() => setShowNuevoTicketModal(true)}
         showUserInfo={true}
         userEmail={user?.email}
         onLogout={handleLogout}
@@ -384,36 +398,36 @@ export default function CalendarioPropiedadPage() {
 
               <div className="grid grid-cols-7 gap-1.5">
                 {diasCalendario.map((dia, index) => {
-                  const tienePagos = dia.pagos.length > 0
+                  const tieneTickets = dia.tickets.length > 0
                   return (
                     <div
                       key={index}
                       className={`min-h-[85px] p-1.5 rounded-lg border transition-all ${
                         dia.esMesActual ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-50/50'
-                      } ${tienePagos && dia.esMesActual ? 'hover:border-ras-turquesa hover:shadow-md cursor-pointer hover:scale-[1.02]' : ''}`}
+                      } ${tieneTickets && dia.esMesActual ? 'hover:border-ras-turquesa hover:shadow-md cursor-pointer hover:scale-[1.02]' : ''}`}
                     >
                       <div className={`text-center text-xs font-bold mb-1 w-6 h-6 rounded-full flex items-center justify-center mx-auto transition-all font-poppins ${
                         dia.esHoy ? 'bg-ras-turquesa text-white shadow-md' : dia.esMesActual ? 'bg-gray-100 text-gray-700' : 'bg-transparent text-gray-400'
                       }`}>
                         {dia.dia}
                       </div>
-                      {tienePagos && dia.esMesActual && (
+                      {tieneTickets && dia.esMesActual && (
                         <div className="space-y-1">
-                          {dia.pagos.slice(0, 2).map(pago => (
+                          {dia.tickets.slice(0, 2).map(ticket => (
                             <div
-                              key={pago.id}
-                              onClick={() => setPagoSeleccionado(pago)}
-                              className="text-[10px] p-1 bg-gradient-to-r from-ras-turquesa/10 to-ras-azul/10 rounded border border-ras-turquesa/30 hover:from-ras-turquesa/20 hover:to-ras-azul/20 transition-all"
+                              key={ticket.id}
+                              onClick={() => setTicketSeleccionado(ticket)}
+                              className="text-[10px] p-1 bg-gradient-to-r from-ras-turquesa/10 to-ras-azul/10 rounded border border-ras-turquesa/30 hover:from-ras-turquesa/20 hover:to-ras-azul/20 transition-all cursor-pointer"
                             >
                               <div className="flex items-center gap-1 text-ras-azul">
-                                <span className="flex-shrink-0">{getTipoIcon(pago.tipo_servicio)}</span>
-                                <span className="truncate flex-1 font-semibold">{pago.servicio_nombre}</span>
+                                <span className="flex-shrink-0">{ticket.pagado ? '✓' : '○'}</span>
+                                <span className="truncate flex-1 font-semibold">{ticket.titulo}</span>
                               </div>
                             </div>
                           ))}
-                          {dia.pagos.length > 2 && (
+                          {dia.tickets.length > 2 && (
                             <div className="text-[9px] text-center text-ras-azul font-bold">
-                              +{dia.pagos.length - 2} más
+                              +{dia.tickets.length - 2} más
                             </div>
                           )}
                           <div className="text-[10px] text-center font-bold text-ras-azul">
@@ -433,42 +447,42 @@ export default function CalendarioPropiedadPage() {
         {vista === 'semana' && (
           <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
             <h3 className="text-lg font-bold text-ras-azul mb-4 font-poppins">
-              Pagos de esta semana ({pagosSemana.length})
+              Tickets de esta semana ({ticketsSemana.length})
             </h3>
-            {pagosSemana.length === 0 ? (
+            {ticketsSemana.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
-                <p className="font-medium">No hay pagos programados esta semana</p>
+                <p className="font-medium">No hay tickets programados esta semana</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {pagosSemana
-                  .sort((a, b) => new Date(a.fecha_pago).getTime() - new Date(b.fecha_pago).getTime())
-                  .map(pago => (
+                {ticketsSemana
+                  .sort((a, b) => new Date(a.fecha_programada).getTime() - new Date(b.fecha_programada).getTime())
+                  .map(ticket => (
                     <div
-                      key={pago.id}
-                      onClick={() => setPagoSeleccionado(pago)}
+                      key={ticket.id}
+                      onClick={() => setTicketSeleccionado(ticket)}
                       className="flex items-center gap-4 p-4 bg-gradient-to-r from-ras-turquesa/5 to-ras-azul/5 rounded-xl border border-ras-turquesa/20 hover:border-ras-turquesa hover:shadow-md transition-all cursor-pointer"
                     >
                       <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-ras-turquesa/20 to-ras-azul/20 flex items-center justify-center text-ras-azul">
-                        {getTipoIcon(pago.tipo_servicio)}
+                        {ticket.pagado ? '✓' : '○'}
                       </div>
                       <div className="flex-1">
-                        <div className="font-bold text-gray-800 font-poppins">{pago.servicio_nombre}</div>
-                        <div className="text-xs text-gray-500 capitalize">{pago.tipo_servicio}</div>
+                        <div className="font-bold text-gray-800 font-poppins">{ticket.titulo}</div>
+                        <div className="text-xs text-gray-500 capitalize">{ticket.tipo_ticket}</div>
                       </div>
                       <div className="text-right">
                         <div className="text-sm font-medium text-gray-600">
-                          {new Date(pago.fecha_pago).toLocaleDateString('es-MX', {
+                          {new Date(ticket.fecha_programada).toLocaleDateString('es-MX', {
                             weekday: 'short',
                             day: 'numeric',
                             month: 'short'
                           })}
                         </div>
                         <div className="text-lg font-bold text-green-600 font-poppins">
-                          ${pago.monto_estimado.toLocaleString('es-MX')}
+                          ${ticket.monto_estimado.toLocaleString('es-MX')}
                         </div>
                       </div>
                     </div>
@@ -485,52 +499,55 @@ export default function CalendarioPropiedadPage() {
               <table className="w-full">
                 <thead className="bg-gradient-to-r from-ras-azul to-ras-turquesa text-white">
                   <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Estado</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Fecha</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Servicio</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Ticket</th>
                     <th className="px-6 py-3 text-right text-xs font-semibold uppercase">Monto</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {pagos.length === 0 ? (
+                  {tickets.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="px-6 py-12 text-center text-gray-500">
+                      <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
                         <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                         </svg>
-                        <p className="font-medium">No hay pagos programados</p>
+                        <p className="font-medium">No hay tickets programados</p>
                       </td>
                     </tr>
                   ) : (
-                    pagos
-                      .sort((a, b) => new Date(a.fecha_pago).getTime() - new Date(b.fecha_pago).getTime())
-                      .map(pago => (
+                    tickets
+                      .sort((a, b) => new Date(a.fecha_programada).getTime() - new Date(b.fecha_programada).getTime())
+                      .map(ticket => (
                         <tr
-                          key={pago.id}
-                          onClick={() => setPagoSeleccionado(pago)}
+                          key={ticket.id}
+                          onClick={() => setTicketSeleccionado(ticket)}
                           className="hover:bg-ras-turquesa/5 cursor-pointer transition-colors"
                         >
                           <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-ras-turquesa/20 to-ras-azul/20">
+                              <span className="text-lg">{ticket.pagado ? '✓' : '○'}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">
-                              {new Date(pago.fecha_pago).toLocaleDateString('es-MX', {
+                              {new Date(ticket.fecha_programada).toLocaleDateString('es-MX', {
                                 day: 'numeric',
                                 month: 'short',
                                 year: 'numeric'
                               })}
                             </div>
                             <div className="text-xs text-gray-500">
-                              {new Date(pago.fecha_pago).toLocaleDateString('es-MX', { weekday: 'long' })}
+                              {new Date(ticket.fecha_programada).toLocaleDateString('es-MX', { weekday: 'long' })}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              <div className="text-ras-azul">{getTipoIcon(pago.tipo_servicio)}</div>
-                              <div className="text-sm font-medium text-gray-900">{pago.servicio_nombre}</div>
-                            </div>
-                            <div className="text-xs text-gray-500 capitalize">{pago.tipo_servicio}</div>
+                            <div className="text-sm font-medium text-gray-900">{ticket.titulo}</div>
+                            <div className="text-xs text-gray-500 capitalize">{ticket.tipo_ticket}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right">
                             <div className="text-lg font-bold text-green-600 font-poppins">
-                              ${pago.monto_estimado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                              ${ticket.monto_estimado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                             </div>
                           </td>
                         </tr>
@@ -543,25 +560,25 @@ export default function CalendarioPropiedadPage() {
         )}
 
         {/* Modal de detalle */}
-        {pagoSeleccionado && (
+        {ticketSeleccionado && (
           <div
             className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => setPagoSeleccionado(null)}
+            onClick={() => setTicketSeleccionado(null)}
           >
             <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="bg-gradient-to-r from-ras-azul to-ras-turquesa p-6 text-white">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center border border-white/30">
-                      {getTipoIcon(pagoSeleccionado.tipo_servicio)}
+                      <span className="text-2xl">{ticketSeleccionado.pagado ? '✓' : '○'}</span>
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold font-poppins">{pagoSeleccionado.servicio_nombre}</h3>
-                      <p className="text-sm text-white/90 font-roboto">{pagoSeleccionado.propiedad_nombre}</p>
+                      <h3 className="text-lg font-bold font-poppins">{ticketSeleccionado.titulo}</h3>
+                      <p className="text-sm text-white/90 font-roboto">{ticketSeleccionado.propiedad_nombre}</p>
                     </div>
                   </div>
                   <button
-                    onClick={() => setPagoSeleccionado(null)}
+                    onClick={() => setTicketSeleccionado(null)}
                     className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-1.5 transition-all"
                   >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -579,14 +596,25 @@ export default function CalendarioPropiedadPage() {
                       <line x1="8" y1="2" x2="8" y2="6"/>
                       <line x1="3" y1="10" x2="21" y2="10"/>
                     </svg>
-                    <span className="text-sm font-semibold">Fecha de pago</span>
+                    <span className="text-sm font-semibold">Fecha programada</span>
                   </div>
                   <span className="text-sm font-bold text-gray-800">
-                    {new Date(pagoSeleccionado.fecha_pago).toLocaleDateString('es-MX', {
+                    {new Date(ticketSeleccionado.fecha_programada).toLocaleDateString('es-MX', {
                       day: 'numeric',
                       month: 'short',
                       year: 'numeric'
                     })}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-purple-50 rounded-xl border border-purple-200">
+                  <div className="flex items-center gap-2 text-purple-700">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    <span className="text-sm font-semibold">Estado</span>
+                  </div>
+                  <span className="text-sm font-bold text-purple-600 capitalize">
+                    {ticketSeleccionado.pagado ? '✅ Pagado' : '⏳ Pendiente'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-4 bg-gradient-to-br from-green-50 to-green-100/50 rounded-xl border border-green-200">
@@ -597,17 +625,17 @@ export default function CalendarioPropiedadPage() {
                     <span className="text-sm font-semibold">Monto</span>
                   </div>
                   <span className="text-xl font-bold text-green-600 font-poppins">
-                    ${pagoSeleccionado.monto_estimado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                    ${ticketSeleccionado.monto_estimado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <button
                   onClick={() => {
                     router.push(`/dashboard/catalogo/propiedad/${propiedadId}/tickets`)
-                    setPagoSeleccionado(null)
+                    setTicketSeleccionado(null)
                   }}
                   className="w-full py-3.5 bg-gradient-to-r from-ras-azul to-ras-turquesa text-white rounded-xl font-semibold hover:shadow-lg hover:scale-[1.02] transition-all font-poppins flex items-center justify-center gap-2"
                 >
-                  <span>Ver todos los pagos</span>
+                  <span>Ver todos los tickets</span>
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
@@ -615,6 +643,24 @@ export default function CalendarioPropiedadPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Modal de Nuevo Ticket */}
+        {showNuevoTicketModal && propiedad && (
+          <NuevoTicket
+            isOpen={showNuevoTicketModal}
+            onClose={() => setShowNuevoTicketModal(false)}
+            onSuccess={() => {
+              setShowNuevoTicketModal(false)
+              cargarDatos()
+            }}
+            propiedades={[{
+              id: propiedad.id,
+              nombre: propiedad.nombre_propiedad,
+              user_id: user?.id || ''
+            }]}
+            propiedadInicial={propiedad.id}
+          />
         )}
       </main>
     </div>
