@@ -168,10 +168,39 @@ export default function CuentasGlobalPage() {
         }
       })
 
-      console.log('📊 Movimientos CONCRETADOS cargados:', movimientosEgresos.length)
+      console.log('📊 Movimientos EGRESOS cargados:', movimientosEgresos.length)
 
-      // TODO: Aquí agregarás los INGRESOS cuando estén en la BD
-      const movimientosIngresos: Movimiento[] = []
+      // Cargar INGRESOS de la tabla `ingresos`
+      const { data: ingresosData } = await supabase
+        .from('ingresos')
+        .select(`
+          id,
+          concepto,
+          monto,
+          fecha_ingreso,
+          tipo_ingreso,
+          propiedad_id,
+          creado_por
+        `)
+        .in('propiedad_id', propIds)
+        .limit(500)
+
+      // Transformar ingresos a movimientos
+      const movimientosIngresos: Movimiento[] = (ingresosData || []).map(ingreso => {
+        const propiedad = todasPropiedades.find(p => p.id === ingreso.propiedad_id)
+        return {
+          id: ingreso.id,
+          propiedad_nombre: propiedad?.nombre || 'Sin nombre',
+          tipo: 'ingreso' as const,
+          titulo: ingreso.concepto,
+          monto: ingreso.monto,
+          responsable: ingreso.tipo_ingreso || 'Ingreso',
+          fecha: ingreso.fecha_ingreso,
+          propiedad_id: ingreso.propiedad_id
+        }
+      })
+
+      console.log('📊 Movimientos INGRESOS cargados:', movimientosIngresos.length)
 
       const todosMovimientos = [...movimientosEgresos, ...movimientosIngresos]
       setMovimientos(todosMovimientos)

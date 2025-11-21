@@ -126,8 +126,33 @@ export default function BalancePropiedadPage() {
         propiedad_id: pago.propiedad_id
       }))
 
-      // TODO: Aquí agregarás los INGRESOS cuando estén en la BD
-      const movimientosIngresos: Movimiento[] = []
+      // Cargar INGRESOS de la tabla `ingresos`
+      const { data: ingresosData } = await supabase
+        .from('ingresos')
+        .select(`
+          id,
+          concepto,
+          monto,
+          fecha_ingreso,
+          tipo_ingreso,
+          propiedad_id
+        `)
+        .eq('propiedad_id', propiedadId)
+        .limit(500)
+
+      // Transformar ingresos a movimientos
+      const movimientosIngresos: Movimiento[] = (ingresosData || []).map(ingreso => ({
+        id: ingreso.id,
+        propiedad_nombre: propData.nombre_propiedad,
+        tipo: 'ingreso' as const,
+        titulo: ingreso.concepto,
+        monto: ingreso.monto,
+        responsable: ingreso.tipo_ingreso || 'Ingreso',
+        fecha: ingreso.fecha_ingreso,
+        propiedad_id: ingreso.propiedad_id
+      }))
+
+      console.log('📊 Movimientos INGRESOS cargados:', movimientosIngresos.length)
 
       const todosMovimientos = [...movimientosEgresos, ...movimientosIngresos]
       setMovimientos(todosMovimientos)

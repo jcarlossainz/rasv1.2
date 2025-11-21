@@ -31,7 +31,7 @@ export default function RegistrarPagoModal({
   pagoExistente
 }: RegistrarPagoModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  
+
   // Estados del formulario
   const [fechaPago, setFechaPago] = useState(
     pagoExistente?.fecha_pago || new Date().toISOString().split('T')[0]
@@ -45,12 +45,42 @@ export default function RegistrarPagoModal({
   const [tieneFactura, setTieneFactura] = useState(false)
   const [numeroFactura, setNumeroFactura] = useState('')
   const [notas, setNotas] = useState('') // Nuevo: notas adicionales
+  const [cuentaId, setCuentaId] = useState('') // *** NUEVO: Cuenta bancaria
   const [archivo, setArchivo] = useState<File | null>(null)
   const [archivoPreview, setArchivoPreview] = useState<string | null>(null)
-  
+
   // Estados de UI
   const [guardando, setGuardando] = useState(false)
   const [subiendoArchivo, setSubiendoArchivo] = useState(false)
+  const [cuentas, setCuentas] = useState<Array<{id: string; nombre: string; balance_actual: number}>>([])
+  const [cargandoCuentas, setCargandoCuentas] = useState(false)
+
+  // *** NUEVO: Cargar cuentas del usuario
+  const cargarCuentas = async () => {
+    setCargandoCuentas(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('cuentas')
+        .select('id, nombre, balance_actual')
+        .eq('activo', true)
+        .order('nombre', { ascending: true })
+
+      if (error) throw error
+      setCuentas(data || [])
+    } catch (error) {
+      console.error('Error cargando cuentas:', error)
+    } finally {
+      setCargandoCuentas(false)
+    }
+  }
+
+  // Cargar cuentas al abrir el modal
+  if (isOpen && cuentas.length === 0 && !cargandoCuentas) {
+    cargarCuentas()
+  }
 
   const handleArchivoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -144,6 +174,12 @@ export default function RegistrarPagoModal({
       return
     }
 
+    // *** NUEVO: Validar cuenta
+    if (!cuentaId) {
+      alert('Debes seleccionar una cuenta para realizar el pago')
+      return
+    }
+
     if (tieneFactura && !numeroFactura.trim()) {
       alert('Si tiene factura, debes indicar el número')
       return
@@ -178,11 +214,15 @@ export default function RegistrarPagoModal({
             numero_factura: tieneFactura ? numeroFactura : null,
             comprobante_url: urlComprobante,
             notas: notas || null,
+            cuenta_id: cuentaId || null, // *** NUEVO: Asociar a cuenta
             updated_at: new Date().toISOString()
           })
           .eq('id', pagoExistente.id)
 
         if (error) throw error
+
+        // *** NOTA: El trigger actualizar_saldo_cuenta() se encargará automáticamente
+        // de actualizar el balance_actual de la cuenta seleccionada
       } else {
         // Crear nuevo registro de pago
         // TODO: Aquí necesitarás definir la estructura para pagos manuales
@@ -328,6 +368,30 @@ export default function RegistrarPagoModal({
                   className="w-full pl-8 pr-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ras-turquesa text-sm"
                 />
               </div>
+            </div>
+
+            {/* *** NUEVO: Cuenta */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
+                Cuenta para Pago <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={cuentaId}
+                onChange={(e) => setCuentaId(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ras-turquesa text-sm"
+              >
+                <option value="">Seleccionar cuenta...</option>
+                {cuentas.map(cuenta => (
+                  <option key={cuenta.id} value={cuenta.id}>
+                    {cuenta.nombre} (Saldo: ${cuenta.balance_actual?.toLocaleString('es-MX', { minimumFractionDigits: 2 }) || '0.00'})
+                  </option>
+                ))}
+              </select>
+              {cuentas.length === 0 && !cargandoCuentas && (
+                <p className="mt-2 text-sm text-amber-600">
+                  ⚠️ No tienes cuentas registradas. <a href="/dashboard/cuentas" className="underline font-semibold">Crear cuenta</a>
+                </p>
+              )}
             </div>
 
             {/* Método de Pago */}

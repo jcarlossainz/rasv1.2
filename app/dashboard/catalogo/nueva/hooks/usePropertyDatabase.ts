@@ -228,48 +228,45 @@ export function usePropertyDatabase() {
       // 3. Transformar datos
       const dbData = transformFormToDatabase(data);
       
+      let finalPropertyId = propertyId;
+
       if (propertyId) {
         // ==========================================
         // ACTUALIZAR PROPIEDAD EXISTENTE
         // ==========================================
         console.log(`🔄 Actualizando propiedad: ${propertyId}`);
-        
+
         const { error } = await supabase
           .from('propiedades')
           .update(dbData)
           .eq('id', propertyId)
           .eq('owner_id', user.id);
-        
+
         if (error) {
           console.error('❌ Error actualizando:', error);
           throw error;
         }
-        
+
         console.log('✅ Propiedad actualizada exitosamente');
-        
-        return {
-          success: true,
-          propertyId: propertyId
-        };
-        
+
       } else {
         // ==========================================
         // CREAR NUEVA PROPIEDAD
         // ==========================================
         console.log('✨ Creando nueva propiedad');
-        
+
         const dataToInsert = {
           ...dbData,
           owner_id: user.id,
           empresa_id: empresaId
         };
-        
+
         const { data: newProperty, error } = await supabase
           .from('propiedades')
           .insert([dataToInsert])
           .select('id')
           .single();
-        
+
         if (error) {
           console.error('❌ ========================================');
           console.error('❌ ERROR AL CREAR');
@@ -277,17 +274,127 @@ export function usePropertyDatabase() {
           console.error('❌ ========================================');
           throw error;
         }
-        
+
         console.log('✅ ========================================');
         console.log('✅ PROPIEDAD CREADA EXITOSAMENTE');
         console.log('✅ ID:', newProperty.id);
         console.log('✅ ========================================');
-        
-        return {
-          success: true,
-          propertyId: newProperty.id
-        };
+
+        finalPropertyId = newProperty.id;
       }
+
+      // ==========================================
+      // PROCESAR SERVICIOS (NUEVO)
+      // ==========================================
+      if (data.servicios && data.servicios.length > 0) {
+        console.log('🔧 ========================================');
+        console.log('🔧 PROCESANDO SERVICIOS');
+        console.log(`🔧 Cantidad: ${data.servicios.length}`);
+        console.log('🔧 ========================================');
+
+        for (const servicio of data.servicios) {
+          try {
+            // Verificar si ya existe el servicio (por nombre y propiedad)
+            const { data: servicioExistente } = await supabase
+              .from('servicios_inmueble')
+              .select('id')
+              .eq('propiedad_id', finalPropertyId)
+              .eq('nombre', servicio.name)
+              .maybeSingle();
+
+            let servicioId: string;
+
+            if (servicioExistente) {
+              // Actualizar servicio existente
+              console.log(`🔄 Actualizando servicio: ${servicio.name}`);
+
+              const { error: updateError } = await supabase
+                .from('servicios_inmueble')
+                .update({
+                  tipo_servicio: servicio.category || 'Otro',
+                  proveedor: servicio.provider || null,
+                  numero_contrato: servicio.accountNumber || null,
+                  monto: parseFloat(servicio.cost || '0'),
+                  es_fijo: servicio.isFixedCost !== false,
+                  frecuencia_valor: parseInt(servicio.frequency || '1'),
+                  frecuencia_unidad: servicio.frequencyUnit || 'meses',
+                  ultima_fecha_pago: servicio.lastPaymentDate || null,
+                  activo: true,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', servicioExistente.id);
+
+              if (updateError) {
+                console.error(`❌ Error actualizando servicio ${servicio.name}:`, updateError);
+                continue;
+              }
+
+              servicioId = servicioExistente.id;
+
+            } else {
+              // Crear nuevo servicio
+              console.log(`✨ Creando servicio: ${servicio.name}`);
+
+              const { data: nuevoServicio, error: insertError } = await supabase
+                .from('servicios_inmueble')
+                .insert([{
+                  propiedad_id: finalPropertyId,
+                  tipo_servicio: servicio.category || 'Otro',
+                  nombre: servicio.name,
+                  numero_contrato: servicio.accountNumber || null,
+                  proveedor: servicio.provider || null,
+                  monto: parseFloat(servicio.cost || '0'),
+                  es_fijo: servicio.isFixedCost !== false,
+                  frecuencia_valor: parseInt(servicio.frequency || '1'),
+                  frecuencia_unidad: servicio.frequencyUnit || 'meses',
+                  ultima_fecha_pago: servicio.lastPaymentDate || null,
+                  activo: true,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                }])
+                .select('id')
+                .single();
+
+              if (insertError) {
+                console.error(`❌ Error creando servicio ${servicio.name}:`, insertError);
+                continue;
+              }
+
+              servicioId = nuevoServicio.id;
+            }
+
+            // Generar fechas de pago automáticamente
+            if (servicio.lastPaymentDate) {
+              console.log(`📅 Generando fechas de pago para: ${servicio.name}`);
+
+              const { data: result, error: rpcError } = await supabase
+                .rpc('generar_fechas_pago_servicio', {
+                  p_servicio_id: servicioId,
+                  p_cantidad_meses: 12
+                });
+
+              if (rpcError) {
+                console.error(`❌ Error generando fechas de pago:`, rpcError);
+              } else {
+                console.log(`✅ Generadas ${result || 0} fechas de pago`);
+              }
+            } else {
+              console.log(`⚠️ Servicio ${servicio.name} no tiene fecha de último pago`);
+            }
+
+          } catch (servicioError: any) {
+            console.error(`❌ Error procesando servicio ${servicio.name}:`, servicioError);
+            // Continuar con el siguiente servicio
+          }
+        }
+
+        console.log('✅ Servicios procesados');
+      }
+
+      return {
+        success: true,
+        propertyId: finalPropertyId
+      };
       
     } catch (error: any) {
       console.error('❌ Error general al guardar:', error);
