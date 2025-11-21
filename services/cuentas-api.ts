@@ -95,7 +95,10 @@ export async function crearCuenta(cuenta: NuevaCuentaBancaria): Promise<CuentaBa
   const cuentaData = {
     ...cuenta,
     propietario_id: cuenta.propietario_id || (cuenta.propiedad_id ? null : user.id),
-    activo: true
+    activo: true,
+    // FIX: Establecer balance_actual explícitamente igual a balance_inicial
+    // El trigger debería hacer esto, pero por si acaso lo hacemos explícito
+    balance_actual: cuenta.balance_inicial
   }
 
   const { data, error } = await supabase
