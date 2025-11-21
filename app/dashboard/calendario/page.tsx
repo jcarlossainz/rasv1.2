@@ -19,6 +19,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useLogout } from '@/hooks/useLogout'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
+import NuevoTicket from '@/app/dashboard/tickets/NuevoTicket'
 
 interface Pago {
   id: string
@@ -74,6 +75,9 @@ export default function CalendarioGlobalPage() {
   const [propietarioFiltro, setPropietarioFiltro] = useState<string[]>([])
   const [showPropietarioDropdown, setShowPropietarioDropdown] = useState(false)
   const [showPropiedadDropdown, setShowPropiedadDropdown] = useState(false)
+
+  // Modal de Nuevo Ticket
+  const [showNuevoTicketModal, setShowNuevoTicketModal] = useState(false)
 
   useEffect(() => {
     if (user?.id) {
@@ -350,7 +354,9 @@ export default function CalendarioGlobalPage() {
       <TopBar
         title="Calendario de Pagos"
         showBackButton
+        showAddButton
         onBackClick={() => router.push('/dashboard')}
+        onNuevoTicket={() => setShowNuevoTicketModal(true)}
       />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -817,6 +823,18 @@ export default function CalendarioGlobalPage() {
             </div>
           </div>
         )}
+
+        {/* Modal de Nuevo Ticket */}
+        <NuevoTicket
+          isOpen={showNuevoTicketModal}
+          onClose={() => setShowNuevoTicketModal(false)}
+          propiedades={propiedades.map(p => ({ id: p.id, nombre: p.nombre }))}
+          onTicketCreado={() => {
+            if (user?.id) {
+              cargarDatos(user.id)
+            }
+          }}
+        />
       </main>
     </div>
   )
