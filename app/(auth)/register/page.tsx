@@ -3,44 +3,37 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { supabase } from '@/lib/supabase/client'
+import { registerSchema, type RegisterInput } from '@/lib/validation/schemas'
 
 export default function RegisterPage() {
   const router = useRouter()
-  const [nombre, setNombre] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [apiError, setApiError] = useState('')
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
+  const {
+    register,
+    handleSubmit,
+    formState: { errors }
+  } = useForm<RegisterInput>({
+    resolver: zodResolver(registerSchema)
+  })
 
-    // Validaciones
-    if (password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres')
-      return
-    }
-
-    if (password !== confirmPassword) {
-      setError('Las contraseñas no coinciden')
-      return
-    }
-
+  const onSubmit = async (data: RegisterInput) => {
+    setApiError('')
     setLoading(true)
 
     try {
-      // Registrar usuario - el trigger creará el perfil automáticamente
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
+        email: data.email,
+        password: data.password,
         options: {
           data: {
-            nombre: nombre,
+            nombre: data.nombre,
           },
           emailRedirectTo: `${window.location.origin}/dashboard`
         }
@@ -52,7 +45,6 @@ export default function RegisterPage() {
         throw new Error('No se pudo crear el usuario')
       }
 
-      // Redirigir según si hay sesión o no
       if (authData.session) {
         router.push('/dashboard')
       } else {
@@ -63,23 +55,23 @@ export default function RegisterPage() {
     } catch (err: any) {
       console.error('Error en registro:', err)
       if (err.message.includes('already registered') || err.message.includes('User already registered')) {
-        setError('Este correo ya está registrado')
+        setApiError('Este correo ya está registrado')
       } else {
-        setError(err.message || 'Error al crear la cuenta')
+        setApiError(err.message || 'Error al crear la cuenta')
       }
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#00768E] via-[#00CC99] to-[#00768E] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-ras-azul via-ras-turquesa to-ras-azul flex items-center justify-center p-4">
       {/* Card principal */}
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         
         {/* Header con logo y gradiente */}
-        <div className="bg-gradient-to-r from-[#00768E] to-[#00CC99] p-8 text-center">
+        <div className="bg-gradient-to-r from-ras-azul to-ras-turquesa p-8 text-center">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-2xl shadow-lg mb-4">
-            <svg className="w-12 h-12 text-[#00768E]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg className="w-12 h-12 text-ras-azul" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
               <polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
@@ -93,7 +85,7 @@ export default function RegisterPage() {
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Crear Cuenta</h2>
           <p className="text-gray-600 mb-6 text-sm">Comienza a administrar tus propiedades</p>
 
-          <form onSubmit={handleRegister} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {/* Nombre completo */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -108,13 +100,16 @@ export default function RegisterPage() {
                 </div>
                 <input
                   type="text"
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#00768E] focus:border-transparent transition-all outline-none"
+                  {...register('nombre')}
+                  className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-ras-azul focus:border-transparent transition-all outline-none ${
+                    errors.nombre ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="Juan Pérez"
-                  required
                 />
               </div>
+              {errors.nombre && (
+                <p className="mt-1 text-sm text-red-600">{errors.nombre.message}</p>
+              )}
             </div>
 
             {/* Email */}
@@ -131,13 +126,16 @@ export default function RegisterPage() {
                 </div>
                 <input
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#00768E] focus:border-transparent transition-all outline-none"
+                  {...register('email')}
+                  className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-ras-azul focus:border-transparent transition-all outline-none ${
+                    errors.email ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="correo@ejemplo.com"
-                  required
                 />
               </div>
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+              )}
             </div>
 
             {/* Contraseña */}
@@ -154,12 +152,11 @@ export default function RegisterPage() {
                 </div>
                 <input
                   type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#00768E] focus:border-transparent transition-all outline-none"
+                  {...register('password')}
+                  className={`w-full pl-12 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-ras-azul focus:border-transparent transition-all outline-none ${
+                    errors.password ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="••••••••"
-                  required
-                  minLength={6}
                 />
                 <button
                   type="button"
@@ -179,7 +176,10 @@ export default function RegisterPage() {
                   )}
                 </button>
               </div>
-              <p className="text-xs text-gray-500 mt-1">Mínimo 6 caracteres</p>
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">Mínimo 8 caracteres, 1 mayúscula, 1 número</p>
             </div>
 
             {/* Confirmar Contraseña */}
@@ -196,11 +196,11 @@ export default function RegisterPage() {
                 </div>
                 <input
                   type={showConfirmPassword ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#00768E] focus:border-transparent transition-all outline-none"
+                  {...register('confirmPassword')}
+                  className={`w-full pl-12 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-ras-azul focus:border-transparent transition-all outline-none ${
+                    errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="••••••••"
-                  required
                 />
                 <button
                   type="button"
@@ -220,17 +220,20 @@ export default function RegisterPage() {
                   )}
                 </button>
               </div>
+              {errors.confirmPassword && (
+                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
+              )}
             </div>
 
             {/* Error message */}
-            {error && (
+            {apiError && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
                 <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="10"/>
                   <line x1="12" y1="8" x2="12" y2="12"/>
                   <line x1="12" y1="16" x2="12.01" y2="16"/>
                 </svg>
-                <p className="text-sm text-red-700 font-medium">{error}</p>
+                <p className="text-sm text-red-700 font-medium">{apiError}</p>
               </div>
             )}
 
@@ -238,7 +241,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-[#00768E] to-[#00CC99] text-white py-3.5 rounded-xl font-semibold hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              className="w-full bg-gradient-to-r from-ras-azul to-ras-turquesa text-white py-3.5 rounded-xl font-semibold hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -260,7 +263,7 @@ export default function RegisterPage() {
               ¿Ya tienes cuenta?{' '}
               <Link 
                 href="/login" 
-                className="text-[#00768E] font-semibold hover:text-[#00CC99] transition-colors"
+                className="text-ras-azul font-semibold hover:text-ras-turquesa transition-colors"
               >
                 Iniciar sesión
               </Link>
