@@ -23,7 +23,7 @@ interface GenerateTicketsParams {
 function calcularProximasFechas(
   lastPaymentDate: string,
   frecuenciaCantidad: number,
-  frecuenciaUnidad: 'dia' | 'mes' | 'año',
+  frecuenciaUnidad: string, // 'dias' | 'semanas' | 'meses' | 'anos' | 'dia' | 'mes' | 'año'
   cantidadFechas: number
 ): Date[] {
   const fechas: Date[] = [];
@@ -32,11 +32,14 @@ function calcularProximasFechas(
   for (let i = 1; i <= cantidadFechas; i++) {
     const nuevaFecha = new Date(fechaBase);
 
-    if (frecuenciaUnidad === 'dia') {
+    // Soportar tanto singular como plural
+    if (frecuenciaUnidad === 'dia' || frecuenciaUnidad === 'dias') {
       nuevaFecha.setDate(fechaBase.getDate() + (frecuenciaCantidad * i));
-    } else if (frecuenciaUnidad === 'mes') {
+    } else if (frecuenciaUnidad === 'semana' || frecuenciaUnidad === 'semanas') {
+      nuevaFecha.setDate(fechaBase.getDate() + (frecuenciaCantidad * i * 7));
+    } else if (frecuenciaUnidad === 'mes' || frecuenciaUnidad === 'meses') {
       nuevaFecha.setMonth(fechaBase.getMonth() + (frecuenciaCantidad * i));
-    } else if (frecuenciaUnidad === 'año') {
+    } else if (frecuenciaUnidad === 'año' || frecuenciaUnidad === 'anos') {
       nuevaFecha.setFullYear(fechaBase.getFullYear() + (frecuenciaCantidad * i));
     }
 
@@ -66,18 +69,27 @@ async function crearRegistrosServicios(
     console.log(`🗑️ Servicios existentes eliminados para propiedad ${propertyId}`);
 
     // Crear registros en servicios_inmueble
-    const serviciosParaInsertar = services.map(service => ({
-      propiedad_id: propertyId,
-      nombre: service.name,
-      tipo_servicio: service.type,
-      proveedor: service.provider || null,
-      numero_contrato: service.accountNumber || null,
-      monto: service.cost || 0,
-      es_fijo: service.montoTipo === 'fijo' || !service.montoTipo,
-      frecuencia_cantidad: service.frecuenciaCantidad || 1,
-      frecuencia_unidad: service.frecuenciaUnidad || 'mes',
-      notas: service.notes || null
-    }));
+    const serviciosParaInsertar = services.map(service => {
+      // Mapear unidades del frontend (singular) al backend (plural)
+      let unidad = service.frecuenciaUnidad || 'mes';
+      if (unidad === 'dia') unidad = 'dias';
+      if (unidad === 'mes') unidad = 'meses';
+      if (unidad === 'año') unidad = 'anos';
+
+      return {
+        propiedad_id: propertyId,
+        nombre: service.name,
+        tipo_servicio: service.type,
+        proveedor: service.provider || null,
+        numero_contrato: service.accountNumber || null,
+        monto: service.cost || 0,
+        es_fijo: service.montoTipo === 'fijo' || !service.montoTipo,
+        frecuencia_valor: service.frecuenciaCantidad || 1,
+        frecuencia_unidad: unidad,
+        ultima_fecha_pago: service.lastPaymentDate || null,
+        activo: true
+      };
+    });
 
     if (serviciosParaInsertar.length > 0) {
       const { data: serviciosInsertados, error } = await supabase
@@ -171,11 +183,15 @@ export async function generateServiceTickets({
       const unidad = service.frecuenciaUnidad || 'mes';
 
       let cantidadFechas = 12; // Por defecto 12 pagos (1 año mensual)
-      if (unidad === 'mes') {
+
+      // Soportar tanto singular como plural
+      if (unidad === 'mes' || unidad === 'meses') {
         cantidadFechas = Math.ceil(12 / frecuencia); // Ajustar según frecuencia
-      } else if (unidad === 'dia') {
+      } else if (unidad === 'dia' || unidad === 'dias') {
         cantidadFechas = Math.ceil(365 / frecuencia); // ~365 días = 1 año
-      } else if (unidad === 'año') {
+      } else if (unidad === 'semana' || unidad === 'semanas') {
+        cantidadFechas = Math.ceil(52 / frecuencia); // ~52 semanas = 1 año
+      } else if (unidad === 'año' || unidad === 'anos') {
         cantidadFechas = Math.ceil(1 / frecuencia); // 1 o más pagos según frecuencia
       }
 
