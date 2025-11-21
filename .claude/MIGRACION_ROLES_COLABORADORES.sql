@@ -55,19 +55,18 @@ END $$;
 -- 'admin' | 'editor' -> 'supervisor'
 -- 'viewer' -> 'propietario'
 
-UPDATE propiedades_colaboradores
-SET rol = CASE
-  WHEN rol IN ('admin', 'editor') THEN 'supervisor'
-  WHEN rol = 'viewer' THEN 'propietario'
-  ELSE rol
-END
-WHERE rol IN ('admin', 'editor', 'viewer');
-
--- Verificar cuántos registros fueron actualizados
 DO $$
 DECLARE
   updated_count INTEGER;
 BEGIN
+  UPDATE propiedades_colaboradores
+  SET rol = CASE
+    WHEN rol IN ('admin', 'editor') THEN 'supervisor'
+    WHEN rol = 'viewer' THEN 'propietario'
+    ELSE rol
+  END
+  WHERE rol IN ('admin', 'editor', 'viewer');
+
   GET DIAGNOSTICS updated_count = ROW_COUNT;
   RAISE NOTICE '✅ % registros migrados a nuevos roles', updated_count;
 END $$;
@@ -93,7 +92,10 @@ CREATE UNIQUE INDEX idx_unique_propiedad_email
 ON propiedades_colaboradores (propiedad_id, email_invitado)
 WHERE email_invitado IS NOT NULL;
 
-RAISE NOTICE '✅ Constraints actualizados correctamente';
+DO $$
+BEGIN
+  RAISE NOTICE '✅ Constraints actualizados correctamente';
+END $$;
 
 -- ----------------------------------------------------------------------------
 -- PASO 5: Actualizar comentarios de la tabla
@@ -107,7 +109,10 @@ COMMENT ON COLUMN propiedades_colaboradores.email_invitado IS
 COMMENT ON TABLE propiedades_colaboradores IS
   'Colaboradores de propiedades. Soporta usuarios registrados (user_id) y invitaciones pendientes (email_invitado)';
 
-RAISE NOTICE '✅ Comentarios actualizados';
+DO $$
+BEGIN
+  RAISE NOTICE '✅ Comentarios actualizados';
+END $$;
 
 -- ----------------------------------------------------------------------------
 -- VERIFICACIÓN FINAL
