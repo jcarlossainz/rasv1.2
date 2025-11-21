@@ -70,7 +70,7 @@ export async function uploadPropertyImageDual(
         storage_path_display: displayPath,
         storage_path_thumbnail: thumbPath,
         file_size: JSON.stringify({
-          thumbnail: thumbBlob.size,
+          thumbnail: thumbnailBlob.size,
           display: displayBlob.size
         }),
         dimensions: JSON.stringify({
