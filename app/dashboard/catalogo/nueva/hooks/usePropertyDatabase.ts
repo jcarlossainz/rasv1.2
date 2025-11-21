@@ -187,6 +187,112 @@ function transformDatabaseToForm(dbData: any): PropertyFormData {
 }
 
 // ============================================================================
+// SINCRONIZAR COLABORADORES
+// ============================================================================
+
+/**
+ * Sincroniza los colaboradores desde los arrays de emails a la tabla propiedades_colaboradores
+ * Esta función se llama después de guardar/actualizar una propiedad
+ */
+async function syncColaboradores(
+  propertyId: string,
+  propietariosEmail: string[],
+  supervisoresEmail: string[],
+  inquilinosEmail: string[]
+): Promise<void> {
+  console.log('🔄 Sincronizando colaboradores a propiedades_colaboradores...');
+
+  try {
+    // 1. Primero, obtener todos los colaboradores existentes para esta propiedad
+    const { data: existentes, error: errorExistentes } = await supabase
+      .from('propiedades_colaboradores')
+      .select('email_invitado, user_id, rol')
+      .eq('propiedad_id', propertyId);
+
+    if (errorExistentes) {
+      console.error('Error obteniendo colaboradores existentes:', errorExistentes);
+      return;
+    }
+
+    // 2. Crear un Set con los emails/user_ids existentes para evitar duplicados
+    const existentesSet = new Set(
+      (existentes || []).map(e => e.email_invitado || e.user_id)
+    );
+
+    // 3. Preparar lista de colaboradores a insertar
+    const colaboradoresParaInsertar: Array<{
+      propiedad_id: string;
+      rol: string;
+      email_invitado: string | null;
+      user_id: string | null;
+    }> = [];
+
+    // Helper para agregar colaborador si no existe
+    const agregarColaborador = async (email: string, rol: string) => {
+      // Si ya existe, no agregar
+      if (existentesSet.has(email)) {
+        return;
+      }
+
+      // Buscar si el usuario existe en profiles
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (profile) {
+        // Usuario registrado
+        if (!existentesSet.has(profile.id)) {
+          colaboradoresParaInsertar.push({
+            propiedad_id: propertyId,
+            rol: rol,
+            email_invitado: null,
+            user_id: profile.id
+          });
+        }
+      } else {
+        // Invitación pendiente
+        colaboradoresParaInsertar.push({
+          propiedad_id: propertyId,
+          rol: rol,
+          email_invitado: email,
+          user_id: null
+        });
+      }
+    };
+
+    // 4. Procesar todos los emails
+    for (const email of propietariosEmail || []) {
+      await agregarColaborador(email, 'propietario');
+    }
+    for (const email of supervisoresEmail || []) {
+      await agregarColaborador(email, 'supervisor');
+    }
+    for (const email of inquilinosEmail || []) {
+      await agregarColaborador(email, 'inquilino');
+    }
+
+    // 5. Insertar todos los nuevos colaboradores
+    if (colaboradoresParaInsertar.length > 0) {
+      const { error: errorInsert } = await supabase
+        .from('propiedades_colaboradores')
+        .insert(colaboradoresParaInsertar);
+
+      if (errorInsert) {
+        console.error('Error insertando colaboradores:', errorInsert);
+      } else {
+        console.log(`✅ Se insertaron ${colaboradoresParaInsertar.length} colaboradores nuevos`);
+      }
+    } else {
+      console.log('ℹ️ No hay colaboradores nuevos para insertar');
+    }
+  } catch (error) {
+    console.error('Error en syncColaboradores:', error);
+  }
+}
+
+// ============================================================================
 // HOOK PRINCIPAL
 // ============================================================================
 
@@ -247,9 +353,17 @@ export function usePropertyDatabase() {
           console.error('❌ Error actualizando:', error);
           throw error;
         }
-        
+
         console.log('✅ Propiedad actualizada exitosamente');
-        
+
+        // Sincronizar colaboradores a propiedades_colaboradores
+        await syncColaboradores(
+          propertyId,
+          data.propietarios_email || [],
+          data.supervisores_email || [],
+          data.inquilinos_email || []
+        );
+
         return {
           success: true,
           propertyId: propertyId
@@ -285,7 +399,15 @@ export function usePropertyDatabase() {
         console.log('✅ PROPIEDAD CREADA EXITOSAMENTE');
         console.log('✅ ID:', newProperty.id);
         console.log('✅ ========================================');
-        
+
+        // Sincronizar colaboradores a propiedades_colaboradores
+        await syncColaboradores(
+          newProperty.id,
+          data.propietarios_email || [],
+          data.supervisores_email || [],
+          data.inquilinos_email || []
+        );
+
         return {
           success: true,
           propertyId: newProperty.id
