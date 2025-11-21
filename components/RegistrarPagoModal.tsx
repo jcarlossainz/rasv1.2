@@ -60,9 +60,11 @@ export default function RegistrarPagoModal({
 
   // Cargar cuentas cuando cambie la propiedad
   useEffect(() => {
+    console.log('🔍 RegistrarPagoModal - propiedadId:', propiedadId)
     if (propiedadId) {
       cargarCuentasPropiedad(propiedadId)
     } else {
+      console.log('⚠️ No hay propiedadId, limpiando cuentas')
       setCuentas([])
       setCuentaId('')
     }
@@ -83,11 +85,13 @@ export default function RegistrarPagoModal({
 
   const cargarCuentasPropiedad = async (propId: string) => {
     try {
+      console.log('📥 Cargando cuentas para propiedad:', propId)
       setCargandoCuentas(true)
       const cuentasPropiedad = await obtenerCuentasPropiedad(propId)
+      console.log('✅ Cuentas cargadas:', cuentasPropiedad.length, cuentasPropiedad)
       setCuentas(cuentasPropiedad)
     } catch (error) {
-      console.error('Error cargando cuentas:', error)
+      console.error('❌ Error cargando cuentas:', error)
       setCuentas([])
     } finally {
       setCargandoCuentas(false)
