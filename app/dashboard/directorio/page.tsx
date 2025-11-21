@@ -92,7 +92,12 @@ export default function DirectorioPage() {
 
     if (error) {
       console.error('Error cargando proveedores:', error)
-      toast.error('Error al cargar proveedores')
+      console.error('Detalles del error:', JSON.stringify(error, null, 2))
+      // No mostrar error si la tabla no existe aún
+      if (error.code !== 'PGRST116' && error.code !== '42P01') {
+        toast.error('Error al cargar proveedores: ' + error.message)
+      }
+      setContactos([])
       return
     }
 
@@ -109,6 +114,9 @@ export default function DirectorioPage() {
 
     if (errorProps) {
       console.error('Error cargando propiedades:', errorProps)
+      console.error('Detalles del error propiedades:', JSON.stringify(errorProps, null, 2))
+      toast.error('Error al cargar propiedades: ' + errorProps.message)
+      setColaboradores([])
       return
     }
 
@@ -135,7 +143,9 @@ export default function DirectorioPage() {
 
     if (error) {
       console.error('Error cargando colaboradores:', error)
-      toast.error('Error al cargar colaboradores')
+      console.error('Detalles del error colaboradores:', JSON.stringify(error, null, 2))
+      toast.error('Error al cargar colaboradores: ' + error.message)
+      setColaboradores([])
       return
     }
 
