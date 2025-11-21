@@ -39,6 +39,7 @@ export default function CompartirPropiedad({
 
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([])
   const [emailColaborador, setEmailColaborador] = useState('')
+  const [rolSeleccionado, setRolSeleccionado] = useState<'supervisor' | 'propietario' | 'promotor'>('supervisor')
   const [agregando, setAgregando] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -117,7 +118,8 @@ export default function CompartirPropiedad({
         .maybeSingle() // maybeSingle permite que no exista sin error
 
       let dataToInsert: any = {
-        propiedad_id: propiedadId
+        propiedad_id: propiedadId,
+        rol: rolSeleccionado
       }
 
       if (perfilData) {
@@ -199,7 +201,7 @@ export default function CompartirPropiedad({
 
           {/* Formulario agregar colaborador */}
           <form onSubmit={agregarColaborador} className="mb-6">
-            <div className="flex gap-2">
+            <div className="flex gap-2 mb-3">
               <Input
                 type="email"
                 value={emailColaborador}
@@ -208,11 +210,20 @@ export default function CompartirPropiedad({
                 required
                 className="flex-1"
               />
+              <select
+                value={rolSeleccionado}
+                onChange={(e) => setRolSeleccionado(e.target.value as 'supervisor' | 'propietario' | 'promotor')}
+                className="px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ras-azul focus:border-transparent font-roboto"
+              >
+                <option value="supervisor">Supervisor</option>
+                <option value="propietario">Propietario</option>
+                <option value="promotor">Promotor</option>
+              </select>
               <Button type="submit" disabled={agregando} size="md">
                 {agregando ? 'Agregando...' : 'Agregar'}
               </Button>
             </div>
-            <p className="text-xs text-gray-500 mt-2 font-roboto">
+            <p className="text-xs text-gray-500 font-roboto">
               💡 Puedes invitar cualquier email. Si aún no está registrado, tendrá acceso automáticamente cuando se registre.
             </p>
           </form>

@@ -464,10 +464,10 @@ export default function Step1_DatosGenerales({ data, onUpdate }: Step1Props) {
                 <button
                   type="button"
                   onClick={() => handleAbrirModal('propietario')}
-                  className="px-4 py-2.5 bg-ras-azul text-white rounded-lg hover:bg-ras-azul/90 transition-colors font-semibold"
+                  className="px-4 py-2.5 bg-ras-azul text-white rounded-lg hover:bg-ras-azul/90 transition-colors font-semibold whitespace-nowrap"
                   title="Agregar propietario"
                 >
-                  +
+                  + Propietario
                 </button>
               </div>
               <p className="text-xs text-gray-500 mt-1">
@@ -522,10 +522,10 @@ export default function Step1_DatosGenerales({ data, onUpdate }: Step1Props) {
                 <button
                   type="button"
                   onClick={() => handleAbrirModal('supervisor')}
-                  className="px-4 py-2.5 bg-ras-azul text-white rounded-lg hover:bg-ras-azul/90 transition-colors font-semibold"
+                  className="px-4 py-2.5 bg-ras-azul text-white rounded-lg hover:bg-ras-azul/90 transition-colors font-semibold whitespace-nowrap"
                   title="Agregar supervisor"
                 >
-                  +
+                  + Supervisor
                 </button>
               </div>
               <p className="text-xs text-gray-500 mt-1">
