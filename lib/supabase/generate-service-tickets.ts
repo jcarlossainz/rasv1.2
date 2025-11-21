@@ -152,16 +152,17 @@ export async function generateServiceTickets({
     // 1. Crear registros en servicios_inmueble y obtener sus IDs
     const serviceIdMap = await crearRegistrosServicios(propertyId, serviciosValidos);
 
-    // 2. Eliminar tickets existentes para esta propiedad
+    // 2. Eliminar tickets automáticos existentes (los que tienen servicio_id) para esta propiedad
     const { error: deleteError } = await supabase
-      .from('fechas_pago_servicios')
+      .from('tickets')
       .delete()
-      .eq('propiedad_id', propertyId);
+      .eq('propiedad_id', propertyId)
+      .not('servicio_id', 'is', null); // Solo eliminar tickets automáticos de servicios
 
     if (deleteError) {
-      console.error('Error eliminando tickets existentes:', deleteError);
+      console.error('Error eliminando tickets automáticos existentes:', deleteError);
     } else {
-      console.log('🗑️ Tickets existentes eliminados');
+      console.log('🗑️ Tickets automáticos existentes eliminados');
     }
 
     // 3. Generar tickets para el próximo 1 año
@@ -209,10 +210,14 @@ export async function generateServiceTickets({
           ticketsParaInsertar.push({
             propiedad_id: propertyId,
             servicio_id: servicioId,
-            fecha_pago: fecha.toISOString().split('T')[0],
+            titulo: service.name,
+            descripcion: `Pago de ${service.type} - ${service.name}${service.provider ? ` (${service.provider})` : ''}`,
+            tipo: 'Pago de Servicio',
+            prioridad: 'Media',
+            estado: 'pendiente',
+            fecha_programada: fecha.toISOString().split('T')[0],
             monto_estimado: service.cost || 0,
-            pagado: false,
-            notas: `Pago de ${service.name}`
+            pagado: false
           });
         }
       }
@@ -220,10 +225,10 @@ export async function generateServiceTickets({
 
     console.log(`📝 Tickets a insertar: ${ticketsParaInsertar.length}`);
 
-    // 4. Insertar todos los tickets
+    // 4. Insertar todos los tickets en la tabla unificada 'tickets'
     if (ticketsParaInsertar.length > 0) {
       const { data: ticketsInsertados, error: insertError } = await supabase
-        .from('fechas_pago_servicios')
+        .from('tickets')
         .insert(ticketsParaInsertar)
         .select('id');
 
@@ -233,7 +238,7 @@ export async function generateServiceTickets({
       }
 
       console.log('✅ ========================================');
-      console.log(`✅ ${ticketsInsertados?.length || 0} TICKETS CREADOS`);
+      console.log(`✅ ${ticketsInsertados?.length || 0} TICKETS AUTOMÁTICOS CREADOS`);
       console.log('✅ ========================================');
 
       return {

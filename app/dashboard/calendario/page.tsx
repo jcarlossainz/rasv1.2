@@ -163,14 +163,14 @@ export default function CalendarioGlobalPage() {
         return
       }
 
-      // Cargar TODOS los tickets del próximo año
+      // Cargar TODOS los tickets del próximo año (automáticos + manuales)
       const hoy = new Date()
       const fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1) // Incluir mes anterior
       const fechaFin = new Date(hoy.getFullYear() + 1, hoy.getMonth(), hoy.getDate()) // Hasta 1 año adelante
 
       const propIds = todasPropiedades.map(p => p.id)
       const { data: ticketsData, error: ticketsError } = await supabase
-        .from('fechas_pago_servicios')
+        .from('tickets')
         .select(`
           *,
           servicios_inmueble:servicio_id(
@@ -179,9 +179,9 @@ export default function CalendarioGlobalPage() {
           )
         `)
         .in('propiedad_id', propIds)
-        .gte('fecha_pago', fechaInicio.toISOString().split('T')[0])
-        .lte('fecha_pago', fechaFin.toISOString().split('T')[0])
-        .order('fecha_pago', { ascending: true })
+        .gte('fecha_programada', fechaInicio.toISOString().split('T')[0])
+        .lte('fecha_programada', fechaFin.toISOString().split('T')[0])
+        .order('fecha_programada', { ascending: true })
 
       if (ticketsError) {
         console.error('Error cargando tickets:', ticketsError)
@@ -196,14 +196,17 @@ export default function CalendarioGlobalPage() {
 
         return {
           id: ticket.id,
-          titulo: servicio?.nombre || ticket.notas || 'Ticket sin título',
-          fecha_programada: ticket.fecha_pago,
+          titulo: ticket.titulo || servicio?.nombre || 'Ticket sin título',
+          descripcion: ticket.descripcion,
+          fecha_programada: ticket.fecha_programada,
           monto_estimado: ticket.monto_estimado || 0,
+          monto_real: ticket.monto_real,
           pagado: ticket.pagado || false,
           servicio_id: ticket.servicio_id,
-          tipo_ticket: 'Pago',
-          estado: 'Pendiente',
-          prioridad: 'Media',
+          tipo_ticket: ticket.tipo || 'General',
+          estado: ticket.estado || 'pendiente',
+          prioridad: ticket.prioridad || 'Media',
+          asignado_a: ticket.asignado_a,
           propiedad_id: ticket.propiedad_id,
           propiedad_nombre: propiedad?.nombre_propiedad || 'Sin nombre',
           propietario_id: propiedad?.owner_id || '',
