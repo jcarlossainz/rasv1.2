@@ -612,3 +612,106 @@ export interface Service {
   lastPaymentDate: string; // ✨ CORREGIDO - Fecha del último pago (formato YYYY-MM-DD)
   notes: string;
 }
+
+// ============================================================================
+// SISTEMA DE CUENTAS BANCARIAS E INGRESOS
+// ============================================================================
+
+/**
+ * Cuenta bancaria, tarjeta o efectivo
+ * Puede estar asociada a una propiedad O a un propietario
+ */
+export interface CuentaBancaria {
+  id: string;
+  propiedad_id: string | null;
+  propietario_id: string | null;
+  nombre: string;
+  tipo_moneda: 'MXN' | 'USD';
+  tipo_cuenta: 'Banco' | 'Tarjeta' | 'Efectivo';
+  banco: string | null;
+  numero_cuenta: string | null; // Últimos 4 dígitos
+  balance_inicial: number;
+  balance_actual: number;
+  descripcion: string | null;
+  color: string | null; // Color hex para identificación visual
+  activo: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Tipo para crear una nueva cuenta
+ */
+export interface NuevaCuentaBancaria {
+  propiedad_id?: string;
+  propietario_id?: string;
+  nombre: string;
+  tipo_moneda: 'MXN' | 'USD';
+  tipo_cuenta: 'Banco' | 'Tarjeta' | 'Efectivo';
+  banco?: string;
+  numero_cuenta?: string;
+  balance_inicial: number;
+  descripcion?: string;
+  color?: string;
+}
+
+/**
+ * Registro de ingreso (renta, depósito, venta, etc.)
+ */
+export interface Ingreso {
+  id: string;
+  propiedad_id: string;
+  cuenta_id: string | null;
+  creado_por: string | null;
+  concepto: string;
+  monto: number;
+  fecha_ingreso: string; // YYYY-MM-DD
+  tipo_ingreso: 'Renta' | 'Depósito' | 'Venta' | 'Otro' | null;
+  metodo_pago: 'Transferencia' | 'Efectivo' | 'Cheque' | 'Tarjeta' | 'Otro' | null;
+  referencia_pago: string | null;
+  tiene_factura: boolean;
+  numero_factura: string | null;
+  comprobante_url: string | null;
+  notas: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Tipo para crear un nuevo ingreso
+ */
+export interface NuevoIngreso {
+  propiedad_id: string;
+  cuenta_id?: string;
+  concepto: string;
+  monto: number;
+  fecha_ingreso: string;
+  tipo_ingreso?: 'Renta' | 'Depósito' | 'Venta' | 'Otro';
+  metodo_pago?: 'Transferencia' | 'Efectivo' | 'Cheque' | 'Tarjeta' | 'Otro';
+  referencia_pago?: string;
+  tiene_factura?: boolean;
+  numero_factura?: string;
+  comprobante_url?: string;
+  notas?: string;
+}
+
+/**
+ * Movimiento consolidado (ingreso o egreso) para vista de balance
+ */
+export interface MovimientoCuenta {
+  id: string;
+  tipo: 'ingreso' | 'egreso';
+  fecha: string;
+  monto: number;
+  concepto: string;
+  cuenta_id: string | null;
+  propiedad_id: string;
+  metodo_pago: string | null;
+  referencia_pago: string | null;
+  tiene_factura: boolean;
+  numero_factura: string | null;
+  comprobante_url: string | null;
+  notas: string | null;
+  categoria: string | null;
+  created_at: string;
+}

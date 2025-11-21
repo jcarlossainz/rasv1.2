@@ -6,8 +6,10 @@
  * Incluye: fecha, tipo, propiedad, monto, archivo, factura
  */
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import { obtenerCuentasPropiedad } from '@/services/cuentas-api'
+import type { CuentaBancaria } from '@/types/property'
 
 interface RegistrarPagoModalProps {
   isOpen: boolean
@@ -47,10 +49,38 @@ export default function RegistrarPagoModal({
   const [notas, setNotas] = useState('') // Nuevo: notas adicionales
   const [archivo, setArchivo] = useState<File | null>(null)
   const [archivoPreview, setArchivoPreview] = useState<string | null>(null)
-  
+
+  // Estados para cuentas bancarias
+  const [cuentas, setCuentas] = useState<CuentaBancaria[]>([])
+  const [cuentaId, setCuentaId] = useState('')
+  const [cargandoCuentas, setCargandoCuentas] = useState(false)
+
   // Estados de UI
   const [guardando, setGuardando] = useState(false)
   const [subiendoArchivo, setSubiendoArchivo] = useState(false)
+
+  // Cargar cuentas cuando cambie la propiedad
+  useEffect(() => {
+    if (propiedadId) {
+      cargarCuentasPropiedad(propiedadId)
+    } else {
+      setCuentas([])
+      setCuentaId('')
+    }
+  }, [propiedadId])
+
+  const cargarCuentasPropiedad = async (propId: string) => {
+    try {
+      setCargandoCuentas(true)
+      const cuentasPropiedad = await obtenerCuentasPropiedad(propId)
+      setCuentas(cuentasPropiedad)
+    } catch (error) {
+      console.error('Error cargando cuentas:', error)
+      setCuentas([])
+    } finally {
+      setCargandoCuentas(false)
+    }
+  }
 
   const handleArchivoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -172,6 +202,7 @@ export default function RegistrarPagoModal({
             pagado: true,
             fecha_pago_real: fechaPago,
             monto_real: parseFloat(monto),
+            cuenta_id: cuentaId || null,
             metodo_pago: metodoPago || null,
             referencia_pago: referenciaPago || null,
             tiene_factura: tieneFactura,
@@ -283,7 +314,10 @@ export default function RegistrarPagoModal({
               </label>
               <select
                 value={propiedadId}
-                onChange={(e) => setPropiedadId(e.target.value)}
+                onChange={(e) => {
+                  setPropiedadId(e.target.value)
+                  setCuentaId('') // Reset cuenta al cambiar propiedad
+                }}
                 disabled={!!pagoExistente}
                 className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ras-turquesa text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
@@ -293,6 +327,34 @@ export default function RegistrarPagoModal({
                 ))}
               </select>
             </div>
+
+            {/* Cuenta Bancaria (si la propiedad tiene cuentas) */}
+            {propiedadId && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
+                  Cuenta de origen (Opcional)
+                </label>
+                <select
+                  value={cuentaId}
+                  onChange={(e) => setCuentaId(e.target.value)}
+                  disabled={cargandoCuentas}
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-ras-turquesa text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                  <option value="">Sin cuenta específica</option>
+                  {cuentas.map(cuenta => (
+                    <option key={cuenta.id} value={cuenta.id}>
+                      {cuenta.nombre} ({cuenta.tipo_moneda}) - {cuenta.tipo_cuenta}
+                      {cuenta.banco ? ` - ${cuenta.banco}` : ''}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  {cuentas.length === 0
+                    ? 'Esta propiedad no tiene cuentas registradas'
+                    : 'El balance de la cuenta se actualizará automáticamente al registrar el pago'}
+                </p>
+              </div>
+            )}
 
             {/* Concepto */}
             <div>
