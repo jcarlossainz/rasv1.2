@@ -69,14 +69,12 @@ export async function uploadPropertyImageDual(
         url_thumbnail: thumbUrl.publicUrl,
         storage_path_display: displayPath,
         storage_path_thumbnail: thumbPath,
-        file_size: {
-          thumbnail: thumbnailBlob.size,
-          display: displayBlob.size
-        },
-        dimensions: {
-          thumbnail: { width: 300, height: 300 },
-          display: dimensions
-        },
+        file_size_thumbnail: thumbnailBlob.size,
+        file_size_display: displayBlob.size,
+        width_thumbnail: 300,
+        height_thumbnail: 300,
+        width_display: dimensions.width,
+        height_display: dimensions.height,
         is_cover: false,
         space_type: null,
         order_index: 0
