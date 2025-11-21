@@ -114,16 +114,8 @@ export default function CalendarioPropiedadPage() {
       const { data: ticketsData, error: ticketsError } = await supabase
         .from('fechas_pago_servicios')
         .select(`
-          id,
-          fecha_pago,
-          monto_estimado,
-          pagado,
-          servicio_id,
-          tipo_ticket,
-          estado,
-          prioridad,
-          propiedad_id,
-          servicios_inmueble(
+          *,
+          servicios_inmueble:servicio_id(
             nombre,
             tipo_servicio
           )
@@ -139,19 +131,23 @@ export default function CalendarioPropiedadPage() {
         return
       }
 
-      const ticketsTransformados = (ticketsData || []).map(ticket => ({
-        id: ticket.id,
-        titulo: ticket.servicios_inmueble?.nombre || 'Sin título',
-        fecha_programada: ticket.fecha_pago,
-        monto_estimado: ticket.monto_estimado,
-        pagado: ticket.pagado,
-        servicio_id: ticket.servicio_id,
-        tipo_ticket: ticket.tipo_ticket || 'Pago',
-        estado: ticket.estado || 'Pendiente',
-        prioridad: ticket.prioridad || 'Media',
-        propiedad_id: ticket.propiedad_id,
-        propiedad_nombre: propData.nombre_propiedad
-      }))
+      const ticketsTransformados = (ticketsData || []).map(ticket => {
+        const servicio = ticket.servicios_inmueble
+
+        return {
+          id: ticket.id,
+          titulo: servicio?.nombre || ticket.descripcion || 'Ticket sin título',
+          fecha_programada: ticket.fecha_pago,
+          monto_estimado: ticket.monto_estimado || 0,
+          pagado: ticket.pagado || false,
+          servicio_id: ticket.servicio_id,
+          tipo_ticket: ticket.tipo_ticket || 'Pago',
+          estado: ticket.estado || 'Pendiente',
+          prioridad: ticket.prioridad || 'Media',
+          propiedad_id: ticket.propiedad_id,
+          propiedad_nombre: propData.nombre_propiedad
+        }
+      })
 
       setTickets(ticketsTransformados)
 

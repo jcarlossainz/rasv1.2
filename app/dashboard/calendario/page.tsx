@@ -159,16 +159,8 @@ export default function CalendarioGlobalPage() {
       const { data: ticketsData, error: ticketsError } = await supabase
         .from('fechas_pago_servicios')
         .select(`
-          id,
-          fecha_pago,
-          monto_estimado,
-          pagado,
-          servicio_id,
-          tipo_ticket,
-          estado,
-          prioridad,
-          propiedad_id,
-          servicios_inmueble(
+          *,
+          servicios_inmueble:servicio_id(
             nombre,
             tipo_servicio
           )
@@ -180,18 +172,21 @@ export default function CalendarioGlobalPage() {
 
       if (ticketsError) {
         console.error('Error cargando tickets:', ticketsError)
+        toast.error('Error al cargar tickets')
         return
       }
 
       const ticketsTransformados = (ticketsData || []).map(ticket => {
         const propiedad = todasPropiedades.find(p => p.id === ticket.propiedad_id)
         const propietario = propietariosUnicos.find(p => p.id === propiedad?.owner_id)
+        const servicio = ticket.servicios_inmueble
+
         return {
           id: ticket.id,
-          titulo: ticket.servicios_inmueble?.nombre || 'Sin título',
+          titulo: servicio?.nombre || ticket.descripcion || 'Ticket sin título',
           fecha_programada: ticket.fecha_pago,
-          monto_estimado: ticket.monto_estimado,
-          pagado: ticket.pagado,
+          monto_estimado: ticket.monto_estimado || 0,
+          pagado: ticket.pagado || false,
           servicio_id: ticket.servicio_id,
           tipo_ticket: ticket.tipo_ticket || 'Pago',
           estado: ticket.estado || 'Pendiente',
