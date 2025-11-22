@@ -126,6 +126,10 @@ export default function TicketsGlobalPage() {
       // Cargar todos los tickets pendientes - SELECT ESPECÍFICO
       const propIds = todasPropiedades.map(p => p.id)
 
+      // Filtro de fecha: últimos 12 meses (para ver hasta 1 año de tickets)
+      const fechaInicio = new Date()
+      fechaInicio.setMonth(fechaInicio.getMonth() - 12)
+
       // 1. Cargar tickets manuales
       const { data: ticketsManuales, error: ticketsError } = await supabase
         .from('tickets')
@@ -145,6 +149,7 @@ export default function TicketsGlobalPage() {
         `)
         .in('propiedad_id', propIds)
         .eq('pagado', false)
+        .gte('fecha_programada', fechaInicio.toISOString()) // ← CRÍTICO: Filtro de fecha
         .order('fecha_programada', { ascending: true })
         .limit(200)
 
@@ -171,6 +176,7 @@ export default function TicketsGlobalPage() {
         `)
         .in('propiedad_id', propIds)
         .eq('pagado', false)
+        .gte('fecha_pago', fechaInicio.toISOString()) // ← CRÍTICO: Filtro de fecha
         .order('fecha_pago', { ascending: true })
         .limit(200)
 
