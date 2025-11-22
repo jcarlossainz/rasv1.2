@@ -137,7 +137,16 @@ export default function AnuncioPublicoApple() {
         .single()
 
       if (propError) {
-        setError('Anuncio no disponible')
+        console.error('Error cargando propiedad:', propError)
+        console.error('Property ID:', propiedadId)
+        setError(`Anuncio no disponible: ${propError.message}`)
+        setLoading(false)
+        return
+      }
+
+      if (!propData) {
+        console.error('No se encontró propiedad con ID:', propiedadId)
+        setError('No se encontró la propiedad')
         setLoading(false)
         return
       }
