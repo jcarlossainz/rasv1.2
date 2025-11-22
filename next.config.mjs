@@ -9,8 +9,7 @@ const nextConfig = {
   images: {
     domains: [
       'via.placeholder.com',
-      // Añade aquí tu dominio de Supabase Storage
-      // Por ejemplo: 'your-project.supabase.co'
+      'pqwemdgtvhtfxsjbscbn.supabase.co', // Supabase Storage
     ],
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 60,
