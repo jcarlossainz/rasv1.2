@@ -320,12 +320,13 @@ export default function AnuncioEditPage() {
   }, [propiedad, descripcion, fotos, propiedadId, toast, confirm, cargarDatos])
 
   const verAnuncioPublico = useCallback(() => {
-    if (estadoAnuncio !== 'publicado') {
-      toast.info('El anuncio debe estar publicado para verlo')
-      return
-    }
     window.open(`/anuncio/${propiedadId}`, '_blank')
-  }, [estadoAnuncio, propiedadId, toast])
+  }, [propiedadId])
+
+  const verPreview = useCallback(() => {
+    toast.info('Abriendo vista previa del anuncio...')
+    window.open(`/anuncio/${propiedadId}`, '_blank')
+  }, [propiedadId, toast])
 
   const volverCatalogo = useCallback(() => {
     router.push('/dashboard/catalogo')
@@ -427,17 +428,33 @@ export default function AnuncioEditPage() {
             </div>
 
             <div className="flex gap-2">
+              {/* Botón Vista Previa - SIEMPRE visible */}
+              <Button
+                onClick={verPreview}
+                variant="secondary"
+                size="sm"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Vista Previa
+              </Button>
+
+              {/* Link público - Solo si está publicado */}
               {estadoAnuncio === 'publicado' && (
                 <Button
-                  onClick={verAnuncioPublico}
-                  variant="secondary"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/anuncio/${propiedadId}`)
+                    toast.success('Link copiado al portapapeles')
+                  }}
+                  variant="success"
                   size="sm"
                 >
                   <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
-                  Ver anuncio
+                  Copiar Link
                 </Button>
               )}
             </div>
@@ -705,7 +722,7 @@ export default function AnuncioEditPage() {
           </div>
         </div>
 
-        {/* Botón guardar */}
+        {/* Botones de acción */}
         <div className="flex gap-3">
           <Button
             onClick={guardarCambios}
@@ -717,18 +734,18 @@ export default function AnuncioEditPage() {
             {guardando ? 'Guardando...' : 'Guardar cambios'}
           </Button>
 
-          {estadoAnuncio === 'publicado' && (
-            <Button
-              onClick={verAnuncioPublico}
-              variant="success"
-              size="lg"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-              Ver anuncio público
-            </Button>
-          )}
+          {/* Botón Vista Previa - siempre visible */}
+          <Button
+            onClick={verPreview}
+            variant="secondary"
+            size="lg"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            Vista Previa
+          </Button>
         </div>
 
       </main>

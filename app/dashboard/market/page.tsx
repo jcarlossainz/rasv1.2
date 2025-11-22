@@ -20,9 +20,11 @@ interface Propiedad {
   tipo_propiedad: string
   estados: string[]
   codigo_postal: string | null
-  costo_renta_mensual: number | null
-  precio_noche: number | null
-  precio_venta: number | null
+  precios: {
+    mensual?: number | null
+    noche?: number | null
+    venta?: number | null
+  } | null
   estado_anuncio: 'borrador' | 'publicado' | 'pausado' | null
   anuncio_titulo: string | null
   anuncio_tagline: string | null
@@ -167,6 +169,35 @@ export default function MarketPage() {
     }
   }
 
+  // Helper functions - DEBEN estar ANTES del useMemo
+  const getOperacionTipo = (prop: Propiedad): string[] => {
+    const tipos: string[] = []
+    if (prop.precios?.venta) tipos.push('venta')
+    if (prop.precios?.mensual) tipos.push('renta')
+    if (prop.precios?.noche) tipos.push('vacacional')
+    return tipos
+  }
+
+  const getOperacionLabel = (prop: Propiedad): string => {
+    if (prop.precios?.noche) return 'Renta Vacacional'
+    if (prop.precios?.mensual) return 'Renta Largo Plazo'
+    if (prop.precios?.venta) return 'Venta'
+    return 'Sin modalidad'
+  }
+
+  const getPrecioDisplay = (prop: Propiedad) => {
+    if (prop.precios?.venta) {
+      return { monto: `$${prop.precios.venta.toLocaleString('es-MX')}`, periodo: '' }
+    }
+    if (prop.precios?.mensual) {
+      return { monto: `$${prop.precios.mensual.toLocaleString('es-MX')}`, periodo: '/ mes' }
+    }
+    if (prop.precios?.noche) {
+      return { monto: `$${prop.precios.noche.toLocaleString('es-MX')}`, periodo: '/ noche' }
+    }
+    return { monto: 'Sin precio', periodo: '' }
+  }
+
   // Filtrar propiedades con useMemo para optimización
   const propiedadesFiltradas = useMemo(() => {
     return propiedades.filter(prop => {
@@ -204,34 +235,6 @@ export default function MarketPage() {
   useEffect(() => {
     setPaginaActual(1)
   }, [busqueda, filtroEstado, filtroOperacion])
-
-  const getOperacionTipo = (prop: Propiedad): string[] => {
-    const tipos: string[] = []
-    if (prop.precio_venta) tipos.push('venta')
-    if (prop.costo_renta_mensual) tipos.push('renta')
-    if (prop.precio_noche) tipos.push('vacacional')
-    return tipos
-  }
-
-  const getOperacionLabel = (prop: Propiedad): string => {
-    if (prop.precio_noche) return 'Renta Vacacional'
-    if (prop.costo_renta_mensual) return 'Renta Largo Plazo'
-    if (prop.precio_venta) return 'Venta'
-    return 'Sin modalidad'
-  }
-
-  const getPrecioDisplay = (prop: Propiedad) => {
-    if (prop.precio_venta) {
-      return { monto: `$${prop.precio_venta.toLocaleString('es-MX')}`, periodo: '' }
-    }
-    if (prop.costo_renta_mensual) {
-      return { monto: `$${prop.costo_renta_mensual.toLocaleString('es-MX')}`, periodo: '/ mes' }
-    }
-    if (prop.precio_noche) {
-      return { monto: `USD ${prop.precio_noche.toFixed(2)}`, periodo: '/ noche' }
-    }
-    return { monto: 'Sin precio', periodo: '' }
-  }
 
   if (authLoading) {
     return <Loading message="Cargando anuncios..." />
