@@ -16,11 +16,9 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/useToast'
 import { useAuth } from '@/hooks/useAuth'
-import { useLogout } from '@/hooks/useLogout'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
 import NuevoTicket from '@/app/dashboard/tickets/NuevoTicket'
-import { autoRegenerateTickets } from '@/lib/supabase/generate-service-tickets'
 
 interface Ticket {
   id: string
@@ -64,7 +62,6 @@ export default function CalendarioGlobalPage() {
   const router = useRouter()
   const toast = useToast()
   const { user, loading: authLoading } = useAuth()
-  const logout = useLogout()
 
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [ticketsFiltrados, setTicketsFiltrados] = useState<Ticket[]>([])
@@ -115,11 +112,7 @@ export default function CalendarioGlobalPage() {
 
   const cargarDatos = async (userId: string) => {
     try {
-      // 1. Primero regenerar tickets automáticamente para asegurar 1 año de cobertura
-      console.log('🔄 Regenerando tickets automáticamente...')
-      await autoRegenerateTickets(userId)
-
-      // 2. Cargar propiedades
+      // Cargar propiedades
       const { data: propsPropias } = await supabase
         .from('propiedades')
         .select('id, nombre_propiedad, owner_id')
@@ -130,7 +123,7 @@ export default function CalendarioGlobalPage() {
         .select('propiedad_id')
         .eq('user_id', userId)
 
-      let propsCompartidasData: any[] = []
+      let propsCompartidasData: Propiedad[] = []
       if (propsCompartidas && propsCompartidas.length > 0) {
         const ids = propsCompartidas.map(p => p.propiedad_id)
         const { data } = await supabase
@@ -355,44 +348,6 @@ export default function CalendarioGlobalPage() {
     setSemanaActual(nuevaFecha)
   }
 
-  const getTipoIcon = (tipo: string) => {
-    const iconos: { [key: string]: JSX.Element } = {
-      agua: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-      luz: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-      gas: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-      internet: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" strokeLinecap="round"/>
-        </svg>
-      ),
-      mantenimiento: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-      seguridad: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      )
-    }
-    
-    return iconos[tipo] || iconos.mantenimiento
-  }
-
   const nombreMes = mesActual.toLocaleDateString('es-MX', {
     month: 'long',
     year: 'numeric'
@@ -419,26 +374,6 @@ export default function CalendarioGlobalPage() {
   }
 
   const nombreSemana = getNombreSemana()
-
-  // Obtener tickets de la semana actual
-  const obtenerTicketsSemanaActual = () => {
-    const hoy = new Date()
-    const diaSemana = hoy.getDay()
-    const lunes = new Date(hoy)
-    lunes.setDate(hoy.getDate() - (diaSemana === 0 ? 6 : diaSemana - 1))
-    lunes.setHours(0, 0, 0, 0)
-
-    const domingo = new Date(lunes)
-    domingo.setDate(lunes.getDate() + 6)
-    domingo.setHours(23, 59, 59, 999)
-
-    return ticketsFiltrados.filter(ticket => {
-      const fecha = new Date(ticket.fecha_programada)
-      return fecha >= lunes && fecha <= domingo
-    })
-  }
-
-  const ticketsSemana = obtenerTicketsSemanaActual()
 
   if (authLoading) {
     return <Loading message="Cargando calendario..." />
