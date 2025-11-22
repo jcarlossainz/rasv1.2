@@ -36,8 +36,6 @@ interface PropiedadData {
   }
   tipo_propiedad: string
   estados: string[]
-  mobiliario: string
-  capacidad_personas: number | null
   dimensiones: {
     terreno: number
     terreno_unit: string
@@ -120,8 +118,6 @@ export default function AnuncioPublicoApple() {
           anuncio_secciones_visibles,
           tipo_propiedad,
           estados,
-          mobiliario,
-          capacidad_personas,
           dimensiones,
           ubicacion,
           precios,
