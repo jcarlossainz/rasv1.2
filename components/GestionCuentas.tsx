@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react'
 import { obtenerCuentasPropiedad, crearCuenta, actualizarCuenta, eliminarCuenta } from '@/services/cuentas-api'
 import type { CuentaBancaria, NuevaCuentaBancaria } from '@/types/property'
+import { useToast } from '@/hooks/useToast'
 
 interface GestionCuentasProps {
   propiedadId: string
@@ -20,20 +21,20 @@ export default function GestionCuentas({
   propiedadNombre,
   onCuentaSeleccionada
 }: GestionCuentasProps) {
+  const toast = useToast()
   const [cuentas, setCuentas] = useState<CuentaBancaria[]>([])
   const [cargando, setCargando] = useState(true)
   const [mostrarModal, setMostrarModal] = useState(false)
   const [cuentaEditando, setCuentaEditando] = useState<CuentaBancaria | null>(null)
 
   // Formulario
-  const [nombre, setNombre] = useState('')
+  const [nombreCuenta, setNombreCuenta] = useState('')
   const [tipoMoneda, setTipoMoneda] = useState<'MXN' | 'USD'>('MXN')
   const [tipoCuenta, setTipoCuenta] = useState<'Banco' | 'Tarjeta' | 'Efectivo'>('Banco')
   const [banco, setBanco] = useState('')
   const [numeroCuenta, setNumeroCuenta] = useState('')
-  const [balanceInicial, setBalanceInicial] = useState('0')
+  const [saldoInicial, setSaldoInicial] = useState('0')
   const [descripcion, setDescripcion] = useState('')
-  const [color, setColor] = useState('#3B82F6')
 
   const [guardando, setGuardando] = useState(false)
 
@@ -48,6 +49,7 @@ export default function GestionCuentas({
       setCuentas(data)
     } catch (error) {
       console.error('Error cargando cuentas:', error)
+      toast.error('Error al cargar cuentas')
     } finally {
       setCargando(false)
     }
@@ -55,38 +57,36 @@ export default function GestionCuentas({
 
   const abrirModalNueva = () => {
     setCuentaEditando(null)
-    setNombre('')
+    setNombreCuenta('')
     setTipoMoneda('MXN')
     setTipoCuenta('Banco')
     setBanco('')
     setNumeroCuenta('')
-    setBalanceInicial('0')
+    setSaldoInicial('0')
     setDescripcion('')
-    setColor('#3B82F6')
     setMostrarModal(true)
   }
 
   const abrirModalEditar = (cuenta: CuentaBancaria) => {
     setCuentaEditando(cuenta)
-    setNombre(cuenta.nombre)
-    setTipoMoneda(cuenta.tipo_moneda)
+    setNombreCuenta(cuenta.nombre_cuenta)
+    setTipoMoneda(cuenta.moneda)
     setTipoCuenta(cuenta.tipo_cuenta)
     setBanco(cuenta.banco || '')
     setNumeroCuenta(cuenta.numero_cuenta || '')
-    setBalanceInicial(cuenta.balance_inicial.toString())
+    setSaldoInicial(cuenta.saldo_inicial.toString())
     setDescripcion(cuenta.descripcion || '')
-    setColor(cuenta.color || '#3B82F6')
     setMostrarModal(true)
   }
 
   const handleGuardar = async () => {
-    if (!nombre.trim()) {
-      alert('El nombre de la cuenta es obligatorio')
+    if (!nombreCuenta.trim()) {
+      toast.error('El nombre de la cuenta es obligatorio')
       return
     }
 
-    if (parseFloat(balanceInicial) < 0) {
-      alert('El balance inicial no puede ser negativo')
+    if (parseFloat(saldoInicial) < 0) {
+      toast.error('El saldo inicial no puede ser negativo')
       return
     }
 
@@ -94,28 +94,29 @@ export default function GestionCuentas({
 
     try {
       const cuentaData: NuevaCuentaBancaria = {
-        propiedad_id: propiedadId,
-        nombre: nombre.trim(),
-        tipo_moneda: tipoMoneda,
+        nombre_cuenta: nombreCuenta.trim(),
+        moneda: tipoMoneda,
         tipo_cuenta: tipoCuenta,
         banco: banco.trim() || undefined,
         numero_cuenta: numeroCuenta.trim() || undefined,
-        balance_inicial: parseFloat(balanceInicial),
+        saldo_inicial: parseFloat(saldoInicial),
         descripcion: descripcion.trim() || undefined,
-        color: color || undefined
+        propiedades_ids: [propiedadId]
       }
 
       if (cuentaEditando) {
         await actualizarCuenta(cuentaEditando.id, cuentaData)
+        toast.success('Cuenta actualizada correctamente')
       } else {
         await crearCuenta(cuentaData)
+        toast.success('Cuenta creada correctamente')
       }
 
       await cargarCuentas()
       setMostrarModal(false)
     } catch (error: any) {
       console.error('Error guardando cuenta:', error)
-      alert(error.message || 'Error al guardar la cuenta')
+      toast.error(error.message || 'Error al guardar la cuenta')
     } finally {
       setGuardando(false)
     }
@@ -128,10 +129,11 @@ export default function GestionCuentas({
 
     try {
       await eliminarCuenta(cuentaId)
+      toast.success('Cuenta eliminada correctamente')
       await cargarCuentas()
     } catch (error: any) {
       console.error('Error eliminando cuenta:', error)
-      alert(error.message || 'Error al eliminar la cuenta')
+      toast.error(error.message || 'Error al eliminar la cuenta')
     }
   }
 
@@ -191,10 +193,9 @@ export default function GestionCuentas({
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: cuenta.color || '#3B82F6' }}
+                    className="w-3 h-3 rounded-full bg-blue-500"
                   />
-                  <h4 className="font-semibold text-gray-900">{cuenta.nombre}</h4>
+                  <h4 className="font-semibold text-gray-900">{cuenta.nombre_cuenta}</h4>
                 </div>
                 <div className="flex gap-1">
                   <button
@@ -280,8 +281,8 @@ export default function GestionCuentas({
                 </label>
                 <input
                   type="text"
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
+                  value={nombreCuenta}
+                  onChange={(e) => setNombreCuenta(e.target.value)}
                   placeholder="Ej: Cuenta principal Casa Playa"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -352,38 +353,22 @@ export default function GestionCuentas({
                 </div>
               )}
 
-              {/* Balance inicial */}
+              {/* Saldo inicial */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Balance inicial *
+                  Saldo inicial *
                 </label>
                 <input
                   type="number"
                   step="0.01"
-                  value={balanceInicial}
-                  onChange={(e) => setBalanceInicial(e.target.value)}
+                  value={saldoInicial}
+                  onChange={(e) => setSaldoInicial(e.target.value)}
                   placeholder="0.00"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  El balance actual se calculará automáticamente con ingresos y egresos
+                  El saldo actual se calculará automáticamente con ingresos y egresos
                 </p>
-              </div>
-
-              {/* Color */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Color (para identificación visual)
-                </label>
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="color"
-                    value={color}
-                    onChange={(e) => setColor(e.target.value)}
-                    className="w-12 h-10 border border-gray-300 rounded cursor-pointer"
-                  />
-                  <span className="text-sm text-gray-600">{color}</span>
-                </div>
               </div>
 
               {/* Descripción */}
