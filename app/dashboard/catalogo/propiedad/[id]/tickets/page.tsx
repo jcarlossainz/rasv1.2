@@ -91,8 +91,8 @@ export default function TicketsPropiedadPage() {
 
       setPropiedad(propData)
 
-      // Cargar todos los tickets pendientes de esta propiedad
-      const { data: ticketsData, error: ticketsError } = await supabase
+      // 1️⃣ Cargar tickets MANUALES (tabla tickets)
+      const { data: ticketsManuales, error: ticketsError } = await supabase
         .from('tickets')
         .select('id, titulo, fecha_programada, monto_estimado, pagado, servicio_id, tipo_ticket, estado, prioridad, responsable, proveedor, propiedad_id')
         .eq('propiedad_id', propiedadId)
@@ -101,14 +101,38 @@ export default function TicketsPropiedadPage() {
         .limit(200)
 
       if (ticketsError) {
-        logger.error('Error cargando tickets:', ticketsError)
-        setTickets([])
-        return
+        logger.error('Error cargando tickets manuales:', ticketsError)
       }
 
-      const ticketsTransformados = (ticketsData || []).map(ticket => {
-        const diasRestantes = getDiasRestantes(ticket.fecha_programada)
+      // 2️⃣ Cargar tickets de SERVICIOS (tabla fechas_pago_servicios)
+      const { data: ticketsServicios, error: serviciosError } = await supabase
+        .from('fechas_pago_servicios')
+        .select(`
+          id,
+          fecha_pago,
+          monto_estimado,
+          pagado,
+          propiedad_id,
+          servicio_id,
+          servicios_inmueble (
+            nombre,
+            tipo_servicio,
+            proveedor,
+            responsable
+          )
+        `)
+        .eq('propiedad_id', propiedadId)
+        .eq('pagado', false)
+        .order('fecha_pago', { ascending: true })
+        .limit(200)
 
+      if (serviciosError) {
+        logger.error('Error cargando tickets de servicios:', serviciosError)
+      }
+
+      // Transformar tickets manuales
+      const ticketsManualesTransformados = (ticketsManuales || []).map(ticket => {
+        const diasRestantes = getDiasRestantes(ticket.fecha_programada)
         return {
           id: ticket.id,
           titulo: ticket.titulo,
@@ -127,7 +151,38 @@ export default function TicketsPropiedadPage() {
         }
       })
 
-      setTickets(ticketsTransformados)
+      // Transformar tickets de servicios
+      const ticketsServiciosTransformados = (ticketsServicios || []).map(pago => {
+        const servicio = pago.servicios_inmueble as any
+        const diasRestantes = getDiasRestantes(pago.fecha_pago)
+
+        return {
+          id: pago.id,
+          titulo: servicio?.nombre || 'Pago de servicio',
+          fecha_programada: pago.fecha_pago,
+          monto_estimado: pago.monto_estimado,
+          pagado: pago.pagado,
+          servicio_id: pago.servicio_id,
+          tipo_ticket: 'servicio_recurrente',
+          estado: 'pendiente',
+          prioridad: diasRestantes < 0 ? 'alta' : diasRestantes <= 7 ? 'media' : 'baja',
+          responsable: servicio?.responsable || null,
+          proveedor: servicio?.proveedor || null,
+          propiedad_id: pago.propiedad_id,
+          propiedad_nombre: propData.nombre_propiedad,
+          dias_restantes: diasRestantes
+        }
+      })
+
+      // Combinar ambos tipos de tickets y ordenar por fecha
+      const todosLosTickets = [...ticketsManualesTransformados, ...ticketsServiciosTransformados]
+        .sort((a, b) => {
+          const fechaA = new Date(a.fecha_programada).getTime()
+          const fechaB = new Date(b.fecha_programada).getTime()
+          return fechaA - fechaB
+        })
+
+      setTickets(todosLosTickets)
 
     } catch (error) {
       logger.error('Error cargando datos:', error)
@@ -357,7 +412,9 @@ ${ticket.proveedor ? `🏢 Proveedor: ${ticket.proveedor}` : ''}
                             <div className="text-2xl">{getTipoIcon(ticket.tipo_ticket)}</div>
                             <div>
                               <div className="text-sm font-semibold text-gray-900">{ticket.titulo}</div>
-                              <div className="text-xs text-gray-500 capitalize">{ticket.tipo_ticket.replace('_', ' ')}</div>
+                              {ticket.tipo_ticket && (
+                                <div className="text-xs text-gray-500 capitalize">{ticket.tipo_ticket.replace('_', ' ')}</div>
+                              )}
                               {ticket.proveedor && (
                                 <div className="text-xs text-gray-500">🏢 {ticket.proveedor}</div>
                               )}

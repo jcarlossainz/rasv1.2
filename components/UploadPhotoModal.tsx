@@ -3,8 +3,8 @@
 
 import React, { useState, useRef } from 'react';
 import { PropertyImage } from '@/types/property';
-import { compressImageDual } from '@/lib/image-compression';
-import { uploadPropertyImageDual } from '@/lib/supabase-storage';
+import { compressImageDual } from '@/lib/supabase/image-compression';
+import { uploadPropertyImageDual } from '@/lib/supabase/supabase-storage';
 
 interface UploadPhotoModalProps {
   isOpen: boolean;

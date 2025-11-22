@@ -6,7 +6,7 @@
  * Diseño alineado con Calendario RAS
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/useToast'
@@ -73,6 +73,10 @@ export default function TicketsGlobalPage() {
   // Modal de Nuevo Ticket
   const [showNuevoTicketModal, setShowNuevoTicketModal] = useState(false)
 
+  // Estados para paginación
+  const [paginaActual, setPaginaActual] = useState(1)
+  const ITEMS_POR_PAGINA = 20
+
   useEffect(() => {
     if (user?.id) {
       cargarDatos(user.id)
@@ -90,8 +94,8 @@ export default function TicketsGlobalPage() {
       // Cargar todas las propiedades del usuario
       const { data: propsPropias } = await supabase
         .from('propiedades')
-        .select('id, nombre')
-        .eq('user_id', userId)
+        .select('id, nombre_propiedad')
+        .eq('owner_id', userId)
 
       const { data: propsCompartidas } = await supabase
         .from('propiedades_colaboradores')
@@ -103,7 +107,7 @@ export default function TicketsGlobalPage() {
         const ids = propsCompartidas.map(p => p.propiedad_id)
         const { data } = await supabase
           .from('propiedades')
-          .select('id, nombre')
+          .select('id, nombre_propiedad')
           .in('id', ids)
         propsCompartidasData = data || []
       }
@@ -119,11 +123,26 @@ export default function TicketsGlobalPage() {
         return
       }
 
-      // Cargar todos los tickets pendientes
+      // Cargar todos los tickets pendientes - SELECT ESPECÍFICO
       const propIds = todasPropiedades.map(p => p.id)
-      const { data: ticketsData, error: ticketsError } = await supabase
+
+      // 1. Cargar tickets manuales
+      const { data: ticketsManuales, error: ticketsError } = await supabase
         .from('tickets')
-        .select('*')
+        .select(`
+          id,
+          titulo,
+          fecha_programada,
+          monto_estimado,
+          pagado,
+          servicio_id,
+          tipo_ticket,
+          estado,
+          prioridad,
+          responsable,
+          proveedor,
+          propiedad_id
+        `)
         .in('propiedad_id', propIds)
         .eq('pagado', false)
         .order('fecha_programada', { ascending: true })
@@ -131,14 +150,39 @@ export default function TicketsGlobalPage() {
 
       if (ticketsError) {
         console.error('Error cargando tickets:', ticketsError)
-        setTickets([])
-        return
       }
 
-      const ticketsTransformados = (ticketsData || []).map(ticket => {
+      // 2. Cargar tickets de servicios (pagos pendientes)
+      const { data: pagosPendientes, error: pagosError } = await supabase
+        .from('fechas_pago_servicios')
+        .select(`
+          id,
+          fecha_pago,
+          monto_estimado,
+          pagado,
+          propiedad_id,
+          servicio_id,
+          servicios_inmueble (
+            nombre,
+            tipo_servicio,
+            proveedor,
+            responsable
+          )
+        `)
+        .in('propiedad_id', propIds)
+        .eq('pagado', false)
+        .order('fecha_pago', { ascending: true })
+        .limit(200)
+
+      if (pagosError) {
+        console.error('Error cargando pagos de servicios:', pagosError)
+      }
+
+      // Transformar tickets manuales
+      const ticketsManualesTransformados = (ticketsManuales || []).map(ticket => {
         const propiedad = todasPropiedades.find(p => p.id === ticket.propiedad_id)
         const diasRestantes = getDiasRestantes(ticket.fecha_programada)
-        
+
         return {
           id: ticket.id,
           titulo: ticket.titulo,
@@ -146,9 +190,9 @@ export default function TicketsGlobalPage() {
           monto_estimado: ticket.monto_estimado,
           pagado: ticket.pagado,
           servicio_id: ticket.servicio_id,
-          tipo_ticket: ticket.tipo_ticket,
-          estado: ticket.estado,
-          prioridad: ticket.prioridad,
+          tipo_ticket: ticket.tipo_ticket || 'Manual',
+          estado: ticket.estado || 'pendiente',
+          prioridad: ticket.prioridad || 'Media',
           responsable: ticket.responsable,
           proveedor: ticket.proveedor,
           propiedad_id: ticket.propiedad_id,
@@ -157,7 +201,39 @@ export default function TicketsGlobalPage() {
         }
       })
 
-      setTickets(ticketsTransformados)
+      // Transformar pagos de servicios
+      const ticketsServiciosTransformados = (pagosPendientes || []).map(pago => {
+        const propiedad = todasPropiedades.find(p => p.id === pago.propiedad_id)
+        const diasRestantes = getDiasRestantes(pago.fecha_pago)
+        const servicio = (pago.servicios_inmueble as any)
+
+        return {
+          id: pago.id,
+          titulo: `Pago: ${servicio?.nombre || 'Servicio'}`,
+          fecha_programada: pago.fecha_pago,
+          monto_estimado: pago.monto_estimado,
+          pagado: pago.pagado,
+          servicio_id: pago.servicio_id,
+          tipo_ticket: servicio?.tipo_servicio || 'Servicio',
+          estado: 'pendiente',
+          prioridad: diasRestantes < 0 ? 'Urgente' : diasRestantes <= 7 ? 'Alta' : 'Media',
+          responsable: servicio?.responsable,
+          proveedor: servicio?.proveedor,
+          propiedad_id: pago.propiedad_id,
+          propiedad_nombre: propiedad?.nombre || 'Sin nombre',
+          dias_restantes: diasRestantes
+        }
+      })
+
+      // Combinar y ordenar todos los tickets
+      const todosLosTickets = [
+        ...ticketsManualesTransformados,
+        ...ticketsServiciosTransformados
+      ].sort((a, b) => {
+        return new Date(a.fecha_programada).getTime() - new Date(b.fecha_programada).getTime()
+      })
+
+      setTickets(todosLosTickets)
 
     } catch (error) {
       console.error('Error cargando datos:', error)
@@ -290,6 +366,20 @@ ${ticket.proveedor ? `🏢 Proveedor: ${ticket.proveedor}` : ''}
     }
   }
 
+  // Paginar tickets con useMemo
+  const ticketsPaginados = useMemo(() => {
+    const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA
+    const fin = inicio + ITEMS_POR_PAGINA
+    return ticketsFiltrados.slice(inicio, fin)
+  }, [ticketsFiltrados, paginaActual])
+
+  const totalPaginas = Math.ceil(ticketsFiltrados.length / ITEMS_POR_PAGINA)
+
+  // Auto-reset página cuando cambian filtros
+  useEffect(() => {
+    setPaginaActual(1)
+  }, [busqueda, fechaDesdeTabla, fechaHastaTabla])
+
   if (authLoading) {
     return <Loading message="Cargando tickets..." />
   }
@@ -297,11 +387,14 @@ ${ticket.proveedor ? `🏢 Proveedor: ${ticket.proveedor}` : ''}
   return (
     <div className="min-h-screen bg-gradient-to-br from-ras-crema via-white to-ras-crema">
       <TopBar
-        title="Tickets"
+        title="RAS v1.2 - Tickets"
         showBackButton
         showAddButton
+        showUserInfo={true}
+        userEmail={user?.email}
         onBackClick={() => router.push('/dashboard')}
         onNuevoTicket={() => setShowNuevoTicketModal(true)}
+        onLogout={logout}
       />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -357,7 +450,7 @@ ${ticket.proveedor ? `🏢 Proveedor: ${ticket.proveedor}` : ''}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {ticketsFiltrados.map(ticket => {
+                  {ticketsPaginados.map(ticket => {
                     const badge = getEstadoBadge(ticket.dias_restantes)
                     return (
                       <tr
@@ -466,7 +559,78 @@ ${ticket.proveedor ? `🏢 Proveedor: ${ticket.proveedor}` : ''}
               </table>
             </div>
           </div>
-        ) : (
+        ) : null}
+
+        {/* Paginación profesional */}
+        {totalPaginas > 1 && (
+          <div className="bg-white rounded-xl shadow-md border border-gray-200 px-6 py-4 mt-6">
+            <div className="flex items-center justify-between">
+              {/* Contador de resultados */}
+              <div className="text-sm text-gray-600">
+                Mostrando <span className="font-semibold text-gray-900">
+                  {(paginaActual - 1) * ITEMS_POR_PAGINA + 1}
+                </span> - <span className="font-semibold text-gray-900">
+                  {Math.min(paginaActual * ITEMS_POR_PAGINA, ticketsFiltrados.length)}
+                </span> de <span className="font-semibold text-gray-900">
+                  {ticketsFiltrados.length}
+                </span> tickets
+              </div>
+
+              {/* Controles de navegación */}
+              <div className="flex items-center gap-2">
+                {/* Botón Anterior */}
+                <button
+                  onClick={() => setPaginaActual(prev => Math.max(1, prev - 1))}
+                  disabled={paginaActual === 1}
+                  className="px-4 py-2 rounded-lg border-2 border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-gray-700 transition-all"
+                >
+                  ← Anterior
+                </button>
+
+                {/* Números de página con smart ellipsis */}
+                <div className="flex gap-1">
+                  {Array.from({ length: totalPaginas }, (_, i) => i + 1)
+                    .filter(num => {
+                      return (
+                        num === 1 ||
+                        num === totalPaginas ||
+                        (num >= paginaActual - 1 && num <= paginaActual + 1)
+                      )
+                    })
+                    .map((num, idx, arr) => (
+                      <div key={num} className="flex items-center">
+                        {idx > 0 && arr[idx - 1] !== num - 1 && (
+                          <span className="px-2 text-gray-400">...</span>
+                        )}
+                        <button
+                          onClick={() => setPaginaActual(num)}
+                          className={`w-10 h-10 rounded-lg font-semibold transition-all ${
+                            paginaActual === num
+                              ? 'bg-ras-azul text-white shadow-lg'
+                              : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {num}
+                        </button>
+                      </div>
+                    ))}
+                </div>
+
+                {/* Botón Siguiente */}
+                <button
+                  onClick={() => setPaginaActual(prev => Math.min(totalPaginas, prev + 1))}
+                  disabled={paginaActual === totalPaginas}
+                  className="px-4 py-2 rounded-lg border-2 border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-gray-700 transition-all"
+                >
+                  Siguiente →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {ticketsFiltrados.length === 0 && (
           <EmptyState
             icon={
               <svg className="w-16 h-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

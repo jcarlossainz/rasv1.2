@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
+import { useToast } from '@/hooks/useToast';
 
 interface NuevoTicketProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export default function NuevoTicket({
   propiedades,
   onTicketCreado
 }: NuevoTicketProps) {
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [archivos, setArchivos] = useState<File[]>([]);
   const [formData, setFormData] = useState({
@@ -94,6 +96,9 @@ export default function NuevoTicket({
       // TODO: Subir archivos a Supabase Storage si hay archivos seleccionados
       // Implementar después de crear el bucket en Supabase Storage
 
+      // Notificar éxito
+      toast.success('✅ Ticket creado exitosamente');
+
       // Resetear form
       setFormData({
         propiedad_id: propiedadId || '',
@@ -113,7 +118,7 @@ export default function NuevoTicket({
       onClose();
     } catch (error) {
       console.error('Error al crear ticket:', error);
-      alert('Error al crear el ticket. Por favor intenta de nuevo.');
+      toast.error('❌ Error al crear el ticket. Por favor intenta de nuevo.');
     } finally {
       setLoading(false);
     }

@@ -30,18 +30,94 @@ export interface LoadPropertyResult {
 }
 
 // ============================================================================
+// HELPER: Generar tickets automáticos usando función RPC
+// ============================================================================
+
+async function generarTicketsAutomaticos(
+  propertyId: string,
+  services: any[]
+): Promise<{ success: boolean; ticketsCreated: number; error?: string }> {
+  try {
+    let totalTickets = 0;
+
+    // Primero, guardar servicios en servicios_inmueble
+    for (const service of services) {
+      // Mapear unidades del frontend al backend
+      let unidad = service.frecuenciaUnidad || 'mes';
+      if (unidad === 'dia') unidad = 'dias';
+      if (unidad === 'mes') unidad = 'meses';
+      if (unidad === 'año') unidad = 'anos';
+
+      const servicioData = {
+        propiedad_id: propertyId,
+        nombre: service.name,
+        tipo_servicio: service.type,
+        proveedor: service.provider || null,
+        numero_contrato: service.accountNumber || null,
+        monto: service.cost || 0,
+        es_fijo: service.montoTipo === 'fijo' || !service.montoTipo,
+        frecuencia_valor: service.frecuenciaCantidad || 1,
+        frecuencia_unidad: unidad,
+        ultima_fecha_pago: service.lastPaymentDate || null,
+        activo: true
+      };
+
+      // Insertar servicio
+      const { data: servicioInsertado, error: errorServicio } = await supabase
+        .from('servicios_inmueble')
+        .insert(servicioData)
+        .select('id')
+        .single();
+
+      if (errorServicio) {
+        console.error(`❌ Error insertando servicio ${service.name}:`, errorServicio);
+        continue;
+      }
+
+      // Llamar función RPC para generar fechas de pago
+      if (servicioInsertado && service.lastPaymentDate) {
+        const { data: ticketsGenerados, error: errorRPC } = await supabase
+          .rpc('generar_fechas_pago_servicio', {
+            p_servicio_id: servicioInsertado.id,
+            p_cantidad_meses: 12
+          });
+
+        if (errorRPC) {
+          console.error(`❌ Error generando fechas para ${service.name}:`, errorRPC);
+        } else {
+          totalTickets += ticketsGenerados || 0;
+          console.log(`✅ ${ticketsGenerados} fechas generadas para ${service.name}`);
+        }
+      }
+    }
+
+    return {
+      success: true,
+      ticketsCreated: totalTickets
+    };
+  } catch (error: any) {
+    console.error('❌ Error en generarTicketsAutomaticos:', error);
+    return {
+      success: false,
+      ticketsCreated: 0,
+      error: error.message
+    };
+  }
+}
+
+// ============================================================================
 // TRANSFORMADOR: FormData → Database
 // ============================================================================
 
 function transformFormToDatabase(formData: PropertyFormData): any {
   console.log('📦 Transformando FormData → Database');
-  
+
   return {
     // STEP 1: Datos Generales
     nombre_propiedad: formData.nombre_propiedad || '',
     tipo_propiedad: formData.tipo_propiedad || null,
     mobiliario: formData.mobiliario || null,
-    
+
     dimensiones: {
       terreno: {
         valor: parseFloat(formData.tamano_terreno || '0'),
@@ -52,7 +128,7 @@ function transformFormToDatabase(formData: PropertyFormData): any {
         unidad: formData.tamano_construccion_unit || 'm²'
       }
     },
-    
+
     estados: Array.isArray(formData.estados) ? formData.estados : [],
     propietarios_email: formData.propietarios_email || [],
     supervisores_email: formData.supervisores_email || [],
@@ -113,22 +189,22 @@ function transformFormToDatabase(formData: PropertyFormData): any {
 
 function transformDatabaseToForm(dbData: any): PropertyFormData {
   console.log('📦 Transformando Database → FormData');
-  
+
   return {
     // STEP 1: Datos Generales
     nombre_propiedad: dbData.nombre_propiedad || '',
     tipo_propiedad: dbData.tipo_propiedad || 'Departamento',
     mobiliario: dbData.mobiliario || 'Amueblada',
-    
+
     tamano_terreno: dbData.dimensiones?.terreno?.valor?.toString() || '',
     tamano_terreno_unit: dbData.dimensiones?.terreno?.unidad || 'm²',
     tamano_construccion: dbData.dimensiones?.construccion?.valor?.toString() || '',
     tamano_construccion_unit: dbData.dimensiones?.construccion?.unidad || 'm²',
-    
+
     estados: Array.isArray(dbData.estados) ? dbData.estados : [],
     propietarios_email: dbData.propietarios_email || [],
     supervisores_email: dbData.supervisores_email || [],
-    
+
     // STEP 2: Ubicación
     ubicacion: dbData.ubicacion || {
       google_maps_link: '',
@@ -143,36 +219,39 @@ function transformDatabaseToForm(dbData: any): PropertyFormData {
       nombre_complejo: '',
       amenidades_complejo: []
     },
-    
+
     // STEP 3: Espacios
     espacios: dbData.espacios || [],
-    
+
     // STEP 4: Condicionales
     precios: {
       mensual: dbData.precios?.mensual || null,
       noche: dbData.precios?.noche || null,
       venta: dbData.precios?.venta || null
     },
-    
+
     inquilinos_email: dbData.inquilinos_email || [],
-    fecha_inicio_contrato: dbData.fecha_inicio_contrato || '',
-    duracion_contrato_valor: dbData.duracion_contrato_valor?.toString() || '',
-    duracion_contrato_unidad: dbData.duracion_contrato_unidad || 'meses',
-    frecuencia_pago: dbData.frecuencia_pago || 'mensual',
-    dia_pago: dbData.dia_pago?.toString() || '',
-    
-    precio_renta_disponible: dbData.precio_renta_disponible?.toString() || '',
-    requisitos_renta: dbData.requisitos_renta || [],
-    requisitos_renta_custom: dbData.requisitos_renta_custom || [],
-    
-    amenidades_vacacional: dbData.amenidades_vacacional || [],
-    
+
+    // Datos de renta largo plazo - leer desde JSONB o columnas individuales (compatibilidad)
+    fecha_inicio_contrato: dbData.datos_renta_largo_plazo?.fecha_inicio_contrato || dbData.fecha_inicio_contrato || '',
+    duracion_contrato_valor: (dbData.datos_renta_largo_plazo?.duracion_contrato_valor || dbData.duracion_contrato_valor)?.toString() || '',
+    duracion_contrato_unidad: dbData.datos_renta_largo_plazo?.duracion_contrato_unidad || dbData.duracion_contrato_unidad || 'meses',
+    frecuencia_pago: dbData.datos_renta_largo_plazo?.frecuencia_pago || dbData.frecuencia_pago || 'mensual',
+    dia_pago: (dbData.datos_renta_largo_plazo?.dia_pago || dbData.dia_pago)?.toString() || '',
+
+    precio_renta_disponible: (dbData.precio_renta_disponible || dbData.precios?.mensual)?.toString() || '',
+    requisitos_renta: dbData.datos_renta_largo_plazo?.requisitos_renta || dbData.requisitos_renta || [],
+    requisitos_renta_custom: dbData.datos_renta_largo_plazo?.requisitos_renta_custom || dbData.requisitos_renta_custom || [],
+
+    // Datos de renta vacacional - leer desde JSONB o columnas individuales (compatibilidad)
+    amenidades_vacacional: dbData.datos_renta_vacacional?.amenidades_vacacional || dbData.amenidades_vacacional || [],
+
     // STEP 5: Servicios
     servicios: dbData.servicios || [],
-    
+
     // STEP 6: Galería (vacío por ahora)
     fotos: [],
-    
+
     // Metadata
     wizard_step: dbData.wizard_step || 1,
     wizard_completed: dbData.wizard_completed || false,
@@ -181,6 +260,112 @@ function transformDatabaseToForm(dbData: any): PropertyFormData {
     created_at: dbData.created_at || '',
     updated_at: dbData.updated_at || ''
   };
+}
+
+// ============================================================================
+// SINCRONIZAR COLABORADORES
+// ============================================================================
+
+/**
+ * Sincroniza los colaboradores desde los arrays de emails a la tabla propiedades_colaboradores
+ * Esta función se llama después de guardar/actualizar una propiedad
+ */
+async function syncColaboradores(
+  propertyId: string,
+  propietariosEmail: string[],
+  supervisoresEmail: string[],
+  inquilinosEmail: string[]
+): Promise<void> {
+  console.log('🔄 Sincronizando colaboradores a propiedades_colaboradores...');
+
+  try {
+    // 1. Primero, obtener todos los colaboradores existentes para esta propiedad
+    const { data: existentes, error: errorExistentes } = await supabase
+      .from('propiedades_colaboradores')
+      .select('email_invitado, user_id, rol')
+      .eq('propiedad_id', propertyId);
+
+    if (errorExistentes) {
+      console.error('Error obteniendo colaboradores existentes:', errorExistentes);
+      return;
+    }
+
+    // 2. Crear un Set con los emails/user_ids existentes para evitar duplicados
+    const existentesSet = new Set(
+      (existentes || []).map(e => e.email_invitado || e.user_id)
+    );
+
+    // 3. Preparar lista de colaboradores a insertar
+    const colaboradoresParaInsertar: Array<{
+      propiedad_id: string;
+      rol: string;
+      email_invitado: string | null;
+      user_id: string | null;
+    }> = [];
+
+    // Helper para agregar colaborador si no existe
+    const agregarColaborador = async (email: string, rol: string) => {
+      // Si ya existe, no agregar
+      if (existentesSet.has(email)) {
+        return;
+      }
+
+      // Buscar si el usuario existe en profiles
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (profile) {
+        // Usuario registrado
+        if (!existentesSet.has(profile.id)) {
+          colaboradoresParaInsertar.push({
+            propiedad_id: propertyId,
+            rol: rol,
+            email_invitado: null,
+            user_id: profile.id
+          });
+        }
+      } else {
+        // Invitación pendiente
+        colaboradoresParaInsertar.push({
+          propiedad_id: propertyId,
+          rol: rol,
+          email_invitado: email,
+          user_id: null
+        });
+      }
+    };
+
+    // 4. Procesar todos los emails
+    for (const email of propietariosEmail || []) {
+      await agregarColaborador(email, 'propietario');
+    }
+    for (const email of supervisoresEmail || []) {
+      await agregarColaborador(email, 'supervisor');
+    }
+    for (const email of inquilinosEmail || []) {
+      await agregarColaborador(email, 'inquilino');
+    }
+
+    // 5. Insertar todos los nuevos colaboradores
+    if (colaboradoresParaInsertar.length > 0) {
+      const { error: errorInsert } = await supabase
+        .from('propiedades_colaboradores')
+        .insert(colaboradoresParaInsertar);
+
+      if (errorInsert) {
+        console.error('Error insertando colaboradores:', errorInsert);
+      } else {
+        console.log(`✅ Se insertaron ${colaboradoresParaInsertar.length} colaboradores nuevos`);
+      }
+    } else {
+      console.log('ℹ️ No hay colaboradores nuevos para insertar');
+    }
+  } catch (error) {
+    console.error('Error en syncColaboradores:', error);
+  }
 }
 
 // ============================================================================
@@ -244,9 +429,31 @@ export function usePropertyDatabase() {
           console.error('❌ Error actualizando:', error);
           throw error;
         }
-        
+
         console.log('✅ Propiedad actualizada exitosamente');
-        
+
+        // Sincronizar colaboradores a propiedades_colaboradores
+        await syncColaboradores(
+          propertyId,
+          data.propietarios_email || [],
+          data.supervisores_email || [],
+          data.inquilinos_email || []
+        );
+
+        // Generar tickets automáticos desde los servicios usando RPC
+        if (data.servicios && data.servicios.length > 0) {
+          const ticketResult = await generarTicketsAutomaticos(
+            propertyId,
+            data.servicios
+          );
+
+          if (ticketResult.success) {
+            console.log(`✅ ${ticketResult.ticketsCreated} tickets automáticos generados`);
+          } else {
+            console.error(`❌ Error generando tickets: ${ticketResult.error}`);
+          }
+        }
+
         return {
           success: true,
           propertyId: propertyId
@@ -282,7 +489,29 @@ export function usePropertyDatabase() {
         console.log('✅ PROPIEDAD CREADA EXITOSAMENTE');
         console.log('✅ ID:', newProperty.id);
         console.log('✅ ========================================');
-        
+
+        // Sincronizar colaboradores a propiedades_colaboradores
+        await syncColaboradores(
+          newProperty.id,
+          data.propietarios_email || [],
+          data.supervisores_email || [],
+          data.inquilinos_email || []
+        );
+
+        // Generar tickets automáticos desde los servicios
+        if (data.servicios && data.servicios.length > 0) {
+          const ticketResult = await generateServiceTickets({
+            propertyId: newProperty.id,
+            services: data.servicios
+          });
+
+          if (ticketResult.success) {
+            console.log(`✅ ${ticketResult.ticketsCreated} tickets automáticos generados`);
+          } else {
+            console.error(`❌ Error generando tickets: ${ticketResult.error}`);
+          }
+        }
+
         return {
           success: true,
           propertyId: newProperty.id
@@ -322,7 +551,7 @@ export function usePropertyDatabase() {
         throw new Error('Usuario no autenticado');
       }
       
-      // 2. Cargar propiedad
+      // 2. Cargar propiedad - SELECT * (todas las columnas)
       const { data, error } = await supabase
         .from('propiedades')
         .select('*')

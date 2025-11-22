@@ -35,6 +35,7 @@ export default function GaleriaPage() {
   const [selectedSpace, setSelectedSpace] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 })
   const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null)
   const [editingCaption, setEditingCaption] = useState('')
 
@@ -174,13 +175,30 @@ export default function GaleriaPage() {
       const files = e.target.files
       if (!files || files.length === 0) return
 
+      // Verificar límite de 30 fotos
+      const currentPhotoCount = photos.length
+      const maxPhotos = 30
+      const availableSlots = maxPhotos - currentPhotoCount
+
+      if (availableSlots <= 0) {
+        toast.error(`Has alcanzado el límite máximo de ${maxPhotos} fotos por propiedad`)
+        return
+      }
+
+      if (files.length > availableSlots) {
+        toast.warning(`Solo puedes subir ${availableSlots} foto(s) más. Límite: ${maxPhotos} fotos por propiedad`)
+        return
+      }
+
       setIsUploading(true)
+      setUploadProgress({ current: 0, total: files.length })
 
       try {
         const newPhotos: PropertyImage[] = []
 
         for (let i = 0; i < files.length; i++) {
           const file = files[i]
+          setUploadProgress({ current: i + 1, total: files.length })
 
           try {
             const compressed = await compressImageDual(file)
@@ -216,6 +234,7 @@ export default function GaleriaPage() {
         toast.error('Error al subir las fotos. Intenta nuevamente')
       } finally {
         setIsUploading(false)
+        setUploadProgress({ current: 0, total: 0 })
       }
     },
     [propertyId, photos, toast]
@@ -364,203 +383,170 @@ export default function GaleriaPage() {
         onLogout={handleLogout}
       />
 
-      <main className="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
-        {/* Filtros */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Buscador */}
-            <div className="flex-1">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Buscar fotos..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 rounded-lg focus:border-ras-turquesa focus:outline-none transition-colors"
-                />
-                <svg className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="11" cy="11" r="8"/>
-                  <path d="m21 21-4.35-4.35"/>
-                </svg>
-              </div>
-            </div>
-
-            {/* Filtro por espacio */}
-            <div className="relative">
-              <select
-                value={selectedSpace}
-                onChange={(e) => setSelectedSpace(e.target.value)}
-                className="appearance-none bg-white border-2 border-gray-200 rounded-lg px-4 py-2 pr-10 font-medium text-gray-700 hover:border-ras-turquesa focus:border-ras-turquesa focus:outline-none transition-colors cursor-pointer"
-              >
-                {property?.espacios?.map((espacio) => (
-                  <option key={espacio.id} value={espacio.id}>
-                    {espacio.name}
-                  </option>
-                ))}
-              </select>
-              <svg className="w-4 h-4 text-gray-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
-            </div>
-
-            {/* Botón subir fotos */}
-            {photos.length > 0 && (
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleFileSelect}
-                  disabled={isUploading}
-                  className="hidden"
-                />
-                <div className="px-6 py-2 bg-gradient-to-r from-ras-azul to-ras-turquesa text-white rounded-lg font-semibold hover:shadow-lg transition-all hover:scale-105 active:scale-95 whitespace-nowrap">
-                  {isUploading ? '⏳ Subiendo...' : '📸 Subir'}
-                </div>
-              </label>
-            )}
+      <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
+        {/* Header con filtros y botón de subida */}
+        <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+          {/* Buscador */}
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              placeholder="Buscar fotos..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-lg focus:border-ras-turquesa focus:outline-none transition-colors bg-white"
+            />
+            <svg className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.35-4.35"/>
+            </svg>
           </div>
+
+          {/* Filtro por espacio */}
+          <select
+            value={selectedSpace}
+            onChange={(e) => setSelectedSpace(e.target.value)}
+            className="appearance-none bg-white border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 font-medium text-gray-700 hover:border-ras-turquesa focus:border-ras-turquesa focus:outline-none transition-colors cursor-pointer"
+          >
+            {property?.espacios?.map((espacio) => (
+              <option key={espacio.id} value={espacio.id}>
+                {espacio.icon} {espacio.name}
+              </option>
+            ))}
+          </select>
+
+          {/* Botón subir fotos */}
+          {photos.length > 0 && photos.length < 30 && (
+            <label className="cursor-pointer">
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleFileSelect}
+                disabled={isUploading}
+                className="hidden"
+              />
+              <div className="px-6 py-2.5 bg-gradient-to-r from-ras-azul to-ras-turquesa text-white rounded-lg font-semibold hover:shadow-lg transition-all hover:scale-105 active:scale-95 whitespace-nowrap text-center">
+                📸 Subir fotos ({photos.length}/30)
+              </div>
+            </label>
+          )}
         </div>
 
-        {/* Grid de fotos */}
+        {/* Contenedor principal de galería */}
         {filteredPhotos.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredPhotos.map((photo, index) => (
-              <div
-                key={photo.id}
-                className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all"
-              >
-                {/* Imagen con dropdown y badge */}
-                <div className="relative aspect-square group">
-                  <img
-                    src={photo.url}
-                    alt={photo.caption || 'Foto'}
-                    className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
-                    onClick={() => openLightbox(index)}
-                  />
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            {/* Grid simple de fotos */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+              {filteredPhotos.map((photo, index) => (
+                <div key={photo.id} className="group relative">
+                  {/* Imagen */}
+                  <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
+                    <img
+                      src={photo.url_thumbnail || photo.url}
+                      alt={photo.caption || 'Foto'}
+                      className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-110"
+                      onClick={() => openLightbox(index)}
+                    />
 
-                  {/* Overlay para indicar que es clickeable */}
-                  <div
-                    className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer"
-                    onClick={() => openLightbox(index)}
-                  >
-                    <svg
-                      className="w-12 h-12 text-white"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <circle cx="11" cy="11" r="8" />
-                      <path d="m21 21-4.35-4.35" />
-                      <line x1="11" y1="8" x2="11" y2="14" />
-                      <line x1="8" y1="11" x2="14" y2="11" />
-                    </svg>
-                  </div>
-                  
-                  {/* Badge de portada */}
-                  {photo.is_cover && (
-                    <div className="absolute top-3 right-3 bg-yellow-500 text-white px-3 py-1 rounded-lg text-xs font-bold shadow-lg">
-                      ⭐ PORTADA
+                    {/* Badge de portada */}
+                    {photo.is_cover && (
+                      <div className="absolute top-2 right-2 bg-yellow-500 text-white px-2 py-0.5 rounded text-xs font-bold">
+                        ⭐
+                      </div>
+                    )}
+
+                    {/* Overlay con acciones */}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
+                      {/* Botones de acción */}
+                      <div className="flex gap-1">
+                        {!photo.is_cover && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleSetCover(photo.id); }}
+                            className="w-8 h-8 rounded bg-yellow-500 hover:bg-yellow-600 text-white flex items-center justify-center transition-colors"
+                            title="Establecer como portada"
+                          >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                            </svg>
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleStartEdit(photo); }}
+                          className="w-8 h-8 rounded bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center transition-colors"
+                          title="Editar"
+                        >
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                          </svg>
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDelete(photo.id); }}
+                          className="w-8 h-8 rounded bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-colors"
+                          title="Eliminar"
+                        >
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                          </svg>
+                        </button>
+                      </div>
+
+                      {/* Selector de espacio */}
+                      <select
+                        value={photo.space_type || 'sin-espacio'}
+                        onChange={(e) => { e.stopPropagation(); handleAssignSpace(photo.id, e.target.value); }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full px-2 py-1 bg-white/95 text-xs rounded border-0 focus:outline-none focus:ring-2 focus:ring-ras-turquesa"
+                      >
+                        {property?.espacios?.map((espacio) => (
+                          <option key={espacio.id} value={espacio.id}>
+                            {espacio.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                  )}
-
-                  {/* Dropdown de espacios dentro de la imagen */}
-                  <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent">
-                    <select
-                      value={photo.space_type || 'sin-espacio'}
-                      onChange={(e) => handleAssignSpace(photo.id, e.target.value)}
-                      className="w-full px-3 py-2 bg-white/95 backdrop-blur-sm border-2 border-white/50 rounded-lg text-sm font-medium focus:border-ras-turquesa focus:outline-none transition-colors cursor-pointer"
-                    >
-                      {property?.espacios?.map((espacio) => (
-                        <option key={espacio.id} value={espacio.id}>
-                          {espacio.name}
-                        </option>
-                      ))}
-                    </select>
                   </div>
-                </div>
 
-                {/* Nombre de la foto (editable) */}
-                <div className="p-4">
+                  {/* Caption editable */}
                   {editingPhotoId === photo.id ? (
-                    <div className="mb-3">
+                    <div className="absolute inset-0 bg-white rounded-lg p-2 flex flex-col gap-1 z-10">
                       <input
                         type="text"
                         value={editingCaption}
                         onChange={(e) => setEditingCaption(e.target.value)}
-                        className="w-full px-3 py-2 border-2 border-ras-turquesa rounded-lg text-sm font-medium focus:outline-none mb-2"
+                        className="w-full px-2 py-1 border border-ras-turquesa rounded text-xs focus:outline-none"
                         autoFocus
-                        onKeyPress={(e) => {
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => {
+                          e.stopPropagation();
                           if (e.key === 'Enter') handleSaveCaption(photo.id);
                           if (e.key === 'Escape') handleCancelEdit();
                         }}
                       />
-                      <div className="flex gap-2">
+                      <div className="flex gap-1">
                         <button
-                          onClick={() => handleSaveCaption(photo.id)}
-                          className="flex-1 px-3 py-1 bg-gradient-to-r from-ras-azul to-ras-turquesa text-white rounded-lg text-xs font-semibold hover:shadow-lg transition-all"
+                          onClick={(e) => { e.stopPropagation(); handleSaveCaption(photo.id); }}
+                          className="flex-1 px-2 py-1 bg-gradient-to-r from-ras-azul to-ras-turquesa text-white rounded text-xs font-semibold"
                         >
-                          Guardar
+                          ✓
                         </button>
                         <button
-                          onClick={handleCancelEdit}
-                          className="flex-1 px-3 py-1 bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-300 transition-all"
+                          onClick={(e) => { e.stopPropagation(); handleCancelEdit(); }}
+                          className="flex-1 px-2 py-1 bg-gray-200 text-gray-700 rounded text-xs font-semibold"
                         >
-                          Cancelar
+                          ✕
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-700 mb-3 font-medium truncate">
+                    <p className="mt-1 text-xs text-gray-600 truncate text-center">
                       {photo.caption}
                     </p>
                   )}
-
-                  {/* 3 Botones de acción */}
-                  {editingPhotoId !== photo.id && (
-                    <div className="flex gap-2 justify-center">
-                      {/* Botón Portada (solo si no es portada) */}
-                      {!photo.is_cover && (
-                        <button
-                          onClick={() => handleSetCover(photo.id)}
-                          className="w-10 h-10 rounded-lg border-2 border-yellow-200 bg-yellow-50 hover:bg-yellow-100 hover:border-yellow-400 hover:scale-110 transition-all flex items-center justify-center group"
-                          title="Establecer como portada"
-                        >
-                          <svg className="w-5 h-5 text-yellow-600 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                          </svg>
-                        </button>
-                      )}
-
-                      {/* Botón Editar */}
-                      <button
-                        onClick={() => handleStartEdit(photo)}
-                        className="w-10 h-10 rounded-lg border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 hover:border-blue-400 hover:scale-110 transition-all flex items-center justify-center group"
-                        title="Editar nombre"
-                      >
-                        <svg className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                        </svg>
-                      </button>
-
-                      {/* Botón Eliminar */}
-                      <button
-                        onClick={() => handleDelete(photo.id)}
-                        className="w-10 h-10 rounded-lg border-2 border-red-200 bg-red-50 hover:bg-red-100 hover:border-red-400 hover:scale-110 transition-all flex items-center justify-center group"
-                        title="Eliminar"
-                      >
-                        <svg className="w-5 h-5 text-red-600 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <line x1="18" y1="6" x2="6" y2="18"/>
-                          <line x1="6" y1="6" x2="18" y2="18"/>
-                        </svg>
-                      </button>
-                    </div>
-                  )}
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         ) : (
           <EmptyState 
@@ -653,6 +639,45 @@ export default function GaleriaPage() {
               </p>
               <p className="text-white/60 text-sm">
                 {lightboxIndex + 1} / {filteredPhotos.length}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Overlay de loading durante subida */}
+      {isUploading && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-8 shadow-2xl max-w-md w-full mx-4">
+            <div className="flex flex-col items-center gap-4">
+              {/* Spinner animado */}
+              <div className="relative w-16 h-16">
+                <div className="absolute inset-0 border-4 border-gray-200 rounded-full"></div>
+                <div className="absolute inset-0 border-4 border-transparent border-t-ras-turquesa border-l-ras-azul rounded-full animate-spin"></div>
+              </div>
+
+              {/* Texto */}
+              <div className="text-center">
+                <h3 className="text-xl font-bold text-gray-800 mb-1">
+                  📸 Cargando fotos...
+                </h3>
+                <p className="text-gray-600">
+                  {uploadProgress.current} de {uploadProgress.total}
+                </p>
+              </div>
+
+              {/* Barra de progreso */}
+              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-ras-azul to-ras-turquesa transition-all duration-300 ease-out"
+                  style={{
+                    width: `${(uploadProgress.current / uploadProgress.total) * 100}%`
+                  }}
+                />
+              </div>
+
+              <p className="text-sm text-gray-500">
+                Por favor espera, no cierres esta ventana
               </p>
             </div>
           </div>

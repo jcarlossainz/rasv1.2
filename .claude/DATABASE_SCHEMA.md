@@ -1,10 +1,10 @@
-# 🗄️ DATABASE SCHEMA - RAS v1.0
+# 🗄️ DATABASE SCHEMA - RAS v1.2
 
 **Sistema:** RAS - Realty Administration System
 **Base de Datos:** Supabase (PostgreSQL)
-**Versión del Schema:** 1.0.0
-**Fecha:** 17 de Noviembre 2025
-**Estado:** Documentación completa
+**Versión del Schema:** 1.2.0
+**Fecha:** 21 de Noviembre 2025
+**Estado:** Actualizado con Sistema de Cuentas e Ingresos
 
 ---
 
@@ -47,6 +47,8 @@
 | `propiedades_colaboradores` | ✅ Activa | Colaboradores por propiedad | ⚠️ Desactivado |
 | `contactos` | ✅ Activa | Directorio de contactos | ⚠️ Desactivado |
 | `documentos` | ✅ Activa | Documentos adjuntos | ⚠️ Desactivado |
+| `cuentas_bancarias` | ✅ Activa | **NUEVO** - Cuentas bancarias (MXN/USD) | ⚠️ Desactivado |
+| `ingresos` | ✅ Activa | **NUEVO** - Registro de ingresos (rentas, ventas) | ⚠️ Desactivado |
 
 ### Tablas Pendientes de Crear
 
@@ -63,6 +65,7 @@
 | Vista | Estado | Propósito |
 |-------|--------|-----------|
 | `v_proximos_pagos` | ✅ Activa | Próximos pagos de servicios |
+| `v_movimientos_cuenta` | ✅ Activa | **NUEVO** - Movimientos consolidados (ingresos + egresos) |
 
 ---
 
@@ -74,38 +77,49 @@
 │  (usuarios)     │
 └────────┬────────┘
          │
-         │ owner_id / user_id
-         ├──────────────────────────┐
-         │                          │
-         ▼                          ▼
-┌─────────────────┐      ┌──────────────────────┐
-│  propiedades    │◄─────┤ propiedades_         │
-│  (inmuebles)    │      │ colaboradores        │
-└────────┬────────┘      └──────────────────────┘
-         │
-         │ propiedad_id
-         ├────────────┬──────────────┬─────────────┬──────────────┐
-         │            │              │             │              │
-         ▼            ▼              ▼             ▼              ▼
-┌──────────────┐ ┌────────────┐ ┌─────────┐ ┌──────────┐ ┌────────────┐
-│ property_    │ │ servicios_ │ │ tickets │ │ eventos_ │ │ inventarios│
-│ images       │ │ inmueble   │ │         │ │calendario│ │            │
-│ (fotos)      │ │            │ │(tareas) │ │(futuro)  │ │  (futuro)  │
-└──────────────┘ └─────┬──────┘ └─────────┘ └──────────┘ └────────────┘
+         │ owner_id / user_id / propietario_id
+         ├──────────────────────────┬────────────────────┐
+         │                          │                    │
+         ▼                          ▼                    ▼
+┌─────────────────┐      ┌──────────────────────┐  ┌───────────────────┐
+│  propiedades    │◄─────┤ propiedades_         │  │ cuentas_          │ **NUEVO**
+│  (inmuebles)    │      │ colaboradores        │  │ bancarias         │
+└────────┬────────┘      └──────────────────────┘  └─────────┬─────────┘
+         │                                                   │
+         │ propiedad_id                                     │ cuenta_id
+         ├────────────┬──────────────┬─────────────┬────────┼────────────┬──────────┐
+         │            │              │             │        │            │          │
+         ▼            ▼              ▼             ▼        ▼            ▼          ▼
+┌──────────────┐ ┌────────────┐ ┌─────────┐ ┌──────────┐ ┌────────────┐ ┌─────────────┐
+│ property_    │ │ servicios_ │ │ tickets │ │ eventos_ │ │ inventarios│ │  ingresos   │ **NUEVO**
+│ images       │ │ inmueble   │ │         │ │calendario│ │            │ │  (rentas,   │
+│ (fotos)      │ │            │ │(tareas) │ │(futuro)  │ │  (futuro)  │ │  depósitos) │
+└──────────────┘ └─────┬──────┘ └─────────┘ └──────────┘ └────────────┘ └─────────────┘
                        │
                        │ servicio_id
                        ▼
                 ┌──────────────────┐
-                │ fechas_pago_     │
-                │ servicios        │
-                │ (calendario)     │
-                └──────────────────┘
+                │ fechas_pago_     │◄────── cuenta_id ──────┐
+                │ servicios        │                        │
+                │ (calendario)     │                        │
+                └──────────────────┘                        │
+                                                           │
+                                            ┌──────────────┴────────────────┐
+                                            │ v_movimientos_cuenta (vista)  │
+                                            │ Ingresos + Egresos            │
+                                            └───────────────────────────────┘
 
 ┌─────────────────┐      ┌──────────────────┐
 │   contactos     │      │   documentos     │
 │  (directorio)   │      │   (archivos)     │
 └─────────────────┘      └──────────────────┘
 ```
+
+**NOTA:**
+- `cuentas_bancarias` se relaciona con `propiedades` O `profiles` (no ambos)
+- `ingresos` se relaciona con `propiedades` Y opcionalmente con `cuentas_bancarias`
+- `fechas_pago_servicios` ahora incluye `cuenta_id` para ligar pagos a cuentas
+- La vista `v_movimientos_cuenta` consolida movimientos de ambas tablas
 
 ---
 
@@ -561,7 +575,7 @@ interface Ticket {
 
 ### TABLA: `propiedades_colaboradores`
 
-**Descripción:** Relación N:N entre propiedades y colaboradores (usuarios que pueden ver/editar propiedades).
+**Descripción:** Relación N:N entre propiedades y colaboradores. Soporta usuarios registrados (user_id) e invitaciones pendientes (email_invitado).
 
 #### Estructura de Campos
 
@@ -571,15 +585,20 @@ CREATE TABLE propiedades_colaboradores (
   id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   propiedad_id    UUID REFERENCES propiedades(id) ON DELETE CASCADE,
   user_id         UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  email_invitado  TEXT, -- Para invitar usuarios no registrados
 
   -- ===== PERMISOS =====
-  rol             TEXT DEFAULT 'viewer', -- 'viewer' | 'editor' | 'admin'
+  rol             TEXT NOT NULL, -- 'supervisor' | 'propietario' | 'promotor'
 
   -- ===== TIMESTAMPS =====
   created_at      TIMESTAMPTZ DEFAULT NOW(),
 
-  -- ===== CONSTRAINT =====
-  UNIQUE(propiedad_id, user_id)
+  -- ===== CONSTRAINTS =====
+  -- user_id y email_invitado son mutuamente exclusivos
+  CONSTRAINT check_user_or_email CHECK (
+    (user_id IS NOT NULL AND email_invitado IS NULL) OR
+    (user_id IS NULL AND email_invitado IS NOT NULL)
+  )
 );
 ```
 
@@ -588,7 +607,24 @@ CREATE TABLE propiedades_colaboradores (
 ```sql
 CREATE INDEX idx_colaboradores_propiedad ON propiedades_colaboradores(propiedad_id);
 CREATE INDEX idx_colaboradores_user ON propiedades_colaboradores(user_id);
+
+-- Índices UNIQUE parciales para evitar duplicados
+CREATE UNIQUE INDEX idx_unique_propiedad_user
+ON propiedades_colaboradores (propiedad_id, user_id)
+WHERE user_id IS NOT NULL;
+
+CREATE UNIQUE INDEX idx_unique_propiedad_email
+ON propiedades_colaboradores (propiedad_id, email_invitado)
+WHERE email_invitado IS NOT NULL;
 ```
+
+#### Roles Explicados
+
+| Rol | Permisos | Uso |
+|-----|----------|-----|
+| `supervisor` | Ver y gestionar todo excepto: compartir, duplicar, editar configuración | Para administradores de la propiedad |
+| `propietario` | Solo visualización. NO puede crear/editar tickets | Para dueños que solo quieren ver |
+| `promotor` | Acceso únicamente a sección de Anuncios | Para agentes de ventas/rentas |
 
 #### Contrato TypeScript
 
@@ -596,11 +632,27 @@ CREATE INDEX idx_colaboradores_user ON propiedades_colaboradores(user_id);
 interface PropiedadColaborador {
   id: string;
   propiedad_id: string;
-  user_id: string;
-  rol: 'viewer' | 'editor' | 'admin';
+  user_id?: string | null; // NULL si es invitación pendiente
+  email_invitado?: string | null; // Se usa cuando user_id es NULL
+  rol: 'supervisor' | 'propietario' | 'promotor';
   created_at?: string;
 }
+
+interface Colaborador {
+  id: string;
+  user_id: string | null;
+  email: string;
+  full_name?: string;
+  email_invitado?: string | null;
+  esPendiente?: boolean; // true si email_invitado está presente
+}
 ```
+
+#### Notas Importantes
+
+- **Invitaciones pendientes:** Cuando se invita a un email no registrado, se crea un registro con `email_invitado` y `user_id = NULL`
+- **Conversión automática:** Cuando el usuario se registra, se puede actualizar el registro para usar `user_id` en lugar de `email_invitado`
+- **Migración:** Los roles antiguos (`admin`, `editor`, `viewer`) fueron migrados a los nuevos valores
 
 ---
 
@@ -1241,6 +1293,482 @@ ON propiedades USING gin(to_tsvector('spanish', nombre_propiedad));
 
 ---
 
+---
+
+## 💰 TABLA: `cuentas_bancarias`
+
+**Propósito:** Gestión de cuentas bancarias asociadas a propiedades o propietarios
+
+### Estructura
+
+```sql
+CREATE TABLE cuentas_bancarias (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  propiedad_id UUID REFERENCES propiedades(id) ON DELETE CASCADE,
+  propietario_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  nombre TEXT NOT NULL,
+  tipo_moneda TEXT NOT NULL CHECK (tipo_moneda IN ('MXN', 'USD')),
+  tipo_cuenta TEXT NOT NULL CHECK (tipo_cuenta IN ('Banco', 'Tarjeta', 'Efectivo')),
+  banco TEXT,
+  numero_cuenta TEXT,
+  balance_inicial NUMERIC(12,2) DEFAULT 0,
+  balance_actual NUMERIC(12,2) DEFAULT 0,
+  descripcion TEXT,
+  color TEXT DEFAULT '#3B82F6',
+  activo BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  CONSTRAINT cuenta_owner_check CHECK (
+    (propiedad_id IS NOT NULL AND propietario_id IS NULL) OR
+    (propiedad_id IS NULL AND propietario_id IS NOT NULL)
+  )
+);
+```
+
+### Campos
+
+| Campo | Tipo | Descripción | Requerido | Default |
+|-------|------|-------------|-----------|---------|
+| `id` | UUID | Identificador único | Sí | auto |
+| `propiedad_id` | UUID | FK a propiedades (cuenta de propiedad) | Condicional | null |
+| `propietario_id` | UUID | FK a profiles (cuenta personal) | Condicional | null |
+| `nombre` | TEXT | Nombre descriptivo (ej: "BBVA Casa Playa") | Sí | - |
+| `tipo_moneda` | TEXT | Moneda: 'MXN' o 'USD' | Sí | - |
+| `tipo_cuenta` | TEXT | Tipo: 'Banco', 'Tarjeta', 'Efectivo' | Sí | - |
+| `banco` | TEXT | Nombre del banco | No | null |
+| `numero_cuenta` | TEXT | Últimos 4 dígitos de cuenta | No | null |
+| `balance_inicial` | NUMERIC(12,2) | Saldo inicial al crear cuenta | No | 0 |
+| `balance_actual` | NUMERIC(12,2) | Saldo actual (calculado automáticamente) | No | 0 |
+| `descripcion` | TEXT | Descripción adicional | No | null |
+| `color` | TEXT | Color para identificación visual (hex) | No | '#3B82F6' |
+| `activo` | BOOLEAN | Si la cuenta está activa | No | true |
+| `created_at` | TIMESTAMPTZ | Fecha de creación | Sí | now() |
+| `updated_at` | TIMESTAMPTZ | Última actualización | Sí | now() |
+
+### Constraints
+
+- **cuenta_owner_check:** Una cuenta DEBE tener `propiedad_id` O `propietario_id`, NO ambos
+
+### Índices
+
+```sql
+CREATE INDEX idx_cuentas_propiedad ON cuentas_bancarias(propiedad_id);
+CREATE INDEX idx_cuentas_propietario ON cuentas_bancarias(propietario_id);
+CREATE INDEX idx_cuentas_tipo_moneda ON cuentas_bancarias(tipo_moneda);
+CREATE INDEX idx_cuentas_activo ON cuentas_bancarias(activo);
+```
+
+### Triggers
+
+#### 1. Inicializar Balance
+**Función:** `inicializar_balance_cuenta()`
+**Trigger:** `trigger_inicializar_balance`
+**Momento:** BEFORE INSERT
+
+Al crear una cuenta nueva, establece `balance_actual = balance_inicial`
+
+```sql
+CREATE OR REPLACE FUNCTION inicializar_balance_cuenta()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.balance_actual := COALESCE(NEW.balance_inicial, 0);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Ejemplo de Datos
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "propiedad_id": "123e4567-e89b-12d3-a456-426614174000",
+  "propietario_id": null,
+  "nombre": "BBVA Cuenta Casa Playa",
+  "tipo_moneda": "MXN",
+  "tipo_cuenta": "Banco",
+  "banco": "BBVA",
+  "numero_cuenta": "1234",
+  "balance_inicial": 50000.00,
+  "balance_actual": 48500.00,
+  "descripcion": "Cuenta principal para gastos de la casa en la playa",
+  "color": "#0033A0",
+  "activo": true
+}
+```
+
+---
+
+## 💵 TABLA: `ingresos`
+
+**Propósito:** Registro de ingresos de propiedades (rentas, depósitos, ventas)
+
+### Estructura
+
+```sql
+CREATE TABLE ingresos (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  propiedad_id UUID REFERENCES propiedades(id) ON DELETE CASCADE,
+  cuenta_id UUID REFERENCES cuentas_bancarias(id) ON DELETE SET NULL,
+  creado_por UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  concepto TEXT NOT NULL,
+  monto NUMERIC(10,2) NOT NULL CHECK (monto > 0),
+  fecha_ingreso DATE NOT NULL,
+  tipo_ingreso TEXT CHECK (tipo_ingreso IN ('Renta', 'Depósito', 'Venta', 'Otro')),
+  metodo_pago TEXT,
+  referencia_pago TEXT,
+  tiene_factura BOOLEAN DEFAULT false,
+  numero_factura TEXT,
+  comprobante_url TEXT,
+  notas TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+### Campos
+
+| Campo | Tipo | Descripción | Requerido | Default |
+|-------|------|-------------|-----------|---------|
+| `id` | UUID | Identificador único | Sí | auto |
+| `propiedad_id` | UUID | FK a propiedades | Sí | - |
+| `cuenta_id` | UUID | FK a cuentas_bancarias (cuenta destino) | No | null |
+| `creado_por` | UUID | FK a profiles (usuario que registró) | Sí | - |
+| `concepto` | TEXT | Descripción del ingreso | Sí | - |
+| `monto` | NUMERIC(10,2) | Cantidad del ingreso | Sí | - |
+| `fecha_ingreso` | DATE | Fecha en que se recibió el ingreso | Sí | - |
+| `tipo_ingreso` | TEXT | Tipo: 'Renta', 'Depósito', 'Venta', 'Otro' | No | null |
+| `metodo_pago` | TEXT | Forma de pago (transferencia, efectivo, etc) | No | null |
+| `referencia_pago` | TEXT | Número de referencia o confirmación | No | null |
+| `tiene_factura` | BOOLEAN | Si se emitió factura | No | false |
+| `numero_factura` | TEXT | Folio de factura | No | null |
+| `comprobante_url` | TEXT | URL del comprobante en Storage | No | null |
+| `notas` | TEXT | Notas adicionales | No | null |
+| `created_at` | TIMESTAMPTZ | Fecha de creación del registro | Sí | now() |
+| `updated_at` | TIMESTAMPTZ | Última actualización | Sí | now() |
+
+### Índices
+
+```sql
+CREATE INDEX idx_ingresos_propiedad ON ingresos(propiedad_id);
+CREATE INDEX idx_ingresos_cuenta ON ingresos(cuenta_id);
+CREATE INDEX idx_ingresos_fecha ON ingresos(fecha_ingreso);
+CREATE INDEX idx_ingresos_tipo ON ingresos(tipo_ingreso);
+CREATE INDEX idx_ingresos_creado_por ON ingresos(creado_por);
+```
+
+### Triggers
+
+#### 1. Actualizar Balance de Cuenta (Ingresos)
+**Función:** `actualizar_balance_cuenta_ingreso()`
+**Trigger:** `trigger_actualizar_balance_ingreso`
+**Momento:** AFTER INSERT, UPDATE, DELETE
+
+Actualiza automáticamente el `balance_actual` de la cuenta cuando:
+- Se inserta un nuevo ingreso: suma el monto
+- Se actualiza un ingreso: ajusta la diferencia
+- Se elimina un ingreso: resta el monto
+- Se cambia la cuenta destino: mueve el balance entre cuentas
+
+```sql
+CREATE OR REPLACE FUNCTION actualizar_balance_cuenta_ingreso()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.cuenta_id IS NOT NULL THEN
+      UPDATE cuentas_bancarias
+      SET balance_actual = balance_actual + NEW.monto
+      WHERE id = NEW.cuenta_id;
+    END IF;
+  ELSIF TG_OP = 'UPDATE' THEN
+    -- Si cambió la cuenta destino
+    IF OLD.cuenta_id IS DISTINCT FROM NEW.cuenta_id THEN
+      -- Restar de cuenta antigua
+      IF OLD.cuenta_id IS NOT NULL THEN
+        UPDATE cuentas_bancarias
+        SET balance_actual = balance_actual - OLD.monto
+        WHERE id = OLD.cuenta_id;
+      END IF;
+      -- Sumar a cuenta nueva
+      IF NEW.cuenta_id IS NOT NULL THEN
+        UPDATE cuentas_bancarias
+        SET balance_actual = balance_actual + NEW.monto
+        WHERE id = NEW.cuenta_id;
+      END IF;
+    -- Si solo cambió el monto
+    ELSIF OLD.monto IS DISTINCT FROM NEW.monto AND NEW.cuenta_id IS NOT NULL THEN
+      UPDATE cuentas_bancarias
+      SET balance_actual = balance_actual - OLD.monto + NEW.monto
+      WHERE id = NEW.cuenta_id;
+    END IF;
+  ELSIF TG_OP = 'DELETE' THEN
+    IF OLD.cuenta_id IS NOT NULL THEN
+      UPDATE cuentas_bancarias
+      SET balance_actual = balance_actual - OLD.monto
+      WHERE id = OLD.cuenta_id;
+    END IF;
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Ejemplo de Datos
+
+```json
+{
+  "id": "660e8400-e29b-41d4-a716-446655440001",
+  "propiedad_id": "123e4567-e89b-12d3-a456-426614174000",
+  "cuenta_id": "550e8400-e29b-41d4-a716-446655440000",
+  "creado_por": "user-uuid-123",
+  "concepto": "Renta de Diciembre 2025",
+  "monto": 15000.00,
+  "fecha_ingreso": "2025-12-01",
+  "tipo_ingreso": "Renta",
+  "metodo_pago": "Transferencia SPEI",
+  "referencia_pago": "REF123456789",
+  "tiene_factura": true,
+  "numero_factura": "A123456",
+  "comprobante_url": "https://supabase.co/storage/v1/object/public/documentos/comprobantes/diciembre_renta.pdf",
+  "notas": "Pago puntual del inquilino"
+}
+```
+
+---
+
+## 👁️ VISTA: `v_movimientos_cuenta`
+
+**Propósito:** Vista consolidada de todos los movimientos de una cuenta (ingresos + egresos)
+
+### Estructura
+
+```sql
+CREATE OR REPLACE VIEW v_movimientos_cuenta AS
+-- Ingresos (+)
+SELECT
+  i.id,
+  i.cuenta_id,
+  i.fecha_ingreso as fecha,
+  'ingreso' as tipo_movimiento,
+  i.concepto as descripcion,
+  i.monto,
+  i.tipo_ingreso as categoria,
+  i.metodo_pago,
+  i.referencia_pago,
+  i.comprobante_url,
+  i.created_at
+FROM ingresos i
+WHERE i.cuenta_id IS NOT NULL
+
+UNION ALL
+
+-- Egresos (-)
+SELECT
+  fps.id,
+  fps.cuenta_id,
+  fps.fecha_pago as fecha,
+  'egreso' as tipo_movimiento,
+  si.nombre as descripcion,
+  fps.monto_real as monto,
+  si.tipo_servicio as categoria,
+  fps.metodo_pago,
+  fps.referencia_pago,
+  fps.comprobante_url,
+  fps.updated_at as created_at
+FROM fechas_pago_servicios fps
+JOIN servicios_inmueble si ON fps.servicio_id = si.id
+WHERE fps.cuenta_id IS NOT NULL AND fps.pagado = true
+
+ORDER BY fecha DESC, created_at DESC;
+```
+
+### Campos
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | UUID | ID del movimiento (ingreso o egreso) |
+| `cuenta_id` | UUID | ID de la cuenta |
+| `fecha` | DATE | Fecha del movimiento |
+| `tipo_movimiento` | TEXT | 'ingreso' o 'egreso' |
+| `descripcion` | TEXT | Concepto o nombre del servicio |
+| `monto` | NUMERIC | Cantidad del movimiento |
+| `categoria` | TEXT | Tipo de ingreso o servicio |
+| `metodo_pago` | TEXT | Método de pago |
+| `referencia_pago` | TEXT | Referencia o confirmación |
+| `comprobante_url` | TEXT | URL del comprobante |
+| `created_at` | TIMESTAMPTZ | Fecha de registro |
+
+### Uso desde TypeScript
+
+```typescript
+// Obtener movimientos de una cuenta
+const { data: movimientos } = await supabase
+  .from('v_movimientos_cuenta')
+  .select('*')
+  .eq('cuenta_id', cuentaId)
+  .order('fecha', { ascending: false })
+  .limit(50)
+
+// Filtrar por tipo
+const { data: ingresos } = await supabase
+  .from('v_movimientos_cuenta')
+  .select('*')
+  .eq('cuenta_id', cuentaId)
+  .eq('tipo_movimiento', 'ingreso')
+
+// Filtrar por rango de fechas
+const { data: movimientosMes } = await supabase
+  .from('v_movimientos_cuenta')
+  .select('*')
+  .eq('cuenta_id', cuentaId)
+  .gte('fecha', '2025-12-01')
+  .lte('fecha', '2025-12-31')
+```
+
+---
+
+## 🔧 MODIFICACIONES A TABLA: `fechas_pago_servicios`
+
+Se agregaron los siguientes campos para soportar el sistema de cuentas:
+
+```sql
+ALTER TABLE fechas_pago_servicios
+ADD COLUMN IF NOT EXISTS cuenta_id UUID REFERENCES cuentas_bancarias(id) ON DELETE SET NULL,
+ADD COLUMN IF NOT EXISTS metodo_pago TEXT,
+ADD COLUMN IF NOT EXISTS referencia_pago TEXT,
+ADD COLUMN IF NOT EXISTS tiene_factura BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS numero_factura TEXT,
+ADD COLUMN IF NOT EXISTS comprobante_url TEXT,
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
+```
+
+### Trigger Agregado
+
+#### Actualizar Balance de Cuenta (Egresos)
+**Función:** `actualizar_balance_cuenta_pago()`
+**Trigger:** `trigger_actualizar_balance_pago`
+**Momento:** AFTER UPDATE
+
+Cuando se marca un pago como `pagado = TRUE`:
+- Resta el `monto_real` del `balance_actual` de la cuenta
+- Si se desmarca, revierte el balance
+
+```sql
+CREATE OR REPLACE FUNCTION actualizar_balance_cuenta_pago()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Solo actuar si cambió el estado de pagado o el monto
+  IF OLD.pagado IS DISTINCT FROM NEW.pagado OR OLD.monto_real IS DISTINCT FROM NEW.monto_real THEN
+
+    -- Si se marcó como pagado
+    IF NEW.pagado = TRUE AND OLD.pagado = FALSE THEN
+      IF NEW.cuenta_id IS NOT NULL THEN
+        UPDATE cuentas_bancarias
+        SET balance_actual = balance_actual - COALESCE(NEW.monto_real, NEW.monto_estimado, 0)
+        WHERE id = NEW.cuenta_id;
+      END IF;
+
+    -- Si se desmarcó como pagado
+    ELSIF NEW.pagado = FALSE AND OLD.pagado = TRUE THEN
+      IF OLD.cuenta_id IS NOT NULL THEN
+        UPDATE cuentas_bancarias
+        SET balance_actual = balance_actual + COALESCE(OLD.monto_real, OLD.monto_estimado, 0)
+        WHERE id = OLD.cuenta_id;
+      END IF;
+
+    -- Si cambió el monto pero sigue pagado
+    ELSIF NEW.pagado = TRUE AND OLD.pagado = TRUE AND OLD.monto_real IS DISTINCT FROM NEW.monto_real THEN
+      IF NEW.cuenta_id IS NOT NULL THEN
+        UPDATE cuentas_bancarias
+        SET balance_actual = balance_actual + COALESCE(OLD.monto_real, 0) - COALESCE(NEW.monto_real, 0)
+        WHERE id = NEW.cuenta_id;
+      END IF;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+---
+
+## 📊 FUNCIÓN RPC: `generar_fechas_pago_servicio`
+
+**Propósito:** Genera automáticamente tickets de pago para servicios recurrentes
+
+### Definición
+
+```sql
+CREATE OR REPLACE FUNCTION generar_fechas_pago_servicio(
+  p_servicio_id UUID,
+  p_cantidad_meses INTEGER DEFAULT 12
+)
+RETURNS INTEGER AS $$
+DECLARE
+  v_servicio RECORD;
+  v_fecha_base DATE;
+  v_contador INTEGER := 0;
+BEGIN
+  -- Obtener información del servicio
+  SELECT * INTO v_servicio
+  FROM servicios_inmueble
+  WHERE id = p_servicio_id AND activo = true;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Servicio no encontrado o inactivo';
+  END IF;
+
+  -- Determinar fecha base
+  SELECT COALESCE(MAX(fecha_pago), v_servicio.fecha_ultimo_pago, CURRENT_DATE)
+  INTO v_fecha_base
+  FROM fechas_pago_servicios
+  WHERE servicio_id = p_servicio_id;
+
+  -- Generar fechas según frecuencia
+  FOR i IN 1..p_cantidad_meses LOOP
+    INSERT INTO fechas_pago_servicios (
+      servicio_id,
+      propiedad_id,
+      fecha_pago,
+      monto_estimado,
+      pagado
+    ) VALUES (
+      p_servicio_id,
+      v_servicio.propiedad_id,
+      v_fecha_base + (i * INTERVAL '1 month'),
+      v_servicio.monto,
+      false
+    )
+    ON CONFLICT DO NOTHING;
+
+    v_contador := v_contador + 1;
+  END LOOP;
+
+  RETURN v_contador;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Uso
+
+```sql
+-- Generar 12 meses de tickets para un servicio
+SELECT generar_fechas_pago_servicio('servicio-uuid', 12);
+
+-- Generar para todos los servicios activos
+DO $$
+DECLARE
+  servicio RECORD;
+BEGIN
+  FOR servicio IN SELECT id FROM servicios_inmueble WHERE activo = true
+  LOOP
+    PERFORM generar_fechas_pago_servicio(servicio.id, 12);
+  END LOOP;
+END $$;
+```
+
+---
 ## 📌 NOTAS TÉCNICAS
 
 ### 1. Campos JSONB vs Columnas Separadas

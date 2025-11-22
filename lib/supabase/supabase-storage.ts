@@ -60,7 +60,7 @@ export async function uploadPropertyImageDual(
     const dimensions = await getImageDimensions(displayBlob);
 
     // 7. Guardar metadata en la tabla property_images
-    const { data: imageRecord, error: dbError } = await supabase
+    const { data: imageRecord, error: dbError} = await supabase
       .from('property_images')
       .insert({
         id: imageId,
@@ -69,16 +69,15 @@ export async function uploadPropertyImageDual(
         url_thumbnail: thumbUrl.publicUrl,
         storage_path_display: displayPath,
         storage_path_thumbnail: thumbPath,
-        file_size_display: displayBlob.size,
         file_size_thumbnail: thumbnailBlob.size,
-        width_display: dimensions.width,
-        height_display: dimensions.height,
+        file_size_display: displayBlob.size,
         width_thumbnail: 300,
         height_thumbnail: 300,
+        width_display: dimensions.width,
+        height_display: dimensions.height,
         is_cover: false,
-        order_index: 0,
         space_type: null,
-        caption: originalFileName
+        order_index: 0
       })
       .select()
       .single();
@@ -118,10 +117,10 @@ export async function uploadPropertyImageDual(
  */
 export async function deletePropertyImage(imageId: string, propertyId: string) {
   try {
-    // 1. Obtener rutas de storage antes de eliminar
+    // 1. Obtener URLs para extraer las rutas
     const { data: imageData, error: fetchError } = await supabase
       .from('property_images')
-      .select('storage_path_display, storage_path_thumbnail')
+      .select('url, url_thumbnail')
       .eq('id', imageId)
       .eq('property_id', propertyId)
       .single();
@@ -129,17 +128,26 @@ export async function deletePropertyImage(imageId: string, propertyId: string) {
     if (fetchError) throw new Error(`Error obteniendo imagen: ${fetchError.message}`);
     if (!imageData) throw new Error('Imagen no encontrada');
 
-    // 2. Eliminar archivos de Storage
-    const { error: storageError } = await supabase.storage
-      .from('property-images')
-      .remove([
-        imageData.storage_path_display,
-        imageData.storage_path_thumbnail
-      ]);
+    // 2. Extraer rutas desde las URLs públicas
+    // URL format: https://[project].supabase.co/storage/v1/object/public/property-images/[path]
+    const extractPath = (url: string) => {
+      const match = url.match(/property-images\/(.+)$/);
+      return match ? match[1] : null;
+    };
 
-    if (storageError) console.warn('⚠️ Error eliminando de Storage:', storageError);
+    const displayPath = extractPath(imageData.url);
+    const thumbPath = extractPath(imageData.url_thumbnail);
 
-    // 3. Eliminar registro de BD
+    // 3. Eliminar archivos de Storage (si tenemos las rutas)
+    if (displayPath && thumbPath) {
+      const { error: storageError } = await supabase.storage
+        .from('property-images')
+        .remove([displayPath, thumbPath]);
+
+      if (storageError) console.warn('⚠️ Error eliminando de Storage:', storageError);
+    }
+
+    // 4. Eliminar registro de BD
     const { error: dbError } = await supabase
       .from('property_images')
       .delete()
@@ -165,7 +173,7 @@ export async function getPropertyImages(propertyId: string) {
       .from('property_images')
       .select('*')
       .eq('property_id', propertyId)
-      .order('order_index', { ascending: true });
+      .order('created_at', { ascending: true }); // Ordenar por fecha de creación en lugar de order_index
 
     if (error) throw error;
     return data || [];

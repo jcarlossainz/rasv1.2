@@ -42,6 +42,10 @@ export default function CatalogoPage() {
   const [busqueda, setBusqueda] = useState('')
   const [filtroPropiedad, setFiltroPropiedad] = useState<'todos' | 'propios' | 'compartidos'>('todos')
 
+  // Paginación
+  const [paginaActual, setPaginaActual] = useState(1)
+  const ITEMS_POR_PAGINA = 20
+
   useEffect(() => {
     if (user?.id) {
       cargarPropiedades(user.id)
@@ -232,6 +236,20 @@ export default function CatalogoPage() {
     })
   }, [propiedades, busqueda, filtroPropiedad])
 
+  // ⚡ PAGINACIÓN: Calcular propiedades a mostrar
+  const propiedadesPaginadas = useMemo(() => {
+    const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA
+    const fin = inicio + ITEMS_POR_PAGINA
+    return propiedadesFiltradas.slice(inicio, fin)
+  }, [propiedadesFiltradas, paginaActual])
+
+  const totalPaginas = Math.ceil(propiedadesFiltradas.length / ITEMS_POR_PAGINA)
+
+  // Resetear página cuando cambian los filtros
+  useEffect(() => {
+    setPaginaActual(1)
+  }, [busqueda, filtroPropiedad])
+
   if (authLoading) {
     return <Loading message="Cargando propiedades..." />
   }
@@ -314,21 +332,44 @@ export default function CatalogoPage() {
             </div>
 
             <div className="divide-y divide-gray-100">
-              {propiedadesFiltradas.map((prop) => (
+              {propiedadesPaginadas.map((prop) => (
                 <div 
                   key={prop.id}
                   className="px-6 py-4 hover:bg-gray-50 transition-all"
                 >
                   <div className="flex items-center gap-4">
-                    <div>
-                      <img 
+                    {/* Thumbnail clickeable con indicador */}
+                    <div
+                      onClick={(e) => { e.stopPropagation(); abrirGaleria(prop.id); }}
+                      className="relative group cursor-pointer"
+                    >
+                      <img
                         src={prop.foto_portada || "https://via.placeholder.com/80x60/f3f4f6/9ca3af?text=Sin+foto"}
                         alt={prop.nombre}
-                        className="w-20 h-16 object-cover rounded-lg border-2 border-gray-200"
+                        className="w-20 h-16 object-cover rounded-lg border-2 border-gray-200 group-hover:border-purple-400 transition-all group-hover:scale-105"
                         onError={(e) => {
                           e.currentTarget.src = "https://via.placeholder.com/80x60/f3f4f6/9ca3af?text=Sin+foto"
                         }}
                       />
+                      {/* Overlay con icono de cámara */}
+                      <div className="absolute inset-0 bg-purple-600 bg-opacity-0 group-hover:bg-opacity-70 rounded-lg transition-all flex items-center justify-center">
+                        <svg
+                          className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                          <circle cx="12" cy="13" r="4"/>
+                        </svg>
+                      </div>
+                      {/* Badge indicador si no hay foto */}
+                      {!prop.foto_portada && (
+                        <div className="absolute -top-1 -right-1 bg-purple-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold animate-pulse">
+                          +
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex-1">
@@ -433,6 +474,83 @@ export default function CatalogoPage() {
                 </div>
               ))}
             </div>
+
+            {/* Paginación */}
+            {totalPaginas > 1 && (
+              <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                <div className="flex items-center justify-between">
+                  {/* Info de resultados */}
+                  <div className="text-sm text-gray-600">
+                    Mostrando{' '}
+                    <span className="font-semibold text-gray-900">
+                      {(paginaActual - 1) * ITEMS_POR_PAGINA + 1}
+                    </span>
+                    {' - '}
+                    <span className="font-semibold text-gray-900">
+                      {Math.min(paginaActual * ITEMS_POR_PAGINA, propiedadesFiltradas.length)}
+                    </span>
+                    {' de '}
+                    <span className="font-semibold text-gray-900">
+                      {propiedadesFiltradas.length}
+                    </span>
+                    {' propiedades'}
+                  </div>
+
+                  {/* Controles de navegación */}
+                  <div className="flex items-center gap-2">
+                    {/* Botón Anterior */}
+                    <button
+                      onClick={() => setPaginaActual(prev => Math.max(1, prev - 1))}
+                      disabled={paginaActual === 1}
+                      className="px-4 py-2 rounded-lg border-2 border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-gray-700 transition-all"
+                    >
+                      ← Anterior
+                    </button>
+
+                    {/* Números de página */}
+                    <div className="flex gap-1">
+                      {Array.from({ length: totalPaginas }, (_, i) => i + 1)
+                        .filter(num => {
+                          // Mostrar primera, última, actual y vecinas
+                          return (
+                            num === 1 ||
+                            num === totalPaginas ||
+                            (num >= paginaActual - 1 && num <= paginaActual + 1)
+                          )
+                        })
+                        .map((num, idx, arr) => (
+                          <div key={num} className="flex items-center">
+                            {/* Puntos suspensivos si hay salto */}
+                            {idx > 0 && arr[idx - 1] !== num - 1 && (
+                              <span className="px-2 text-gray-400">...</span>
+                            )}
+
+                            <button
+                              onClick={() => setPaginaActual(num)}
+                              className={`w-10 h-10 rounded-lg font-semibold transition-all ${
+                                paginaActual === num
+                                  ? 'bg-ras-azul text-white shadow-lg'
+                                  : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
+                              }`}
+                            >
+                              {num}
+                            </button>
+                          </div>
+                        ))}
+                    </div>
+
+                    {/* Botón Siguiente */}
+                    <button
+                      onClick={() => setPaginaActual(prev => Math.min(totalPaginas, prev + 1))}
+                      disabled={paginaActual === totalPaginas}
+                      className="px-4 py-2 rounded-lg border-2 border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-gray-700 transition-all"
+                    >
+                      Siguiente →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <EmptyState 

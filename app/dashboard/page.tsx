@@ -56,7 +56,7 @@ export default function DashboardPage() {
       const { data: propsPropias } = await supabase
         .from('propiedades')
         .select('id')
-        .eq('user_id', userId)
+        .eq('owner_id', userId)
 
       const { data: propsCompartidas } = await supabase
         .from('propiedades_colaboradores')

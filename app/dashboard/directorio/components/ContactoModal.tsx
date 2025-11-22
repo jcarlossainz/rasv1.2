@@ -2,63 +2,72 @@
 
 import { useEffect, useState } from 'react'
 
-interface ContactoModalProps {
+interface ProveedorModalProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (data: ContactoFormData) => void
-  contacto?: {
+  onSave: (data: ProveedorFormData) => void
+  proveedor?: {
     id: string
     nombre: string
     telefono: string
     correo: string
-    tipo: 'inquilino' | 'propietario' | 'proveedor' | 'supervisor'
-    provider_category?: string
+    categoria: string
   } | null
 }
 
-interface ContactoFormData {
+interface ProveedorFormData {
   nombre: string
   telefono: string
   correo: string
-  tipo: 'inquilino' | 'propietario' | 'proveedor' | 'supervisor'
-  provider_category?: string
+  categoria: string
 }
 
-export default function ContactoModal({ isOpen, onClose, onSave, contacto }: ContactoModalProps) {
-  const [formData, setFormData] = useState<ContactoFormData>({
+const CATEGORIAS_PROVEEDOR = [
+  'Limpieza',
+  'Mantenimiento',
+  'Jardinería',
+  'Plomería',
+  'Electricidad',
+  'Pintura',
+  'Carpintería',
+  'Seguridad',
+  'Fumigación',
+  'Aire Acondicionado',
+  'Otro'
+]
+
+export default function ProveedorModal({ isOpen, onClose, onSave, proveedor }: ProveedorModalProps) {
+  const [formData, setFormData] = useState<ProveedorFormData>({
     nombre: '',
     telefono: '',
     correo: '',
-    tipo: 'inquilino',
-    provider_category: ''
+    categoria: ''
   })
 
-  const [errors, setErrors] = useState<Partial<ContactoFormData>>({})
+  const [errors, setErrors] = useState<Partial<ProveedorFormData>>({})
 
-  // Cargar datos del contacto si está en modo edición
+  // Cargar datos del proveedor si está en modo edición
   useEffect(() => {
-    if (contacto) {
+    if (proveedor) {
       setFormData({
-        nombre: contacto.nombre,
-        telefono: contacto.telefono,
-        correo: contacto.correo,
-        tipo: contacto.tipo,
-        provider_category: contacto.provider_category || ''
+        nombre: proveedor.nombre,
+        telefono: proveedor.telefono,
+        correo: proveedor.correo,
+        categoria: proveedor.categoria
       })
     } else {
       setFormData({
         nombre: '',
         telefono: '',
         correo: '',
-        tipo: 'inquilino',
-        provider_category: ''
+        categoria: ''
       })
     }
     setErrors({})
-  }, [contacto, isOpen])
+  }, [proveedor, isOpen])
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<ContactoFormData> = {}
+    const newErrors: Partial<ProveedorFormData> = {}
 
     if (!formData.nombre.trim()) {
       newErrors.nombre = 'El nombre es requerido'
@@ -76,9 +85,8 @@ export default function ContactoModal({ isOpen, onClose, onSave, contacto }: Con
       newErrors.correo = 'Formato de correo inválido'
     }
 
-    // Validar categoría de proveedor si el tipo es proveedor
-    if (formData.tipo === 'proveedor' && !formData.provider_category?.trim()) {
-      newErrors.provider_category = 'La categoría es requerida para proveedores'
+    if (!formData.categoria.trim()) {
+      newErrors.categoria = 'La categoría es requerida'
     }
 
     setErrors(newErrors)
@@ -87,37 +95,20 @@ export default function ContactoModal({ isOpen, onClose, onSave, contacto }: Con
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (validateForm()) {
-      // Preparar datos en el formato correcto
-      const dataToSave: ContactoFormData = {
+      onSave({
         nombre: formData.nombre.trim(),
         telefono: formData.telefono.trim(),
         correo: formData.correo.trim(),
-        tipo: formData.tipo
-      }
-
-      // Solo incluir provider_category si es proveedor
-      if (formData.tipo === 'proveedor' && formData.provider_category) {
-        dataToSave.provider_category = formData.provider_category
-      }
-
-      onSave(dataToSave)
+        categoria: formData.categoria
+      })
     }
   }
 
-  const handleChange = (field: keyof ContactoFormData, value: string) => {
-    setFormData(prev => {
-      const newData = { ...prev, [field]: value }
-      
-      // Si cambia el tipo y no es proveedor, limpiar provider_category
-      if (field === 'tipo' && value !== 'proveedor') {
-        newData.provider_category = ''
-      }
-      
-      return newData
-    })
-    
+  const handleChange = (field: keyof ProveedorFormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+
     // Limpiar error del campo cuando el usuario empiece a escribir
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }))
@@ -127,16 +118,22 @@ export default function ContactoModal({ isOpen, onClose, onSave, contacto }: Con
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50 pb-8">
+      <div className="bg-white rounded-t-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-slide-up">
         {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-rose-700/80 to-rose-800/80 backdrop-blur-sm px-6 py-4 flex justify-between items-center rounded-t-2xl">
-          <h2 className="text-xl font-bold text-white">
-            {contacto ? '✏️ Editar Contacto' : '➕ Nuevo Contacto'}
+        <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4 flex justify-between items-center rounded-t-2xl">
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M20 7h-9" />
+              <path d="M14 17H5" />
+              <circle cx="17" cy="17" r="3" />
+              <circle cx="7" cy="7" r="3" />
+            </svg>
+            {proveedor ? 'Editar Proveedor' : 'Nuevo Proveedor'}
           </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-rose-600 rounded-lg transition-colors"
+            className="p-2 hover:bg-purple-500 rounded-lg transition-colors"
           >
             <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -146,55 +143,30 @@ export default function ContactoModal({ isOpen, onClose, onSave, contacto }: Con
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Tipo de contacto */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Categoría */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Tipo de contacto *
+              Categoría *
             </label>
             <select
-              value={formData.tipo}
-              onChange={(e) => handleChange('tipo', e.target.value as ContactoFormData['tipo'])}
-              className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:outline-none focus:border-rose-400 transition-colors font-medium"
+              value={formData.categoria}
+              onChange={(e) => handleChange('categoria', e.target.value)}
+              className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-colors font-medium ${
+                errors.categoria
+                  ? 'border-red-300 focus:border-red-500'
+                  : 'border-gray-200 focus:border-purple-400'
+              }`}
             >
-              <option value="inquilino">Inquilino</option>
-              <option value="propietario">Propietario</option>
-              <option value="proveedor">Proveedor</option>
-              <option value="supervisor">Supervisor</option>
+              <option value="">Seleccionar categoría</option>
+              {CATEGORIAS_PROVEEDOR.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
             </select>
+            {errors.categoria && (
+              <p className="mt-1 text-sm text-red-600">{errors.categoria}</p>
+            )}
           </div>
-
-          {/* Subcategoría - solo para proveedores */}
-          {formData.tipo === 'proveedor' && (
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Categoría del proveedor *
-              </label>
-              <select
-                value={formData.provider_category || ''}
-                onChange={(e) => handleChange('provider_category', e.target.value)}
-                className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-colors font-medium ${
-                  errors.provider_category
-                    ? 'border-red-300 focus:border-red-500'
-                    : 'border-gray-200 focus:border-rose-400'
-                }`}
-              >
-                <option value="">Seleccionar categoría</option>
-                <option value="limpieza">Limpieza</option>
-                <option value="mantenimiento">Mantenimiento</option>
-                <option value="servicio">Servicio</option>
-                <option value="jardineria">Jardinería</option>
-                <option value="seguridad">Seguridad</option>
-                <option value="plomeria">Plomería</option>
-                <option value="electricidad">Electricidad</option>
-                <option value="pintura">Pintura</option>
-                <option value="otro">Otro</option>
-              </select>
-              {errors.provider_category && (
-                <p className="mt-1 text-sm text-red-600">{errors.provider_category}</p>
-              )}
-            </div>
-          )}
 
           {/* Nombre */}
           <div>
@@ -205,11 +177,11 @@ export default function ContactoModal({ isOpen, onClose, onSave, contacto }: Con
               type="text"
               value={formData.nombre}
               onChange={(e) => handleChange('nombre', e.target.value)}
-              placeholder="Ej: Juan Pérez"
+              placeholder="Ej: Juan Pérez - Plomería"
               className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-colors ${
                 errors.nombre
                   ? 'border-red-300 focus:border-red-500'
-                  : 'border-gray-200 focus:border-rose-400'
+                  : 'border-gray-200 focus:border-purple-400'
               }`}
             />
             {errors.nombre && (
@@ -230,7 +202,7 @@ export default function ContactoModal({ isOpen, onClose, onSave, contacto }: Con
               className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-colors ${
                 errors.telefono
                   ? 'border-red-300 focus:border-red-500'
-                  : 'border-gray-200 focus:border-rose-400'
+                  : 'border-gray-200 focus:border-purple-400'
               }`}
             />
             {errors.telefono && (
@@ -251,7 +223,7 @@ export default function ContactoModal({ isOpen, onClose, onSave, contacto }: Con
               className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-colors ${
                 errors.correo
                   ? 'border-red-300 focus:border-red-500'
-                  : 'border-gray-200 focus:border-rose-400'
+                  : 'border-gray-200 focus:border-purple-400'
               }`}
             />
             {errors.correo && (
@@ -270,9 +242,9 @@ export default function ContactoModal({ isOpen, onClose, onSave, contacto }: Con
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-rose-700/80 to-rose-800/80 text-white font-bold hover:from-rose-700 hover:to-rose-800 transition-all shadow-md hover:shadow-lg"
+              className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 text-white font-bold hover:from-purple-700 hover:to-purple-800 transition-all shadow-md hover:shadow-lg"
             >
-              {contacto ? 'Guardar Cambios' : 'Agregar Contacto'}
+              {proveedor ? 'Guardar Cambios' : 'Agregar Proveedor'}
             </button>
           </div>
         </form>
