@@ -12,6 +12,7 @@ export interface Space {
   details: {
     equipamiento: string[];
     camas?: Array<{ tipo: string; id: number }>;
+    capacidadPersonas?: number; // Ocupantes máximos en habitaciones
     tieneBanoPrivado?: boolean;
     banoPrivadoId?: string | null;
     notas?: string;
@@ -719,4 +720,36 @@ export interface MovimientoCuenta {
   notas: string | null;
   categoria: string | null;
   created_at: string;
+}
+
+// ============================================================================
+// FUNCIONES HELPER PARA CÁLCULOS
+// ============================================================================
+
+/**
+ * Calcula la capacidad total de personas sumando los ocupantes de todas las habitaciones
+ * @param espacios - Array de espacios de la propiedad
+ * @returns Número total de personas que puede alojar la propiedad, o null si no hay capacidad definida
+ */
+export function calcularCapacidadPersonas(espacios: Space[]): number | null {
+  if (!espacios || espacios.length === 0) return null;
+
+  // Tipos de espacios que pueden tener ocupantes
+  const espaciosHabitables: SpaceType[] = ['Habitación', 'Lock-off', 'Cuarto de servicio'];
+
+  let capacidadTotal = 0;
+  let tieneCapacidad = false;
+
+  for (const espacio of espacios) {
+    // Solo contar espacios habitables
+    if (espaciosHabitables.includes(espacio.type)) {
+      const capacidad = espacio.details?.capacidadPersonas;
+      if (capacidad && capacidad > 0) {
+        capacidadTotal += capacidad;
+        tieneCapacidad = true;
+      }
+    }
+  }
+
+  return tieneCapacidad ? capacidadTotal : null;
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, lazy, Suspense } from 'react'
+import { useEffect, useState, lazy, Suspense, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
@@ -11,6 +11,7 @@ import Loading from '@/components/ui/loading'
 import CompartirPropiedad from '@/components/CompartirPropiedad'
 import { getPropertyImages } from '@/lib/supabase/supabase-storage'
 import type { PropertyImage } from '@/types/property'
+import { calcularCapacidadPersonas } from '@/types/property'
 
 // ⚡ LAZY LOADING: Modal pesado solo se carga cuando se necesita
 const WizardModal = lazy(() => import('@/app/dashboard/catalogo/nueva/components/WizardModal'))
@@ -52,7 +53,6 @@ interface PropiedadData {
   tipo_propiedad: string
   estados: string[]
   mobiliario: string
-  capacidad_personas: number | null
   tamano_terreno: number | null
   tamano_construccion: number | null
 
@@ -283,10 +283,16 @@ export default function HomePropiedad() {
   const toast = useToast()
   const confirm = useConfirm()
   const propiedadId = params?.id as string
-  
+
   const [loading, setLoading] = useState(true)
   const [propiedad, setPropiedad] = useState<PropiedadData | null>(null)
   const [user, setUser] = useState<any>(null)
+
+  // Calcular capacidad de personas dinámicamente desde los espacios
+  const capacidadPersonas = useMemo(() => {
+    if (!propiedad?.espacios) return null
+    return calcularCapacidadPersonas(propiedad.espacios)
+  }, [propiedad?.espacios])
 
   const [colaboradores, setColaboradores] = useState<Array<{
     id: string
@@ -639,10 +645,10 @@ export default function HomePropiedad() {
                   </>
                 )}
                 
-                {propiedad.capacidad_personas && (
+                {capacidadPersonas && (
                   <div className="flex justify-between items-center py-2 border-b border-gray-100">
                     <span className="text-gray-600 font-medium">Capacidad:</span>
-                    <span className="text-gray-900 font-semibold">{propiedad.capacidad_personas} personas</span>
+                    <span className="text-gray-900 font-semibold">{capacidadPersonas} personas</span>
                   </div>
                 )}
                 

@@ -10,12 +10,13 @@
  * - Responsive mobile-first
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import Image from 'next/image'
 import Loading from '@/components/ui/loading'
 import { motion, AnimatePresence } from 'framer-motion'
+import { calcularCapacidadPersonas } from '@/types/property'
 
 // ============================================================================
 // TIPOS
@@ -70,7 +71,6 @@ interface PropiedadData {
 
   // Datos básicos adicionales
   mobiliario: string | null
-  capacidad_personas: string | null
 
   // Anuncio
   descripcion_anuncio: string | null
@@ -102,6 +102,12 @@ export default function AnuncioPublicoApple() {
   const [error, setError] = useState<string | null>(null)
   const [lightboxOpen] = useState(false)
 
+  // Calcular capacidad de personas dinámicamente desde los espacios
+  const capacidadPersonas = useMemo(() => {
+    if (!propiedad?.espacios) return null
+    return calcularCapacidadPersonas(propiedad.espacios)
+  }, [propiedad?.espacios])
+
   useEffect(() => {
     if (propiedadId) {
       cargarDatos()
@@ -129,8 +135,7 @@ export default function AnuncioPublicoApple() {
           descripcion_anuncio,
           estado_anuncio,
           amenidades_vacacional,
-          mobiliario,
-          capacidad_personas
+          mobiliario
         `)
         .eq('id', propiedadId)
         .eq('estado_anuncio', 'publicado')
@@ -369,9 +374,9 @@ export default function AnuncioPublicoApple() {
                 <div className="text-2xl font-bold">{propiedad.tipo_propiedad}</div>
                 <div className="text-xs opacity-80">Tipo</div>
               </div>
-              {propiedad.capacidad_personas && (
+              {capacidadPersonas && (
                 <div className="px-5 py-3 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 text-white">
-                  <div className="text-2xl font-bold">{propiedad.capacidad_personas}</div>
+                  <div className="text-2xl font-bold">{capacidadPersonas}</div>
                   <div className="text-xs opacity-80">Personas</div>
                 </div>
               )}
@@ -549,11 +554,11 @@ export default function AnuncioPublicoApple() {
                     <div className="font-bold text-gray-900">{propiedad.mobiliario}</div>
                   </div>
 
-                  {propiedad.capacidad_personas && (
+                  {capacidadPersonas && (
                     <div className="p-5 bg-gradient-to-br from-green-50 to-green-100/30 rounded-2xl border border-green-200/50">
                       <div className="text-3xl mb-2">👥</div>
                       <div className="text-sm text-gray-600 mb-1">Capacidad</div>
-                      <div className="font-bold text-gray-900">{propiedad.capacidad_personas} personas</div>
+                      <div className="font-bold text-gray-900">{capacidadPersonas} personas</div>
                     </div>
                   )}
 

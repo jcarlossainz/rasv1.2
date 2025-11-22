@@ -85,12 +85,8 @@ export const propiedadStep1Schema = z.object({
   mobiliario: z
     .string()
     .min(1, 'Selecciona el tipo de mobiliario'),
-  capacidad_personas: z
-    .number()
-    .min(1, 'Debe tener capacidad para al menos 1 persona')
-    .max(100, 'Capacidad máxima: 100 personas')
-    .optional()
-    .nullable(),
+  // capacidad_personas se calcula automáticamente desde espacios[].details.capacidadPersonas
+  // No es un campo de entrada del usuario
   dimensiones: z.object({
     terreno: z.object({
       valor: z.number().min(0, 'El valor debe ser positivo'),
