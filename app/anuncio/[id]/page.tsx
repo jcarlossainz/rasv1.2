@@ -68,6 +68,10 @@ interface PropiedadData {
   // Amenidades
   amenidades_vacacional: string[] | null
 
+  // Datos básicos adicionales
+  mobiliario: string | null
+  capacidad_personas: string | null
+
   // Anuncio
   descripcion_anuncio: string | null
   estado_anuncio: string | null
@@ -124,7 +128,9 @@ export default function AnuncioPublicoApple() {
           espacios,
           descripcion_anuncio,
           estado_anuncio,
-          amenidades_vacacional
+          amenidades_vacacional,
+          mobiliario,
+          capacidad_personas
         `)
         .eq('id', propiedadId)
         .eq('estado_anuncio', 'publicado')
