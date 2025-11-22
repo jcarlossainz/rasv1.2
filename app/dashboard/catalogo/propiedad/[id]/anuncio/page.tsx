@@ -1,8 +1,9 @@
 'use client'
 
 /**
- * ANUNCIO - Vista de Edición
+ * ANUNCIO - Vista de Edición Premium
  * Permite al propietario configurar y publicar el anuncio de su propiedad
+ * con título personalizado, tagline, ordenamiento de fotos y control de secciones
  */
 
 import { useEffect, useState, useCallback } from 'react'
@@ -14,6 +15,23 @@ import { useConfirm } from '@/components/ui/confirm-modal'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
 import Button from '@/components/ui/button'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 interface Propiedad {
   id: string
@@ -21,6 +39,16 @@ interface Propiedad {
   tipo_propiedad: string
   descripcion_anuncio: string | null
   estado_anuncio: 'borrador' | 'publicado' | 'pausado' | null
+  anuncio_titulo: string | null
+  anuncio_tagline: string | null
+  anuncio_secciones_visibles: {
+    precio: boolean
+    ubicacion: boolean
+    mapa: boolean
+    dimensiones: boolean
+    espacios: boolean
+    amenidades: boolean
+  } | null
   precios?: {
     venta?: number | null
     mensual?: number | null
@@ -30,9 +58,69 @@ interface Propiedad {
 }
 
 interface Foto {
+  id: string
   url: string
   url_thumbnail: string
   is_cover: boolean
+  order_index?: number
+}
+
+// Componente para item sortable (drag & drop)
+function SortableFotoItem({ foto, index }: { foto: Foto; index: number }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: foto.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`relative bg-white rounded-lg border-2 ${
+        foto.is_cover ? 'border-ras-turquesa' : 'border-gray-200'
+      } overflow-hidden group`}
+      {...attributes}
+      {...listeners}
+    >
+      <div className="aspect-video relative">
+        <img
+          src={foto.url_thumbnail || foto.url}
+          alt={`Foto ${index + 1}`}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            e.currentTarget.src = "https://via.placeholder.com/400x300/f3f4f6/9ca3af?text=Error"
+          }}
+        />
+
+        {/* Badge de portada */}
+        {foto.is_cover && (
+          <div className="absolute top-2 left-2 bg-ras-turquesa text-white px-2 py-1 rounded text-xs font-semibold">
+            ★ Portada
+          </div>
+        )}
+
+        {/* Indicador de orden */}
+        <div className="absolute top-2 right-2 bg-black/70 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">
+          {index + 1}
+        </div>
+
+        {/* Icono de arrastre */}
+        <div className="absolute bottom-2 left-2 bg-black/70 text-white px-3 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+          ⋮⋮ Arrastra
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function AnuncioEditPage() {
@@ -53,6 +141,26 @@ export default function AnuncioEditPage() {
   const [descripcion, setDescripcion] = useState('')
   const [estadoAnuncio, setEstadoAnuncio] = useState<'borrador' | 'publicado' | 'pausado'>('borrador')
 
+  // Nuevos campos premium
+  const [titulo, setTitulo] = useState('')
+  const [tagline, setTagline] = useState('')
+  const [seccionesVisibles, setSeccionesVisibles] = useState({
+    precio: true,
+    ubicacion: true,
+    mapa: false,
+    dimensiones: true,
+    espacios: true,
+    amenidades: true
+  })
+
+  // Sensors para drag & drop
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
   useEffect(() => {
     if (!authLoading && user) {
       cargarDatos()
@@ -66,10 +174,10 @@ export default function AnuncioEditPage() {
     try {
       setLoading(true)
 
-      // Cargar propiedad
+      // Cargar propiedad con nuevos campos premium
       const { data: propData, error: propError } = await supabase
         .from('propiedades')
-        .select('id, nombre_propiedad, tipo_propiedad, descripcion_anuncio, estado_anuncio, precios')
+        .select('id, nombre_propiedad, tipo_propiedad, descripcion_anuncio, estado_anuncio, precios, anuncio_titulo, anuncio_tagline, anuncio_secciones_visibles')
         .eq('id', propiedadId)
         .single()
 
@@ -90,13 +198,12 @@ export default function AnuncioEditPage() {
 
       propData.foto_portada = fotoPortada?.url_thumbnail || null
 
-      // Cargar todas las fotos
+      // Cargar todas las fotos con id y order_index
       const { data: fotosData } = await supabase
         .from('property_images')
-        .select('url, url_thumbnail, is_cover')
+        .select('id, url, url_thumbnail, is_cover, order_index')
         .eq('property_id', propiedadId)
-        .order('is_cover', { ascending: false })
-        .order('created_at', { ascending: true })
+        .order('order_index', { ascending: true })
 
       if (fotosData) {
         setFotos(fotosData)
@@ -105,6 +212,13 @@ export default function AnuncioEditPage() {
       setPropiedad(propData)
       setDescripcion(propData.descripcion_anuncio || '')
       setEstadoAnuncio(propData.estado_anuncio || 'borrador')
+
+      // Nuevos campos premium
+      setTitulo(propData.anuncio_titulo || '')
+      setTagline(propData.anuncio_tagline || '')
+      if (propData.anuncio_secciones_visibles) {
+        setSeccionesVisibles(propData.anuncio_secciones_visibles)
+      }
 
     } catch (error) {
       console.error('Error cargando datos:', error)
@@ -124,7 +238,10 @@ export default function AnuncioEditPage() {
         .from('propiedades')
         .update({
           descripcion_anuncio: descripcion,
-          estado_anuncio: estadoAnuncio
+          estado_anuncio: estadoAnuncio,
+          anuncio_titulo: titulo || null,
+          anuncio_tagline: tagline || null,
+          anuncio_secciones_visibles: seccionesVisibles
         })
         .eq('id', propiedadId)
 
@@ -143,7 +260,7 @@ export default function AnuncioEditPage() {
     } finally {
       setGuardando(false)
     }
-  }, [propiedad, descripcion, estadoAnuncio, propiedadId, toast, cargarDatos])
+  }, [propiedad, descripcion, estadoAnuncio, titulo, tagline, seccionesVisibles, propiedadId, toast, cargarDatos])
 
   const cambiarEstado = useCallback(async (nuevoEstado: 'borrador' | 'publicado' | 'pausado') => {
     if (!propiedad) return
@@ -219,6 +336,41 @@ export default function AnuncioEditPage() {
     router.push('/login')
   }, [router])
 
+  // Handler para drag & drop de fotos
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (!over || active.id === over.id) {
+      return
+    }
+
+    setFotos((items) => {
+      const oldIndex = items.findIndex((item) => item.id === active.id)
+      const newIndex = items.findIndex((item) => item.id === over.id)
+
+      const newOrder = arrayMove(items, oldIndex, newIndex)
+
+      // Actualizar order_index en base de datos
+      newOrder.forEach(async (foto, index) => {
+        await supabase
+          .from('property_images')
+          .update({ order_index: index })
+          .eq('id', foto.id)
+      })
+
+      toast.success('Orden de fotos actualizado')
+      return newOrder
+    })
+  }, [toast])
+
+  // Toggle de sección visible
+  const toggleSeccion = useCallback((seccion: keyof typeof seccionesVisibles) => {
+    setSeccionesVisibles(prev => ({
+      ...prev,
+      [seccion]: !prev[seccion]
+    }))
+  }, [])
+
   if (loading || authLoading) {
     return <Loading message="Cargando anuncio..." />
   }
@@ -292,38 +444,155 @@ export default function AnuncioEditPage() {
           </div>
         </div>
 
-        {/* Preview de la portada */}
-        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6 border border-gray-200">
-          <div className="relative h-64 bg-gradient-to-br from-gray-100 to-gray-200">
-            {propiedad.foto_portada ? (
-              <img
-                src={propiedad.foto_portada}
-                alt="Portada"
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.src = "https://via.placeholder.com/800x400/f3f4f6/9ca3af?text=Sin+portada"
-                }}
+        {/* Título y Tagline Premium */}
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-gray-200">
+          <div className="flex items-center gap-2 mb-4">
+            <h3 className="text-lg font-bold text-gray-900 font-poppins">Título personalizado</h3>
+            <span className="bg-gradient-to-r from-ras-turquesa to-ras-azul text-white px-2 py-0.5 rounded text-xs font-semibold">
+              PREMIUM
+            </span>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Título del anuncio (opcional)
+              </label>
+              <input
+                type="text"
+                value={titulo}
+                onChange={(e) => setTitulo(e.target.value.slice(0, 60))}
+                placeholder={propiedad.nombre_propiedad}
+                maxLength={60}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ras-turquesa focus:border-transparent"
               />
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center">
-                <svg className="w-16 h-16 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <p className="text-gray-500 text-sm">Sin foto de portada</p>
-                <button
-                  onClick={() => router.push(`/dashboard/catalogo/propiedad/${propiedadId}/galeria`)}
-                  className="mt-2 text-ras-azul hover:text-ras-turquesa text-sm font-semibold"
-                >
-                  Ir a Galería →
-                </button>
+              <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
+                <span>Máximo 60 caracteres</span>
+                <span className={titulo.length > 50 ? 'text-orange-500' : ''}>{titulo.length}/60</span>
               </div>
-            )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Subtítulo / Tagline (opcional)
+              </label>
+              <input
+                type="text"
+                value={tagline}
+                onChange={(e) => setTagline(e.target.value.slice(0, 100))}
+                placeholder="Ej: Tu oasis en el corazón de la ciudad"
+                maxLength={100}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ras-turquesa focus:border-transparent"
+              />
+              <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
+                <span>Máximo 100 caracteres</span>
+                <span className={tagline.length > 80 ? 'text-orange-500' : ''}>{tagline.length}/100</span>
+              </div>
+            </div>
           </div>
-          <div className="p-4 border-t border-gray-200">
-            <p className="text-sm text-gray-600">
-              {fotos.length} {fotos.length === 1 ? 'foto' : 'fotos'} en total
-            </p>
+        </div>
+
+        {/* Control de secciones visibles */}
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-gray-200">
+          <div className="flex items-center gap-2 mb-4">
+            <h3 className="text-lg font-bold text-gray-900 font-poppins">Secciones del anuncio</h3>
+            <span className="bg-gradient-to-r from-ras-turquesa to-ras-azul text-white px-2 py-0.5 rounded text-xs font-semibold">
+              PREMIUM
+            </span>
           </div>
+
+          <p className="text-sm text-gray-600 mb-4">
+            Elige qué información mostrar en tu anuncio público
+          </p>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {[
+              { key: 'precio' as const, label: 'Precios', icon: '💰' },
+              { key: 'ubicacion' as const, label: 'Ubicación', icon: '📍' },
+              { key: 'mapa' as const, label: 'Mapa exacto', icon: '🗺️' },
+              { key: 'dimensiones' as const, label: 'Dimensiones', icon: '📐' },
+              { key: 'espacios' as const, label: 'Espacios', icon: '🏠' },
+              { key: 'amenidades' as const, label: 'Amenidades', icon: '✨' }
+            ].map(({ key, label, icon }) => (
+              <button
+                key={key}
+                onClick={() => toggleSeccion(key)}
+                className={`p-4 rounded-lg border-2 transition-all text-left ${
+                  seccionesVisibles[key]
+                    ? 'border-ras-turquesa bg-ras-turquesa/10'
+                    : 'border-gray-200 bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-2xl mb-1">{icon}</div>
+                    <div className="text-sm font-semibold text-gray-900">{label}</div>
+                  </div>
+                  <div className={`w-10 h-6 rounded-full transition-colors ${
+                    seccionesVisibles[key] ? 'bg-ras-turquesa' : 'bg-gray-300'
+                  } relative`}>
+                    <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${
+                      seccionesVisibles[key] ? 'translate-x-5' : 'translate-x-1'
+                    }`} />
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Galería de fotos con drag & drop */}
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-bold text-gray-900 font-poppins">Galería de fotos</h3>
+              <span className="bg-gradient-to-r from-ras-turquesa to-ras-azul text-white px-2 py-0.5 rounded text-xs font-semibold">
+                DRAG & DROP
+              </span>
+            </div>
+            <button
+              onClick={() => router.push(`/dashboard/catalogo/propiedad/${propiedadId}/galeria`)}
+              className="text-sm text-ras-azul hover:text-ras-turquesa font-semibold"
+            >
+              Administrar fotos →
+            </button>
+          </div>
+
+          <p className="text-sm text-gray-600 mb-4">
+            Arrastra las fotos para cambiar su orden en el anuncio público
+          </p>
+
+          {fotos.length > 0 ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={fotos.map(f => f.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {fotos.map((foto, index) => (
+                    <SortableFotoItem key={foto.id} foto={foto} index={index} />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+              <svg className="w-16 h-16 text-gray-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p className="text-gray-500 mb-2">No tienes fotos aún</p>
+              <button
+                onClick={() => router.push(`/dashboard/catalogo/propiedad/${propiedadId}/galeria`)}
+                className="text-ras-azul hover:text-ras-turquesa font-semibold"
+              >
+                Agregar fotos →
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Precios configurados */}
