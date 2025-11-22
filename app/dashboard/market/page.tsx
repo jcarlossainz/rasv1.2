@@ -24,6 +24,8 @@ interface Propiedad {
   precio_noche: number | null
   precio_venta: number | null
   estado_anuncio: 'borrador' | 'publicado' | 'pausado' | null
+  anuncio_titulo: string | null
+  anuncio_tagline: string | null
   created_at: string
   es_propio: boolean
   foto_portada?: string | null
@@ -329,11 +331,19 @@ export default function MarketPage() {
                       </div>
                     )}
                     
-                    {/* Badge Activo/Inactivo */}
-                    <div className="absolute top-3 right-3">
+                    {/* Badges */}
+                    <div className="absolute top-3 right-3 flex flex-col gap-2 items-end">
+                      {/* Badge Premium */}
+                      {(prop.anuncio_titulo || prop.anuncio_tagline) && (
+                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-ras-turquesa to-ras-azul text-white backdrop-blur-sm shadow-lg">
+                          ✨ PREMIUM
+                        </span>
+                      )}
+
+                      {/* Badge Activo/Inactivo */}
                       <span className={`px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm ${
-                        isActivo 
-                          ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' 
+                        isActivo
+                          ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
                           : 'bg-gray-200/90 text-gray-700'
                       }`}>
                         {isActivo ? 'Activo' : 'Inactivo'}
@@ -344,13 +354,20 @@ export default function MarketPage() {
                   {/* Contenido */}
                   <div className="p-4">
                     {/* Título */}
-                    <h3 
+                    <h3
                       onClick={() => abrirAnuncio(prop.id)}
                       className="text-lg font-bold text-gray-900 mb-1 cursor-pointer hover:text-ras-azul line-clamp-1"
                     >
-                      {prop.nombre}
+                      {prop.anuncio_titulo || prop.nombre}
                     </h3>
-                    
+
+                    {/* Tagline o Ubicación */}
+                    {prop.anuncio_tagline ? (
+                      <p className="text-sm text-gray-600 mb-2 line-clamp-2 italic">
+                        {prop.anuncio_tagline}
+                      </p>
+                    ) : null}
+
                     {/* Ubicación y código */}
                     <p className="text-xs text-gray-500 mb-3">
                       {prop.id.slice(0, 11).toUpperCase()} • {prop.estados?.[0] || 'Sin ubicación'}
