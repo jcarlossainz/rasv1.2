@@ -38,10 +38,14 @@ interface PropiedadData {
   tipo_propiedad: string
   estados: string[]
   dimensiones: {
-    terreno: number
-    terreno_unit: string
-    construccion: number
-    construccion_unit: string
+    terreno: {
+      valor: number
+      unidad: string
+    }
+    construccion: {
+      valor: number
+      unidad: string
+    }
   } | null
 
   // Ubicación
@@ -382,8 +386,8 @@ export default function AnuncioPublicoApple() {
               )}
               {propiedad.dimensiones?.construccion && (
                 <div className="px-5 py-3 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 text-white">
-                  <div className="text-2xl font-bold">{propiedad.dimensiones.construccion}</div>
-                  <div className="text-xs opacity-80">{propiedad.dimensiones.construccion_unit || 'm²'}</div>
+                  <div className="text-2xl font-bold">{propiedad.dimensiones.construccion.valor}</div>
+                  <div className="text-xs opacity-80">{propiedad.dimensiones.construccion.unidad || 'm²'}</div>
                 </div>
               )}
             </div>
@@ -567,7 +571,7 @@ export default function AnuncioPublicoApple() {
                       <div className="text-3xl mb-2">📐</div>
                       <div className="text-sm text-gray-600 mb-1">Construcción</div>
                       <div className="font-bold text-gray-900">
-                        {propiedad.dimensiones.construccion} {propiedad.dimensiones.construccion_unit}
+                        {propiedad.dimensiones.construccion.valor} {propiedad.dimensiones.construccion.unidad}
                       </div>
                     </div>
                   )}
@@ -577,7 +581,7 @@ export default function AnuncioPublicoApple() {
                       <div className="text-3xl mb-2">🌳</div>
                       <div className="text-sm text-gray-600 mb-1">Terreno</div>
                       <div className="font-bold text-gray-900">
-                        {propiedad.dimensiones.terreno} {propiedad.dimensiones.terreno_unit}
+                        {propiedad.dimensiones.terreno.valor} {propiedad.dimensiones.terreno.unidad}
                       </div>
                     </div>
                   )}
