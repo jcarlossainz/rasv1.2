@@ -81,12 +81,12 @@ CREATE INDEX IF NOT EXISTS idx_ingresos_cuenta_fecha
 ON ingresos(cuenta_id, fecha_ingreso DESC);
 
 -- ================================================================
--- ÍNDICE 7: cuentas_bancarias - Por propiedad (v1.2)
+-- ÍNDICE 7: cuentas - Por user_id (v1.2)
 -- ================================================================
--- Optimiza queries de cuentas por propiedad
+-- Optimiza queries de cuentas por usuario
 
-CREATE INDEX IF NOT EXISTS idx_cuentas_propiedad
-ON cuentas_bancarias(propiedad_id);
+CREATE INDEX IF NOT EXISTS idx_cuentas_user
+ON cuentas(user_id);
 
 -- ================================================================
 -- ÍNDICE 8: servicios_inmueble - Por propiedad (IMPORTANTE)

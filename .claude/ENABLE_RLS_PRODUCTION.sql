@@ -522,65 +522,35 @@ CREATE POLICY "profiles_update_own_only"
   WITH CHECK (id = auth.uid());
 
 -- ================================================================
--- TABLA 10: cuentas_bancarias (NUEVA - v1.2)
+-- TABLA 10: cuentas (NUEVA - v1.2)
 -- ================================================================
 
-ALTER TABLE cuentas_bancarias ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cuentas ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "cuentas_select_own_properties"
-  ON cuentas_bancarias
+CREATE POLICY "cuentas_select_own_only"
+  ON cuentas
   FOR SELECT
   TO authenticated
-  USING (
-    propiedad_id IN (
-      SELECT id FROM propiedades
-      WHERE owner_id = auth.uid()
-    )
-    OR
-    propiedad_id IN (
-      SELECT propiedad_id FROM propiedades_colaboradores
-      WHERE user_id = auth.uid()
-    )
-  );
+  USING (user_id = auth.uid());
 
-CREATE POLICY "cuentas_insert_own_properties"
-  ON cuentas_bancarias
+CREATE POLICY "cuentas_insert_own_only"
+  ON cuentas
   FOR INSERT
   TO authenticated
-  WITH CHECK (
-    propiedad_id IN (
-      SELECT id FROM propiedades
-      WHERE owner_id = auth.uid()
-    )
-  );
+  WITH CHECK (user_id = auth.uid());
 
-CREATE POLICY "cuentas_update_own_properties"
-  ON cuentas_bancarias
+CREATE POLICY "cuentas_update_own_only"
+  ON cuentas
   FOR UPDATE
   TO authenticated
-  USING (
-    propiedad_id IN (
-      SELECT id FROM propiedades
-      WHERE owner_id = auth.uid()
-    )
-  )
-  WITH CHECK (
-    propiedad_id IN (
-      SELECT id FROM propiedades
-      WHERE owner_id = auth.uid()
-    )
-  );
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
 
-CREATE POLICY "cuentas_delete_own_properties"
-  ON cuentas_bancarias
+CREATE POLICY "cuentas_delete_own_only"
+  ON cuentas
   FOR DELETE
   TO authenticated
-  USING (
-    propiedad_id IN (
-      SELECT id FROM propiedades
-      WHERE owner_id = auth.uid()
-    )
-  );
+  USING (user_id = auth.uid());
 
 -- ================================================================
 -- TABLA 11: ingresos (NUEVA - v1.2)
@@ -594,11 +564,8 @@ CREATE POLICY "ingresos_select_own_accounts"
   TO authenticated
   USING (
     cuenta_id IN (
-      SELECT id FROM cuentas_bancarias
-      WHERE propiedad_id IN (
-        SELECT id FROM propiedades
-        WHERE owner_id = auth.uid()
-      )
+      SELECT id FROM cuentas
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -608,11 +575,8 @@ CREATE POLICY "ingresos_insert_own_accounts"
   TO authenticated
   WITH CHECK (
     cuenta_id IN (
-      SELECT id FROM cuentas_bancarias
-      WHERE propiedad_id IN (
-        SELECT id FROM propiedades
-        WHERE owner_id = auth.uid()
-      )
+      SELECT id FROM cuentas
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -622,20 +586,14 @@ CREATE POLICY "ingresos_update_own_accounts"
   TO authenticated
   USING (
     cuenta_id IN (
-      SELECT id FROM cuentas_bancarias
-      WHERE propiedad_id IN (
-        SELECT id FROM propiedades
-        WHERE owner_id = auth.uid()
-      )
+      SELECT id FROM cuentas
+      WHERE user_id = auth.uid()
     )
   )
   WITH CHECK (
     cuenta_id IN (
-      SELECT id FROM cuentas_bancarias
-      WHERE propiedad_id IN (
-        SELECT id FROM propiedades
-        WHERE owner_id = auth.uid()
-      )
+      SELECT id FROM cuentas
+      WHERE user_id = auth.uid()
     )
   );
 
@@ -645,11 +603,8 @@ CREATE POLICY "ingresos_delete_own_accounts"
   TO authenticated
   USING (
     cuenta_id IN (
-      SELECT id FROM cuentas_bancarias
-      WHERE propiedad_id IN (
-        SELECT id FROM propiedades
-        WHERE owner_id = auth.uid()
-      )
+      SELECT id FROM cuentas
+      WHERE user_id = auth.uid()
     )
   );
 

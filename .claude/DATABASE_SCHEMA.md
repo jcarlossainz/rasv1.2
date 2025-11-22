@@ -3,8 +3,26 @@
 **Sistema:** RAS - Realty Administration System
 **Base de Datos:** Supabase (PostgreSQL)
 **Versión del Schema:** 1.2.0
-**Fecha:** 21 de Noviembre 2025
-**Estado:** Actualizado con Sistema de Cuentas e Ingresos
+**Fecha:** 22 de Noviembre 2025
+**Estado:** ✅ ACTUALIZADO con nombres reales de tablas
+
+---
+
+## ⚠️ NOMBRES DE TABLAS REALES
+
+**IMPORTANTE:** Estas son las tablas que EXISTEN en la base de datos:
+
+- ✅ `cuentas` (NO `cuentas_bancarias`)
+- ✅ `ingresos`
+- ✅ `contactos`
+- ✅ `documentos`
+- ✅ `fechas_pago_servicios`
+- ✅ `profiles`
+- ✅ `property_images`
+- ✅ `propiedades`
+- ✅ `propiedades_colaboradores`
+- ✅ `servicios_inmueble`
+- ✅ `tickets`
 
 ---
 
@@ -47,7 +65,7 @@
 | `propiedades_colaboradores` | ✅ Activa | Colaboradores por propiedad | ⚠️ Desactivado |
 | `contactos` | ✅ Activa | Directorio de contactos | ⚠️ Desactivado |
 | `documentos` | ✅ Activa | Documentos adjuntos | ⚠️ Desactivado |
-| `cuentas_bancarias` | ✅ Activa | **NUEVO** - Cuentas bancarias (MXN/USD) | ⚠️ Desactivado |
+| `cuentas` | ✅ Activa | **NUEVO** - Cuentas bancarias (MXN/USD) | ⚠️ Desactivado |
 | `ingresos` | ✅ Activa | **NUEVO** - Registro de ingresos (rentas, ventas) | ⚠️ Desactivado |
 
 ### Tablas Pendientes de Crear
@@ -82,8 +100,8 @@
          │                          │                    │
          ▼                          ▼                    ▼
 ┌─────────────────┐      ┌──────────────────────┐  ┌───────────────────┐
-│  propiedades    │◄─────┤ propiedades_         │  │ cuentas_          │ **NUEVO**
-│  (inmuebles)    │      │ colaboradores        │  │ bancarias         │
+│  propiedades    │◄─────┤ propiedades_         │  │ cuentas           │ **NUEVO**
+│  (inmuebles)    │      │ colaboradores        │  │                   │
 └────────┬────────┘      └──────────────────────┘  └─────────┬─────────┘
          │                                                   │
          │ propiedad_id                                     │ cuenta_id
@@ -116,8 +134,8 @@
 ```
 
 **NOTA:**
-- `cuentas_bancarias` se relaciona con `propiedades` O `profiles` (no ambos)
-- `ingresos` se relaciona con `propiedades` Y opcionalmente con `cuentas_bancarias`
+- `cuentas` se relaciona con `propiedades` O `profiles` (no ambos)
+- `ingresos` se relaciona con `propiedades` Y opcionalmente con `cuentas`
 - `fechas_pago_servicios` ahora incluye `cuenta_id` para ligar pagos a cuentas
 - La vista `v_movimientos_cuenta` consolida movimientos de ambas tablas
 
@@ -1295,33 +1313,34 @@ ON propiedades USING gin(to_tsvector('spanish', nombre_propiedad));
 
 ---
 
-## 💰 TABLA: `cuentas_bancarias`
+## 💰 TABLA: `cuentas`
 
 **Propósito:** Gestión de cuentas bancarias asociadas a propiedades o propietarios
+
+⚠️ **NOMBRE REAL:** La tabla se llama `cuentas`, NO `cuentas_bancarias`
 
 ### Estructura
 
 ```sql
-CREATE TABLE cuentas_bancarias (
+CREATE TABLE cuentas (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  propiedad_id UUID REFERENCES propiedades(id) ON DELETE CASCADE,
-  propietario_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  nombre TEXT NOT NULL,
-  tipo_moneda TEXT NOT NULL CHECK (tipo_moneda IN ('MXN', 'USD')),
-  tipo_cuenta TEXT NOT NULL CHECK (tipo_cuenta IN ('Banco', 'Tarjeta', 'Efectivo')),
-  banco TEXT,
-  numero_cuenta TEXT,
-  balance_inicial NUMERIC(12,2) DEFAULT 0,
-  balance_actual NUMERIC(12,2) DEFAULT 0,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  nombre_cuenta VARCHAR NOT NULL,
   descripcion TEXT,
-  color TEXT DEFAULT '#3B82F6',
-  activo BOOLEAN DEFAULT true,
+  saldo_inicial NUMERIC DEFAULT 0.00,
+  saldo_actual NUMERIC DEFAULT 0.00,
+  moneda VARCHAR NOT NULL DEFAULT 'MXN',
+  tipo_cuenta VARCHAR NOT NULL,
+  banco VARCHAR,
+  numero_cuenta VARCHAR,
+  clabe VARCHAR,
+  propietarios_ids UUID[],
+  propiedades_ids UUID[],
+  fecha_corte_dia INTEGER NOT NULL DEFAULT 1,
+  genera_estados_cuenta BOOLEAN DEFAULT false,
+  activa BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now(),
-  CONSTRAINT cuenta_owner_check CHECK (
-    (propiedad_id IS NOT NULL AND propietario_id IS NULL) OR
-    (propiedad_id IS NULL AND propietario_id IS NOT NULL)
-  )
+  updated_at TIMESTAMPTZ DEFAULT now()
 );
 ```
 
@@ -1352,10 +1371,9 @@ CREATE TABLE cuentas_bancarias (
 ### Índices
 
 ```sql
-CREATE INDEX idx_cuentas_propiedad ON cuentas_bancarias(propiedad_id);
-CREATE INDEX idx_cuentas_propietario ON cuentas_bancarias(propietario_id);
-CREATE INDEX idx_cuentas_tipo_moneda ON cuentas_bancarias(tipo_moneda);
-CREATE INDEX idx_cuentas_activo ON cuentas_bancarias(activo);
+CREATE INDEX idx_cuentas_user ON cuentas(user_id);
+CREATE INDEX idx_cuentas_moneda ON cuentas(moneda);
+CREATE INDEX idx_cuentas_activa ON cuentas(activa);
 ```
 
 ### Triggers
