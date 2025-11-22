@@ -111,7 +111,7 @@ export default function AnuncioPublicoApple() {
 
   const cargarDatos = async () => {
     try {
-      // Cargar propiedad
+      // Cargar propiedad (sin filtro de estado para permitir preview)
       const { data: propData, error: propError } = await supabase
         .from('propiedades')
         .select(`
@@ -134,11 +134,10 @@ export default function AnuncioPublicoApple() {
           amenidades_vacacional
         `)
         .eq('id', propiedadId)
-        .eq('estado_anuncio', 'publicado')
         .single()
 
       if (propError) {
-        setError('Anuncio no disponible o no publicado')
+        setError('Anuncio no disponible')
         setLoading(false)
         return
       }

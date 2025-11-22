@@ -149,7 +149,7 @@ export default function MarketPage() {
   }
 
   const abrirAnuncio = (propiedadId: string) => {
-    router.push(`/dashboard/anuncio/${propiedadId}`)
+    router.push(`/dashboard/catalogo/propiedad/${propiedadId}/anuncio`)
   }
 
   const handleLogout = async () => {
