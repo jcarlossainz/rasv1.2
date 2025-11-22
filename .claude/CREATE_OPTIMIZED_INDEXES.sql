@@ -57,11 +57,10 @@ ON property_images(property_id, created_at DESC);
 -- ÍNDICE 4: propiedades - Búsqueda por ciudad (IMPORTANTE)
 -- ================================================================
 -- Permite búsquedas rápidas por ciudad en el catálogo público
--- Usa GIN index para búsqueda en JSONB
+-- Usa B-tree para búsqueda exacta de ciudad
 
 CREATE INDEX IF NOT EXISTS idx_propiedades_ciudad
-ON propiedades
-USING GIN ((ubicacion->>'ciudad'));
+ON propiedades ((ubicacion->>'ciudad'));
 
 -- ================================================================
 -- ÍNDICE 5: propiedades - Estado de anuncio (IMPORTANTE)
