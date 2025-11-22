@@ -233,9 +233,9 @@ export default function DashboardPage() {
             }
           />
 
-          {/* CALENDARIO */}
-          <Card 
-            title="Calendario"
+          {/* PLANIFICADOR */}
+          <Card
+            title="Planificador"
             onClick={() => router.push('/dashboard/calendario')}
             icon={
               <div className="w-24 h-24 rounded-xl bg-gradient-to-b from-ras-crema to-white border-2 border-ras-crema/50 flex items-center justify-center">

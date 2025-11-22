@@ -196,7 +196,7 @@ export default function TicketsGlobalPage() {
           responsable: ticket.responsable,
           proveedor: ticket.proveedor,
           propiedad_id: ticket.propiedad_id,
-          propiedad_nombre: propiedad?.nombre || 'Sin nombre',
+          propiedad_nombre: propiedad?.nombre_propiedad || 'Sin nombre',
           dias_restantes: diasRestantes
         }
       })
@@ -220,7 +220,7 @@ export default function TicketsGlobalPage() {
           responsable: servicio?.responsable,
           proveedor: servicio?.proveedor,
           propiedad_id: pago.propiedad_id,
-          propiedad_nombre: propiedad?.nombre || 'Sin nombre',
+          propiedad_nombre: propiedad?.nombre_propiedad || 'Sin nombre',
           dias_restantes: diasRestantes
         }
       })
