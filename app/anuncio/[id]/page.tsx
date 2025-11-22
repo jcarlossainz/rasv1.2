@@ -74,8 +74,6 @@ interface PropiedadData {
   descripcion_anuncio: string | null
   estado_anuncio: string | null
 
-  // Propietario
-  propietarios_email: string[] | null
 }
 
 interface PropertyImage {
@@ -111,7 +109,7 @@ export default function AnuncioPublicoApple() {
 
   const cargarDatos = async () => {
     try {
-      // Cargar propiedad (sin filtro de estado para permitir preview)
+      // Cargar propiedad - solo anuncios publicados para público
       const { data: propData, error: propError } = await supabase
         .from('propiedades')
         .select(`
@@ -130,10 +128,10 @@ export default function AnuncioPublicoApple() {
           espacios,
           descripcion_anuncio,
           estado_anuncio,
-          propietarios_email,
           amenidades_vacacional
         `)
         .eq('id', propiedadId)
+        .eq('estado_anuncio', 'publicado')
         .single()
 
       if (propError) {
@@ -188,7 +186,8 @@ export default function AnuncioPublicoApple() {
   }
 
   const enviarCorreo = () => {
-    const email = propiedad?.propietarios_email?.[0] || 'contacto@ejemplo.com'
+    // TODO: Obtener email del propietario desde tabla profiles o contactos
+    const email = 'contacto@ejemplo.com'
     const asunto = `Interés en: ${propiedad?.anuncio_titulo || propiedad?.nombre_propiedad}`
     const cuerpo = `Hola,\n\nMe interesa obtener más información sobre esta propiedad.\n\nGracias.`
     const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`

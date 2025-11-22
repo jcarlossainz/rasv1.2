@@ -324,9 +324,13 @@ export default function AnuncioEditPage() {
   }, [propiedadId])
 
   const verPreview = useCallback(() => {
+    if (estadoAnuncio !== 'publicado') {
+      toast.warning('Debes publicar el anuncio para ver el preview público. Publica primero y luego podrás ver cómo se verá.')
+      return
+    }
     toast.info('Abriendo vista previa del anuncio...')
     window.open(`/anuncio/${propiedadId}`, '_blank')
-  }, [propiedadId, toast])
+  }, [estadoAnuncio, propiedadId, toast])
 
   const volverCatalogo = useCallback(() => {
     router.push('/dashboard/catalogo')
