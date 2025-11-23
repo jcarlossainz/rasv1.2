@@ -8,32 +8,62 @@ import { useToast } from '@/hooks/useToast'
 import { useConfirm } from '@/components/ui/confirm-modal'
 import { useAuth } from '@/hooks/useAuth'
 import { useLogout } from '@/hooks/useLogout'
+import { useDashboardConfig } from '@/hooks/useDashboardConfig'
+import { useDashboardWidgets } from '@/hooks/useDashboardWidgets'
+import { useDashboardChartData } from '@/hooks/useDashboardChartData'
 import TopBar from '@/components/ui/topbar'
 import Card from '@/components/ui/card'
 import Loading from '@/components/ui/loading'
+import { DashboardWidget, DashboardWidgetPlaceholder } from '@/components/dashboard'
+import { IncomeExpenseChart } from '@/components/dashboard'
+import { Settings, RefreshCw, Edit3, Check } from 'lucide-react'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import type { WidgetId } from '@/types/dashboard'
 
-interface DashboardMetrics {
-  tickets: {
-    vencidos: number
-    hoy: number
-    proximos: number
-    montoTotal: number
+/**
+ * Sortable Widget Wrapper
+ */
+function SortableWidget({ widgetId, data, onClick }: { widgetId: WidgetId; data: any; onClick?: () => void }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: widgetId })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
   }
-  anuncios: {
-    activos: number
-    pausados: number
-  }
-  calendario: {
-    proximoPago: {
-      fecha: string | null
-      monto: number
-      servicio: string
-    } | null
-  }
-  cuentas: {
-    totalPendiente: number
-    propiedades: number
-  }
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <DashboardWidget
+        widgetId={widgetId}
+        data={data}
+        onClick={onClick}
+        isDragging={isDragging}
+      />
+    </div>
+  )
 }
 
 export default function DashboardPage() {
@@ -42,110 +72,28 @@ export default function DashboardPage() {
   const confirm = useConfirm()
   const { user, loading: authLoading } = useAuth()
   const logout = useLogout()
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
 
-  useEffect(() => {
-    if (user?.id) {
-      cargarMetricas(user.id)
-    }
-  }, [user])
+  // Dashboard hooks
+  const { config, loading: configLoading, updateConfig, reorderWidgets } = useDashboardConfig()
+  const { widgets, loading: widgetsLoading, refreshWidgets } = useDashboardWidgets()
+  const { chartData, loading: chartLoading, refreshChartData } = useDashboardChartData(
+    config?.chart_days || 15,
+    config?.show_comparison || true
+  )
 
-  const cargarMetricas = async (userId: string) => {
-    try {
-      // Obtener propiedades del usuario
-      const { data: propsPropias } = await supabase
-        .from('propiedades')
-        .select('id')
-        .eq('owner_id', userId)
+  // Local state
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
-      const { data: propsCompartidas } = await supabase
-        .from('propiedades_colaboradores')
-        .select('propiedad_id')
-        .eq('user_id', userId)
+  // Drag & drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
-      let propIds: string[] = []
-      if (propsPropias) propIds = [...propIds, ...propsPropias.map(p => p.id)]
-      if (propsCompartidas) propIds = [...propIds, ...propsCompartidas.map(p => p.propiedad_id)]
-
-      if (propIds.length === 0) {
-        setMetrics({
-          tickets: { vencidos: 0, hoy: 0, proximos: 0, montoTotal: 0 },
-          anuncios: { activos: 0, pausados: 0 },
-          calendario: { proximoPago: null },
-          cuentas: { totalPendiente: 0, propiedades: 0 }
-        })
-        return
-      }
-
-      // TICKETS - Pagos pendientes
-      const { data: pagos } = await supabase
-        .from('fechas_pago_servicios')
-        .select('fecha_pago, monto_estimado, servicios_inmueble!inner(nombre)')
-        .in('propiedad_id', propIds)
-        .eq('pagado', false)
-        .order('fecha_pago', { ascending: true })
-
-      const hoy = new Date()
-      hoy.setHours(0, 0, 0, 0)
-
-      let vencidos = 0, pagoHoy = 0, proximos = 0, montoTotal = 0
-      let proximoPago = null
-
-      pagos?.forEach(pago => {
-        const fechaPago = new Date(pago.fecha_pago)
-        fechaPago.setHours(0, 0, 0, 0)
-        const diff = Math.floor((fechaPago.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
-
-        montoTotal += pago.monto_estimado
-
-        if (diff < 0) vencidos++
-        else if (diff === 0) pagoHoy++
-        else if (diff <= 7) proximos++
-
-        if (!proximoPago && diff >= 0) {
-          proximoPago = {
-            fecha: pago.fecha_pago,
-            monto: pago.monto_estimado,
-            servicio: pago.servicios_inmueble?.nombre || 'Servicio'
-          }
-        }
-      })
-
-      // ANUNCIOS - Propiedades publicadas
-      const { data: anuncios } = await supabase
-        .from('propiedades')
-        .select('id')
-        .in('id', propIds)
-
-      const totalAnuncios = anuncios?.length || 0
-      const activos = Math.floor(totalAnuncios * 0.7)
-      const pausados = totalAnuncios - activos
-
-      setMetrics({
-        tickets: {
-          vencidos,
-          hoy: pagoHoy,
-          proximos,
-          montoTotal
-        },
-        anuncios: {
-          activos,
-          pausados
-        },
-        calendario: {
-          proximoPago
-        },
-        cuentas: {
-          totalPendiente: montoTotal,
-          propiedades: propIds.length
-        }
-      })
-
-    } catch (error) {
-      logger.error('Error cargando métricas:', error)
-    }
-  }
-
+  // Handle logout
   const handleLogout = async () => {
     const confirmed = await confirm.warning(
       '¿Estás seguro que deseas cerrar sesión?',
@@ -163,21 +111,77 @@ export default function DashboardPage() {
     }
   }
 
-  const formatearFecha = (fecha: string | null) => {
-    if (!fecha) return 'N/A'
-    return new Date(fecha).toLocaleDateString('es-MX', {
-      day: 'numeric',
-      month: 'short'
-    })
+  // Handle drag end
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (!over || active.id === over.id || !config) {
+      return
+    }
+
+    const oldIndex = config.widget_order.indexOf(active.id as WidgetId)
+    const newIndex = config.widget_order.indexOf(over.id as WidgetId)
+
+    const newOrder = arrayMove(config.widget_order, oldIndex, newIndex)
+
+    try {
+      await reorderWidgets(newOrder)
+      toast.success('Widgets reordenados')
+    } catch (error) {
+      logger.error('Error reordenando widgets:', error)
+      toast.error('Error al reordenar')
+    }
   }
 
-  if (authLoading) {
+  // Handle refresh
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      await Promise.all([
+        refreshWidgets(),
+        refreshChartData(config?.chart_days || 15, config?.show_comparison || true),
+      ])
+      toast.success('Dashboard actualizado')
+    } catch (error) {
+      logger.error('Error refrescando dashboard:', error)
+      toast.error('Error al actualizar')
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  // Handle chart type change
+  const handleChartTypeChange = async (type: 'line' | 'bar' | 'area') => {
+    if (!config) return
+    try {
+      await updateConfig({ chart_type: type })
+      toast.success('Tipo de gráfica actualizado')
+    } catch (error) {
+      logger.error('Error actualizando tipo de gráfica:', error)
+      toast.error('Error al actualizar')
+    }
+  }
+
+  // Handle chart days change
+  const handleChartDaysChange = async (days: 7 | 15 | 30 | 60 | 90) => {
+    if (!config) return
+    try {
+      await updateConfig({ chart_days: days })
+      toast.success('Periodo actualizado')
+    } catch (error) {
+      logger.error('Error actualizando periodo:', error)
+      toast.error('Error al actualizar')
+    }
+  }
+
+  // Loading state
+  if (authLoading || configLoading) {
     return <Loading message="Cargando dashboard..." />
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-ras-crema via-white to-ras-crema">
-      <TopBar 
+      <TopBar
         title="Inicio"
         showAddButton={false}
         showUserInfo={true}
@@ -186,11 +190,11 @@ export default function DashboardPage() {
       />
 
       {/* Main Content */}
-      <main className="max-w-5xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {/* Navigation Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
           {/* CATÁLOGO */}
-          <Card 
+          <Card
             title="Catálogo"
             onClick={() => router.push('/dashboard/catalogo')}
             icon={
@@ -206,7 +210,7 @@ export default function DashboardPage() {
           />
 
           {/* MARKET */}
-          <Card 
+          <Card
             title="Market"
             onClick={() => router.push('/dashboard/market')}
             icon={
@@ -220,7 +224,7 @@ export default function DashboardPage() {
           />
 
           {/* TICKETS */}
-          <Card 
+          <Card
             title="Tickets"
             onClick={() => router.push('/dashboard/tickets')}
             icon={
@@ -251,7 +255,7 @@ export default function DashboardPage() {
           />
 
           {/* CUENTAS */}
-          <Card 
+          <Card
             title="Cuentas"
             onClick={() => router.push('/dashboard/cuentas')}
             icon={
@@ -265,7 +269,7 @@ export default function DashboardPage() {
           />
 
           {/* DIRECTORIO */}
-          <Card 
+          <Card
             title="Directorio"
             onClick={() => router.push('/dashboard/directorio')}
             icon={
@@ -279,117 +283,149 @@ export default function DashboardPage() {
               </div>
             }
           />
+        </div>
 
-          {/* DASHBOARD - Ocupa 3 columnas */}
-          <div className="lg:col-span-3">
-            <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-200 p-6">
-              {/* Título estilo Card */}
-              <h2 className="text-lg font-bold text-gray-800 mb-6 text-center">Dashboard</h2>
-
-              {metrics ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  
-                  {/* TICKETS - Vencidos */}
-                  <div
-                    onClick={() => router.push('/dashboard/tickets')}
-                    className="bg-white rounded-xl p-4 border-2 border-semantic-error/20 hover:border-semantic-error/40 hover:shadow-lg transition-all cursor-pointer"
-                  >
-                    <div className="text-xs font-semibold mb-2 text-semantic-error">Vencidos</div>
-                    <div className="text-4xl font-bold mb-1 text-semantic-error">{metrics.tickets.vencidos}</div>
-                    <div className="text-xs text-gray-500">Pagos atrasados</div>
-                  </div>
-
-                  {/* TICKETS - Hoy */}
-                  <div
-                    onClick={() => router.push('/dashboard/tickets')}
-                    className="bg-white rounded-xl p-4 border-2 border-semantic-warning/20 hover:border-semantic-warning/40 hover:shadow-lg transition-all cursor-pointer"
-                  >
-                    <div className="text-xs font-semibold mb-2 text-semantic-warning">Vencen Hoy</div>
-                    <div className="text-4xl font-bold mb-1 text-semantic-warning">{metrics.tickets.hoy}</div>
-                    <div className="text-xs text-gray-500">Pagos de hoy</div>
-                  </div>
-
-                  {/* TICKETS - Esta semana */}
-                  <div
-                    onClick={() => router.push('/dashboard/tickets')}
-                    className="bg-white rounded-xl p-4 border-2 border-semantic-warning/20 hover:border-semantic-warning/40 hover:shadow-lg transition-all cursor-pointer"
-                  >
-                    <div className="text-xs font-semibold mb-2 text-semantic-warning">Esta Semana</div>
-                    <div className="text-4xl font-bold mb-1 text-semantic-warning">{metrics.tickets.proximos}</div>
-                    <div className="text-xs text-gray-500">Próximos 7 días</div>
-                  </div>
-
-                  {/* TICKETS - Total Pendiente */}
-                  <div
-                    onClick={() => router.push('/dashboard/tickets')}
-                    className="bg-white rounded-xl p-4 border-2 border-semantic-warning/20 hover:border-semantic-warning/40 hover:shadow-lg transition-all cursor-pointer"
-                  >
-                    <div className="text-xs font-semibold mb-2 text-semantic-warning">Por Pagar</div>
-                    <div className="text-3xl font-bold mb-1 text-semantic-warning">
-                      ${(metrics.tickets.montoTotal / 1000).toFixed(1)}K
-                    </div>
-                    <div className="text-xs text-gray-500">Monto total</div>
-                  </div>
-
-                  {/* ANUNCIOS - Activos */}
-                  <div
-                    onClick={() => router.push('/dashboard/market')}
-                    className="bg-white rounded-xl p-4 border-2 border-ras-turquesa/20 hover:border-ras-turquesa/40 hover:shadow-lg transition-all cursor-pointer"
-                  >
-                    <div className="text-xs font-semibold mb-2 text-ras-turquesa">Activos</div>
-                    <div className="text-4xl font-bold mb-1 text-ras-turquesa">{metrics.anuncios.activos}</div>
-                    <div className="text-xs text-gray-500">Anuncios</div>
-                  </div>
-
-                  {/* ANUNCIOS - Pausados */}
-                  <div
-                    onClick={() => router.push('/dashboard/market')}
-                    className="bg-white rounded-xl p-4 border-2 border-ras-turquesa/20 hover:border-ras-turquesa/40 hover:shadow-lg transition-all cursor-pointer"
-                  >
-                    <div className="text-xs font-semibold mb-2 text-ras-turquesa">Pausados</div>
-                    <div className="text-4xl font-bold mb-1 text-ras-turquesa">{metrics.anuncios.pausados}</div>
-                    <div className="text-xs text-gray-500">Anuncios</div>
-                  </div>
-
-                  {/* CALENDARIO - Próximo Pago */}
-                  <div
-                    onClick={() => router.push('/dashboard/calendario')}
-                    className="bg-white rounded-xl p-4 border-2 border-ras-azul/20 hover:border-ras-azul/40 hover:shadow-lg transition-all cursor-pointer"
-                  >
-                    <div className="text-xs font-semibold mb-2 text-ras-azul">Próximo Pago</div>
-                    {metrics.calendario.proximoPago ? (
-                      <>
-                        <div className="text-2xl font-bold mb-1 text-ras-azul">
-                          {formatearFecha(metrics.calendario.proximoPago.fecha)}
-                        </div>
-                        <div className="text-xs text-gray-500 truncate">
-                          {metrics.calendario.proximoPago.servicio}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="text-sm text-gray-500">Sin pagos próximos</div>
-                    )}
-                  </div>
-
-                  {/* CUENTAS - Propiedades */}
-                  <div
-                    onClick={() => router.push('/dashboard/cuentas')}
-                    className="bg-white rounded-xl p-4 border-2 border-semantic-success/20 hover:border-semantic-success/40 hover:shadow-lg transition-all cursor-pointer"
-                  >
-                    <div className="text-xs font-semibold mb-2 text-semantic-success">Propiedades</div>
-                    <div className="text-4xl font-bold mb-1 text-semantic-success">{metrics.cuentas.propiedades}</div>
-                    <div className="text-xs text-gray-500">Total</div>
-                  </div>
-
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-32">
-                  <div className="text-gray-400">Cargando métricas...</div>
-                </div>
-              )}
-            </div>
+        {/* Dashboard Controls */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Mi Dashboard</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              {isEditMode ? 'Arrastra para reordenar widgets' : 'Vista general de tus métricas'}
+            </p>
           </div>
 
+          <div className="flex items-center gap-3">
+            {/* Refresh Button */}
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="px-4 py-2 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-lg transition-all flex items-center gap-2 text-gray-700 font-medium disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Actualizar
+            </button>
+
+            {/* Edit Mode Toggle */}
+            <button
+              onClick={() => setIsEditMode(!isEditMode)}
+              className={`px-4 py-2 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 font-medium ${
+                isEditMode
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-blue-400'
+              }`}
+            >
+              {isEditMode ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  Listo
+                </>
+              ) : (
+                <>
+                  <Edit3 className="w-4 h-4" />
+                  Editar
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Dashboard Grid: Widgets + Chart */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left Column: Widgets */}
+          <div className="space-y-4">
+            {config && config.visible_widgets && (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={config.visible_widgets}
+                  strategy={verticalListSortingStrategy}
+                  disabled={!isEditMode}
+                >
+                  {config.visible_widgets.map((widgetId) => (
+                    <SortableWidget
+                      key={widgetId}
+                      widgetId={widgetId}
+                      data={widgets[widgetId]}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
+            )}
+
+            {/* Add Widget Placeholder (only in edit mode) */}
+            {isEditMode && config && config.visible_widgets.length < 4 && (
+              <DashboardWidgetPlaceholder
+                onAddWidget={() => {
+                  toast.info('Función de agregar widget próximamente')
+                }}
+              />
+            )}
+          </div>
+
+          {/* Right Column: Chart */}
+          <div className="space-y-4">
+            {/* Chart Controls */}
+            {isEditMode && config && (
+              <div className="bg-white rounded-2xl shadow-lg p-4 border border-gray-200">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold text-gray-700">Configuración de Gráfica</span>
+                </div>
+
+                <div className="space-y-3">
+                  {/* Chart Type */}
+                  <div>
+                    <label className="text-xs text-gray-600 block mb-2">Tipo de Gráfica</label>
+                    <div className="flex gap-2">
+                      {(['line', 'bar', 'area'] as const).map((type) => (
+                        <button
+                          key={type}
+                          onClick={() => handleChartTypeChange(type)}
+                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                            config.chart_type === type
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {type === 'line' ? 'Línea' : type === 'bar' ? 'Barras' : 'Área'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Chart Days */}
+                  <div>
+                    <label className="text-xs text-gray-600 block mb-2">Periodo</label>
+                    <div className="flex gap-2">
+                      {([7, 15, 30, 60, 90] as const).map((days) => (
+                        <button
+                          key={days}
+                          onClick={() => handleChartDaysChange(days)}
+                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                            config.chart_days === days
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {days}d
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Chart Component */}
+            <IncomeExpenseChart
+              data={chartData}
+              chartType={config?.chart_type || 'line'}
+              showComparison={config?.show_comparison || true}
+              loading={chartLoading}
+            />
+          </div>
         </div>
       </main>
     </div>
