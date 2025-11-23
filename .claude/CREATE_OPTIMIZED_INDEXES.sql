@@ -101,10 +101,12 @@ WHERE activo = true;
 -- ÍNDICE 9: tickets - Por fecha de vencimiento (FUTURO)
 -- ================================================================
 -- Útil para dashboard de tickets próximos a vencer
+-- NOTA: No se puede usar CURRENT_DATE en índice (no es IMMUTABLE)
+-- La aplicación debe filtrar por fecha en la query
 
 CREATE INDEX IF NOT EXISTS idx_tickets_vencimiento
-ON tickets(fecha_programada)
-WHERE pagado = false AND fecha_programada >= CURRENT_DATE;
+ON tickets(fecha_programada DESC)
+WHERE pagado = false;
 
 -- ================================================================
 -- ÍNDICE 10: property_images - Por tipo de espacio (OPCIONAL)
