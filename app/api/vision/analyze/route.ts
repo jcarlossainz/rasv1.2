@@ -25,7 +25,7 @@ export async function PUT(request: NextRequest) {
     // 1. Obtener la propiedad con sus espacios
     const { data: propertyData, error: propertyError } = await supabase
       .from('propiedades')
-      .select('id, nombre, espacios')
+      .select('id, nombre_propiedad, espacios')
       .eq('id', propertyId)
       .single();
 
