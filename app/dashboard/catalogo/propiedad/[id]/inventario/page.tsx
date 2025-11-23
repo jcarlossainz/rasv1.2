@@ -70,17 +70,26 @@ export default function InventarioPage() {
       // Cargar propiedad
       const { data: propertyData, error: propError } = await supabase
         .from('propiedades')
-        .select('id, nombre_propiedad, tipo_propiedad')
+        .select('id, nombre_propiedad, tipo_propiedad, espacios')
         .eq('id', propertyId)
         .single();
 
       if (propError) throw propError;
       setProperty(propertyData);
 
-      // NOTA: Las tablas property_spaces y property_inventory aún no existen
-      // Esta funcionalidad se implementará en una fase futura
-      setSpaces([]);
-      setInventory([]);
+      // Cargar inventario desde property_inventory
+      await loadInventory();
+
+      // Espacios: se extraen de la propiedad (JSONB espacios)
+      if (propertyData.espacios && Array.isArray(propertyData.espacios)) {
+        const spacesData = propertyData.espacios.map((esp: any) => ({
+          id: esp.id || esp.type,
+          nombre: esp.name || esp.type || 'Sin nombre'
+        }));
+        setSpaces(spacesData);
+      } else {
+        setSpaces([]);
+      }
 
     } catch (error: any) {
       logger.error('Error cargando datos:', error);

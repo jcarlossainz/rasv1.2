@@ -106,6 +106,8 @@ export async function PUT(request: NextRequest) {
             image_url: image.url,
             object_name: obj.name,
             space_type: spaceName, // Guardamos el NOMBRE, no el ID
+            detectado_por_ia: true,
+            confidence: obj.confidence, // Nivel de confianza de Google Vision
             labels: labels.join(', '),
             created_at: new Date().toISOString()
           });
