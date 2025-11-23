@@ -76,7 +76,7 @@ export interface DashboardConfig {
 /**
  * Configuración por defecto del dashboard
  */
-export const DEFAULT_DASHBOARD_CONFIG: Omit<DashboardConfig, 'id' | 'user_id' | 'created_at' | 'updated_at'> = {
+const DEFAULT_DASHBOARD_CONFIG: Omit<DashboardConfig, 'id' | 'user_id' | 'created_at' | 'updated_at'> = {
   visible_widgets: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income'],
   widget_order: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income'],
   chart_type: 'line',
@@ -119,7 +119,7 @@ export interface ChartData {
 /**
  * Catálogo completo de widgets disponibles
  */
-export const AVAILABLE_WIDGETS: Record<WidgetId, WidgetMetadata> = {
+const AVAILABLE_WIDGETS: Record<WidgetId, WidgetMetadata> = {
   total_balance: {
     id: 'total_balance',
     title: 'Balance Total',
@@ -269,35 +269,35 @@ export interface GetWidgetDataResponse {
 /**
  * Valida que un ID sea un widget válido
  */
-export function isValidWidgetId(id: string): id is WidgetId {
+function isValidWidgetId(id: string): id is WidgetId {
   return id in AVAILABLE_WIDGETS;
 }
 
 /**
  * Valida que un tipo de gráfica sea válido
  */
-export function isValidChartType(type: string): type is ChartType {
+function isValidChartType(type: string): type is ChartType {
   return ['line', 'bar', 'area'].includes(type);
 }
 
 /**
  * Valida que los días de gráfica sean válidos
  */
-export function isValidChartDays(days: number): days is 7 | 15 | 30 | 60 | 90 {
+function isValidChartDays(days: number): days is 7 | 15 | 30 | 60 | 90 {
   return [7, 15, 30, 60, 90].includes(days);
 }
 
 /**
  * Valida que el array de widgets tenga máximo 4 elementos
  */
-export function validateWidgetCount(widgets: WidgetId[]): boolean {
+function validateWidgetCount(widgets: WidgetId[]): boolean {
   return widgets.length <= 4 && widgets.length >= 1;
 }
 
 /**
  * Valida que todos los IDs en el array sean widgets válidos
  */
-export function validateWidgetIds(widgets: string[]): widgets is WidgetId[] {
+function validateWidgetIds(widgets: string[]): widgets is WidgetId[] {
   return widgets.every(isValidWidgetId);
 }
 
@@ -308,7 +308,7 @@ export function validateWidgetIds(widgets: string[]): widgets is WidgetId[] {
 /**
  * Formatea un número como moneda
  */
-export function formatCurrency(amount: number): string {
+function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('es-MX', {
     style: 'currency',
     currency: 'MXN',
@@ -320,14 +320,14 @@ export function formatCurrency(amount: number): string {
 /**
  * Formatea un porcentaje
  */
-export function formatPercentage(value: number, decimals: number = 1): string {
+function formatPercentage(value: number, decimals: number = 1): string {
   return `${value >= 0 ? '+' : ''}${value.toFixed(decimals)}%`;
 }
 
 /**
  * Formatea una fecha corta
  */
-export function formatShortDate(date: string | Date): string {
+function formatShortDate(date: string | Date): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   return new Intl.DateTimeFormat('es-MX', {
     day: 'numeric',
@@ -338,7 +338,7 @@ export function formatShortDate(date: string | Date): string {
 /**
  * Obtiene el rango de fechas para la gráfica
  */
-export function getDateRange(days: number): { startDate: Date; endDate: Date } {
+function getDateRange(days: number): { startDate: Date; endDate: Date } {
   const endDate = new Date();
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
@@ -349,7 +349,7 @@ export function getDateRange(days: number): { startDate: Date; endDate: Date } {
 /**
  * Obtiene el rango de fechas del periodo anterior
  */
-export function getPreviousDateRange(days: number): { startDate: Date; endDate: Date } {
+function getPreviousDateRange(days: number): { startDate: Date; endDate: Date } {
   const endDate = new Date();
   endDate.setDate(endDate.getDate() - days - 1);
 
