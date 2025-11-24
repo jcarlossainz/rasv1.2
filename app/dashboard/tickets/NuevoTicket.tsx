@@ -87,8 +87,7 @@ export default function NuevoTicket({
           estado: formData.estado,
           responsable: formData.responsable || null,
           proveedor: formData.proveedor || null,
-          pagado: false,
-          tiene_factura: false
+          pagado: false
         });
 
       if (error) throw error;
