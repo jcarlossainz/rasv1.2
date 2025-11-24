@@ -421,6 +421,7 @@ export default function DirectorioPage() {
     <div className="min-h-screen bg-gradient-to-br from-ras-crema via-white to-ras-crema">
       <TopBar
         title="Directorio"
+        showHomeButton
         showBackButton
         onBackClick={() => router.push('/dashboard')}
       />

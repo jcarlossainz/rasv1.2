@@ -328,6 +328,7 @@ export default function BalancePropiedadPage() {
     <div className="min-h-screen bg-gradient-to-br from-ras-crema via-white to-ras-crema">
       <TopBar
         title={`Balance - ${propiedad?.nombre_propiedad || 'Propiedad'}`}
+        showHomeButton
         showBackButton
         onBackClick={volverCatalogo}
         showUserInfo={true}

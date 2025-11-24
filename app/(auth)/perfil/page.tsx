@@ -129,8 +129,9 @@ export default function PerfilPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-ras-crema via-white to-ras-crema">
-      <TopBar 
+      <TopBar
         title="Configuración"
+        showHomeButton={true}
         showBackButton={true}
         showUserInfo={true}
         userEmail={user?.email}

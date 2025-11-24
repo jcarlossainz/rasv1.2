@@ -405,6 +405,7 @@ export default function AnuncioEditPage() {
     <div className="min-h-screen bg-gradient-to-br from-ras-crema via-white to-ras-crema">
       <TopBar
         title={`Anuncio - ${propiedad.nombre_propiedad}`}
+        showHomeButton
         showBackButton
         onBackClick={volverCatalogo}
         showUserInfo={true}

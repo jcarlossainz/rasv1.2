@@ -405,6 +405,7 @@ export default function CuentasGlobalPage() {
     <div className="min-h-screen bg-gradient-to-br from-ras-crema via-white to-ras-crema">
       <TopBar
         title="Cuentas"
+        showHomeButton
         showBackButton
         onBackClick={() => router.push('/dashboard')}
       />

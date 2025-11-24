@@ -363,6 +363,7 @@ export default function CalendarioPropiedadPage() {
     <div className="min-h-screen bg-gradient-to-br from-ras-crema via-white to-ras-crema">
       <TopBar
         title={`${propiedad?.nombre_propiedad || 'Propiedad'}`}
+        showHomeButton
         showBackButton
         showAddButton
         onBackClick={volverCatalogo}

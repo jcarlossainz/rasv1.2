@@ -440,6 +440,7 @@ export default function CalendarioGlobalPage() {
     <div className="min-h-screen bg-gradient-to-br from-ras-crema via-white to-ras-crema">
       <TopBar
         title="Planificador"
+        showHomeButton
         showBackButton
         showAddButton
         onBackClick={() => router.push('/dashboard')}

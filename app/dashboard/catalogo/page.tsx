@@ -256,8 +256,9 @@ export default function CatalogoPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-ras-crema via-white to-ras-crema">
-      <TopBar 
+      <TopBar
         title="Catálogo"
+        showHomeButton={true}
         showBackButton={true}
         showAddButton={true}
         showUserInfo={true}

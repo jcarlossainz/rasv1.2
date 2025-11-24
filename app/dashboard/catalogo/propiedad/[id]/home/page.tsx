@@ -567,6 +567,7 @@ export default function HomePropiedad() {
     <div className="min-h-screen bg-gray-50">
       <TopBar
         title={propiedad.nombre_propiedad}
+        showHomeButton={true}
         showBackButton={true}
         showUserInfo={true}
         userEmail={user?.email}

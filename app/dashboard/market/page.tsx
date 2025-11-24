@@ -242,9 +242,10 @@ export default function MarketPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-ras-crema via-white to-ras-crema">
-      <TopBar 
+      <TopBar
         title="Market - Anuncios"
         onClick={() => router.push('/dashboard/market')}
+        showHomeButton={true}
         showBackButton={true}
         showAddButton={false}
         showUserInfo={true}

@@ -7,6 +7,7 @@ interface TopBarProps {
   title: string
   showBackButton?: boolean
   showAddButton?: boolean
+  showHomeButton?: boolean
   showUserInfo?: boolean
   userEmail?: string
   onLogout?: () => void
@@ -14,10 +15,11 @@ interface TopBarProps {
   onNuevoTicket?: () => void // Nueva prop para abrir modal de tickets
 }
 
-export default function TopBar({ 
-  title, 
-  showBackButton = false, 
+export default function TopBar({
+  title,
+  showBackButton = false,
   showAddButton = false,
+  showHomeButton = false,
   showUserInfo = false,
   userEmail,
   onLogout,
@@ -45,7 +47,21 @@ export default function TopBar({
     <>
       <div className="sticky top-0 z-50 bg-gradient-to-b from-ras-azul/95 to-ras-turquesa/50 backdrop-blur-md border-b border-white/10 shadow-lg">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
-          
+
+          {/* Botón Home */}
+          {showHomeButton && (
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="w-11 h-11 rounded-full border-2 border-white/30 bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all hover:scale-110"
+              aria-label="Ir a Dashboard"
+            >
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" strokeLinecap="round" strokeLinejoin="round"/>
+                <polyline points="9 22 9 12 15 12 15 22" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          )}
+
           {/* Botón Atrás */}
           {showBackButton && (
             <button 

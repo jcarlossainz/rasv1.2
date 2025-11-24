@@ -270,6 +270,7 @@ export default function InventarioPage() {
     <div className="min-h-screen bg-gradient-to-br from-ras-crema via-white to-ras-crema">
       <TopBar
         title={`Inventario - ${property?.nombre || ''}`}
+        showHomeButton={true}
         showBackButton={true}
         showUserInfo={true}
         userEmail={user?.email}
