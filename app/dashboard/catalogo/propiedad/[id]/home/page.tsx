@@ -9,6 +9,7 @@ import { useConfirm } from '@/components/ui/confirm-modal'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
 import CompartirPropiedad from '@/components/CompartirPropiedad'
+import ConfigurarCalendarioModal from '@/components/ConfigurarCalendarioModal'
 import { getPropertyImages } from '@/lib/supabase/supabase-storage'
 import type { PropertyImage } from '@/types/property'
 import { calcularCapacidadPersonas } from '@/types/property'
@@ -304,6 +305,7 @@ export default function HomePropiedad() {
   const [showCompartir, setShowCompartir] = useState(false)
   const [showDuplicarModal, setShowDuplicarModal] = useState(false)
   const [showEditarModal, setShowEditarModal] = useState(false)
+  const [showCalendarioModal, setShowCalendarioModal] = useState(false)
   const [nombreDuplicado, setNombreDuplicado] = useState('')
   const [duplicando, setDuplicando] = useState(false)
 
@@ -1068,51 +1070,64 @@ export default function HomePropiedad() {
 
             {/* Botones de acción */}
             <div className="mt-6 pt-6 border-t border-gray-200">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                 <button
                   onClick={() => setShowCompartir(true)}
-                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center justify-center gap-2"
+                  className="px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center justify-center gap-2 text-sm"
                 >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                   </svg>
-                  Compartir
+                  <span className="hidden md:inline">Compartir</span>
                 </button>
 
                 <button
                   onClick={editarPropiedad}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center gap-2"
+                  className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center gap-2 text-sm"
                 >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
-                  Editar
+                  <span className="hidden md:inline">Editar</span>
                 </button>
 
                 <button
                   onClick={() => setShowDuplicarModal(true)}
-                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center justify-center gap-2"
+                  className="px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center justify-center gap-2 text-sm"
                 >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                     <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
                   </svg>
-                  Duplicar
+                  <span className="hidden md:inline">Duplicar</span>
+                </button>
+
+                <button
+                  onClick={() => setShowCalendarioModal(true)}
+                  className="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex items-center justify-center gap-2 text-sm"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                  <span className="hidden md:inline">Calendarios</span>
+                </button>
+
+                <button
+                  onClick={eliminarPropiedad}
+                  className="col-span-2 md:col-span-1 px-4 py-3 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-medium border-2 border-red-200 flex items-center justify-center gap-2 text-sm"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                    <line x1="10" y1="11" x2="10" y2="17"/>
+                    <line x1="14" y1="11" x2="14" y2="17"/>
+                  </svg>
+                  <span className="hidden md:inline">Eliminar</span>
                 </button>
               </div>
-
-              <button
-                onClick={eliminarPropiedad}
-                className="w-full mt-3 px-6 py-3 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-medium border-2 border-red-200 flex items-center justify-center gap-2"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="3 6 5 6 21 6"/>
-                  <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                  <line x1="10" y1="11" x2="10" y2="17"/>
-                  <line x1="14" y1="11" x2="14" y2="17"/>
-                </svg>
-                Eliminar propiedad
-              </button>
             </div>
           </div>
 
@@ -1192,6 +1207,16 @@ export default function HomePropiedad() {
             }}
           />
         </Suspense>
+      )}
+
+      {/* Modal Configurar Calendarios */}
+      {showCalendarioModal && (
+        <ConfigurarCalendarioModal
+          isOpen={showCalendarioModal}
+          onClose={() => setShowCalendarioModal(false)}
+          propiedadId={propiedadId}
+          propiedadNombre={propiedad?.nombre_propiedad || ''}
+        />
       )}
     </div>
   )
