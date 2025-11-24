@@ -19,6 +19,7 @@ import EmptyState from '@/components/ui/emptystate'
 
 import RegistrarPagoModal from '@/components/RegistrarPagoModal'
 import NuevoTicket from '@/app/dashboard/tickets/NuevoTicket'
+import TicketDetalles from '@/app/dashboard/tickets/TicketDetalles'
 
 interface Ticket {
   id: string
@@ -35,6 +36,7 @@ interface Ticket {
   propiedad_id: string
   propiedad_nombre: string
   dias_restantes: number
+  descripcion?: string | null
 }
 
 interface Propiedad {
@@ -72,6 +74,10 @@ export default function TicketsGlobalPage() {
 
   // Modal de Nuevo Ticket
   const [showNuevoTicketModal, setShowNuevoTicketModal] = useState(false)
+
+  // Modal de Detalles de Ticket
+  const [showDetallesModal, setShowDetallesModal] = useState(false)
+  const [ticketDetalles, setTicketDetalles] = useState<Ticket | null>(null)
 
   // Estados para paginación
   const [paginaActual, setPaginaActual] = useState(1)
@@ -139,6 +145,7 @@ export default function TicketsGlobalPage() {
         .select(`
           id,
           titulo,
+          descripcion,
           fecha_programada,
           monto_estimado,
           pagado,
@@ -195,6 +202,7 @@ export default function TicketsGlobalPage() {
         return {
           id: ticket.id,
           titulo: ticket.titulo,
+          descripcion: ticket.descripcion,
           fecha_programada: ticket.fecha_programada,
           monto_estimado: ticket.monto_estimado,
           pagado: ticket.pagado,
@@ -333,6 +341,16 @@ export default function TicketsGlobalPage() {
     }
   }
 
+  const handleVerDetalles = (ticket: Ticket) => {
+    setTicketDetalles(ticket)
+    setShowDetallesModal(true)
+  }
+
+  const handleRegistrarPagoDirecto = () => {
+    setTicketSeleccionado(null) // Sin ticket preseleccionado
+    setShowPagoModal(true)
+  }
+
   const handleCompartir = async (ticket: Ticket) => {
     const texto = `
 📋 *Ticket: ${ticket.titulo}*
@@ -404,6 +422,7 @@ ${ticket.proveedor ? `🏢 Proveedor: ${ticket.proveedor}` : ''}
         userEmail={user?.email}
         onBackClick={() => router.push('/dashboard')}
         onNuevoTicket={() => setShowNuevoTicketModal(true)}
+        onRegistrarPago={handleRegistrarPagoDirecto}
         onLogout={logout}
       />
 
@@ -532,9 +551,9 @@ ${ticket.proveedor ? `🏢 Proveedor: ${ticket.proveedor}` : ''}
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                               </svg>
                             </button>
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/propiedad/${ticket.propiedad_id}/tickets`) }} 
-                              className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 hover:scale-110 transition-all" 
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleVerDetalles(ticket) }}
+                              className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 hover:scale-110 transition-all"
                               title="Ver detalles"
                             >
                               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -680,6 +699,14 @@ ${ticket.proveedor ? `🏢 Proveedor: ${ticket.proveedor}` : ''}
               cargarDatos(user.id)
             }
           }}
+        />
+
+        {/* Modal de Detalles de Ticket */}
+        <TicketDetalles
+          isOpen={showDetallesModal}
+          onClose={() => { setShowDetallesModal(false); setTicketDetalles(null) }}
+          ticket={ticketDetalles}
+          onRegistrarPago={handleMarcarPagado}
         />
       </main>
     </div>

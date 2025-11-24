@@ -13,6 +13,7 @@ interface TopBarProps {
   onLogout?: () => void
   onBackClick?: () => void
   onNuevoTicket?: () => void // Nueva prop para abrir modal de tickets
+  onRegistrarPago?: () => void // Nueva prop para abrir modal de registro de pago
 }
 
 export default function TopBar({
@@ -24,7 +25,8 @@ export default function TopBar({
   userEmail,
   onLogout,
   onBackClick,
-  onNuevoTicket
+  onNuevoTicket,
+  onRegistrarPago
 }: TopBarProps) {
   const router = useRouter()
   const [showDropdown, setShowDropdown] = useState(false)
@@ -129,6 +131,24 @@ export default function TopBar({
                     </div>
                     <span className="font-semibold text-gray-800">Nuevo ticket</span>
                   </button>
+
+                  {/* Registrar Pago */}
+                  {onRegistrarPago && (
+                    <button
+                      onClick={() => {
+                        setShowDropdown(false)
+                        onRegistrarPago()
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-orange-50 transition-colors text-left group"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <svg className="w-5 h-5 text-orange-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                        </svg>
+                      </div>
+                      <span className="font-semibold text-gray-800">Registrar pago</span>
+                    </button>
+                  )}
 
                   {/* Nueva Cuenta */}
                   <button
