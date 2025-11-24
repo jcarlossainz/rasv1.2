@@ -18,6 +18,7 @@ import { logger } from '@/lib/logger'
 
 import RegistrarPagoModal from '@/components/RegistrarPagoModal'
 import NuevoTicket from '@/app/dashboard/tickets/NuevoTicket'
+import TicketDetalles from '@/app/dashboard/tickets/TicketDetalles'
 
 interface Ticket {
   id: string
@@ -69,6 +70,10 @@ export default function TicketsPropiedadPage() {
 
   // Modal de Nuevo Ticket
   const [showNuevoTicketModal, setShowNuevoTicketModal] = useState(false)
+
+  // Modal de Detalles de Ticket
+  const [showDetallesModal, setShowDetallesModal] = useState(false)
+  const [ticketDetalles, setTicketDetalles] = useState<Ticket | null>(null)
 
   const getDiasRestantes = useCallback((fechaProgramada: string) => {
     const hoy = new Date()
@@ -311,6 +316,11 @@ ${ticket.proveedor ? `🏢 Proveedor: ${ticket.proveedor}` : ''}
     }).catch(() => { toast.error('No se pudo copiar al portapapeles') })
   }
 
+  const handleVerDetalles = (ticket: Ticket) => {
+    setTicketDetalles(ticket)
+    setShowDetallesModal(true)
+  }
+
   const handleEditar = (ticket: Ticket) => {
     // Si es un ticket de servicio recurrente, ir a editar el servicio
     if (ticket.servicio_id) {
@@ -461,6 +471,16 @@ ${ticket.proveedor ? `🏢 Proveedor: ${ticket.proveedor}` : ''}
                         <td className="px-6 py-4 whitespace-nowrap text-center">
                           <div className="flex gap-2 justify-center items-center">
                             <button
+                              onClick={(e) => { e.stopPropagation(); handleVerDetalles(ticket) }}
+                              className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 hover:scale-110 transition-all"
+                              title="Ver detalles"
+                            >
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </button>
+                            <button
                               onClick={(e) => { e.stopPropagation(); handleMarcarPagado(ticket) }}
                               className="p-2 rounded-lg bg-gradient-to-r from-ras-azul to-ras-turquesa text-white hover:shadow-lg hover:scale-110 transition-all"
                               title="Registrar pago"
@@ -534,6 +554,13 @@ ${ticket.proveedor ? `🏢 Proveedor: ${ticket.proveedor}` : ''}
           onTicketCreado={() => {
             cargarDatos()
           }}
+        />
+
+        {/* Modal de Detalles de Ticket */}
+        <TicketDetalles
+          isOpen={showDetallesModal}
+          onClose={() => { setShowDetallesModal(false); setTicketDetalles(null) }}
+          ticket={ticketDetalles}
         />
       </main>
     </div>
