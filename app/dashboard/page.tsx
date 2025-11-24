@@ -78,7 +78,7 @@ export default function DashboardPage() {
   const { config, loading: configLoading, updateConfig, reorderWidgets } = useDashboardConfig()
   const { widgets, loading: widgetsLoading, refreshWidgets } = useDashboardWidgets()
   const { chartData, loading: chartLoading, refreshChartData } = useDashboardChartData(
-    config?.chart_days || 15,
+    config?.chart_days || 7,
     config?.show_comparison || true
   )
 
@@ -141,7 +141,7 @@ export default function DashboardPage() {
     try {
       await Promise.all([
         refreshWidgets(),
-        refreshChartData(config?.chart_days || 15, config?.show_comparison || true),
+        refreshChartData(config?.chart_days || 7, config?.show_comparison || true),
       ])
       toast.success('Dashboard actualizado')
     } catch (error) {
@@ -206,7 +206,7 @@ export default function DashboardPage() {
       />
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="max-w-5xl mx-auto px-4 py-8">
         {/* Navigation Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
           {/* CATÁLOGO */}

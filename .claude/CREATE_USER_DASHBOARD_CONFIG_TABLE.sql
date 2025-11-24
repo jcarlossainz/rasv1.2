@@ -35,8 +35,8 @@ CREATE TABLE IF NOT EXISTS user_dashboard_config (
   -- Tipo de gráfica: 'line' | 'bar' | 'area'
   chart_type TEXT DEFAULT 'line',
 
-  -- Días a mostrar en la gráfica (15, 30, 60, 90)
-  chart_days INTEGER DEFAULT 15,
+  -- Días a mostrar en la gráfica (7, 15, 30, 60, 90)
+  chart_days INTEGER DEFAULT 7,
 
   -- Mostrar comparación con periodo anterior
   show_comparison BOOLEAN DEFAULT true,
@@ -133,7 +133,7 @@ Ejemplo de configuración:
     "monthly_income"
   ],
   "chart_type": "line",
-  "chart_days": 15,
+  "chart_days": 7,
   "show_comparison": true
 }
 */
@@ -159,7 +159,7 @@ BEGIN
     '["total_balance", "total_properties", "pending_tickets", "monthly_income"]'::jsonb,
     '["total_balance", "total_properties", "pending_tickets", "monthly_income"]'::jsonb,
     'line',
-    15,
+    7,
     true
   )
   ON CONFLICT (user_id) DO NOTHING

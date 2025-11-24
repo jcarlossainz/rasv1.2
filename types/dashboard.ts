@@ -80,7 +80,7 @@ const DEFAULT_DASHBOARD_CONFIG: Omit<DashboardConfig, 'id' | 'user_id' | 'create
   visible_widgets: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income'],
   widget_order: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income'],
   chart_type: 'line',
-  chart_days: 15,
+  chart_days: 7,
   show_comparison: true,
 };
 
