@@ -14,9 +14,8 @@ import { useDashboardChartData } from '@/hooks/useDashboardChartData'
 import TopBar from '@/components/ui/topbar'
 import Card from '@/components/ui/card'
 import Loading from '@/components/ui/loading'
-import { DashboardWidget, DashboardWidgetPlaceholder, WidgetSelectorModal } from '@/components/dashboard'
+import { DashboardWidget, DashboardWidgetPlaceholder } from '@/components/dashboard'
 import { IncomeExpenseChart } from '@/components/dashboard'
-import { Settings, RefreshCw, Edit3, Check } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -83,9 +82,7 @@ export default function DashboardPage() {
   )
 
   // Local state
-  const [isEditMode, setIsEditMode] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [showWidgetSelector, setShowWidgetSelector] = useState(false)
 
   // Drag & drop sensors
   const sensors = useSensors(
@@ -172,20 +169,6 @@ export default function DashboardPage() {
       toast.success('Periodo actualizado')
     } catch (error) {
       logger.error('Error actualizando periodo:', error)
-      toast.error('Error al actualizar')
-    }
-  }
-
-  // Handle widget selection
-  const handleSelectWidgets = async (newWidgets: WidgetId[]) => {
-    try {
-      await updateConfig({
-        visible_widgets: newWidgets,
-        widget_order: newWidgets,
-      })
-      toast.success('Widgets actualizados')
-    } catch (error) {
-      logger.error('Error actualizando widgets:', error)
       toast.error('Error al actualizar')
     }
   }
@@ -304,43 +287,21 @@ export default function DashboardPage() {
         {/* DASHBOARD - Ocupa 3 columnas como antes */}
         <div className="lg:col-span-3">
           <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-200 p-6">
-            {/* Solo botones en la esquina superior derecha */}
-            <div className="flex items-center justify-end mb-6">
-              <div className="flex items-center gap-2">
-                {/* Botón Seleccionar Widgets */}
-                {isEditMode && (
-                  <button
-                    onClick={() => setShowWidgetSelector(true)}
-                    className="px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-all"
-                  >
-                    Seleccionar Widgets
-                  </button>
-                )}
-
-                {/* Botón Editar/Listo - Solo ícono */}
-                <button
-                  onClick={() => setIsEditMode(!isEditMode)}
-                  className={`p-2 rounded-lg transition-all ${
-                    isEditMode
-                      ? 'bg-blue-600 text-white hover:bg-blue-700'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                  title={isEditMode ? 'Terminar edición' : 'Editar dashboard'}
-                >
-                  {isEditMode ? (
-                    <Check className="w-5 h-5" />
-                  ) : (
-                    <Edit3 className="w-5 h-5" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Grid: 4 Widgets (izquierda 2x2) + Gráfica (derecha) */}
+            {/* Grid: Gráfica (izquierda 2 cols) + 4 Widgets (derecha 1 col, grid 2x2) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-              {/* IZQUIERDA: 4 Widgets en grid 2x2 - Ocupa 2 columnas */}
-              <div className="lg:col-span-2 grid grid-cols-2 gap-4">
+              {/* IZQUIERDA: Gráfica - Ocupa 2 columnas */}
+              <div className="lg:col-span-2">
+                <IncomeExpenseChart
+                  data={chartData}
+                  chartType={config?.chart_type || 'line'}
+                  showComparison={config?.show_comparison || false}
+                  loading={chartLoading}
+                />
+              </div>
+
+              {/* DERECHA: 4 Widgets en grid 2x2 - Ocupa 1 columna */}
+              <div className="grid grid-cols-2 gap-3">
                 {config && config.visible_widgets && (
                   <DndContext
                     sensors={sensors}
@@ -350,7 +311,6 @@ export default function DashboardPage() {
                     <SortableContext
                       items={config.visible_widgets}
                       strategy={verticalListSortingStrategy}
-                      disabled={!isEditMode}
                     >
                       {config.visible_widgets.map((widgetId) => (
                         <SortableWidget
@@ -365,30 +325,10 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              {/* DERECHA: Gráfica - Ocupa 1 columna */}
-              <div className="lg:col-span-1">
-                <IncomeExpenseChart
-                  data={chartData}
-                  chartType={config?.chart_type || 'line'}
-                  showComparison={config?.show_comparison || false}
-                  loading={chartLoading}
-                />
-              </div>
-
             </div>
           </div>
         </div>
       </main>
-
-      {/* Modal de Selección de Widgets */}
-      {config && (
-        <WidgetSelectorModal
-          isOpen={showWidgetSelector}
-          onClose={() => setShowWidgetSelector(false)}
-          currentWidgets={config.visible_widgets}
-          onSelectWidgets={handleSelectWidgets}
-        />
-      )}
     </div>
   )
 }
