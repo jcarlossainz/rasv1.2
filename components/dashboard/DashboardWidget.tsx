@@ -17,6 +17,7 @@ interface DashboardWidgetProps {
   onClick?: () => void;
   className?: string;
   isDragging?: boolean;
+  compact?: boolean; // Modo compacto para grid 2x2
 }
 
 export function DashboardWidget({
@@ -25,6 +26,7 @@ export function DashboardWidget({
   onClick,
   className = '',
   isDragging = false,
+  compact = false,
 }: DashboardWidgetProps) {
   const metadata = AVAILABLE_WIDGETS[widgetId];
 
@@ -89,6 +91,37 @@ export function DashboardWidget({
     return value.toLocaleString('es-MX');
   };
 
+  // Modo compacto (para grid 2x2)
+  if (compact) {
+    return (
+      <div
+        onClick={onClick}
+        className={`
+          bg-white rounded-xl p-4 border-2 hover:shadow-lg transition-all cursor-pointer
+          ${isDragging ? 'opacity-50 scale-95' : ''}
+          ${iconColor.includes('green') ? 'border-green-500/20 hover:border-green-500/40' : ''}
+          ${iconColor.includes('blue') ? 'border-blue-500/20 hover:border-blue-500/40' : ''}
+          ${iconColor.includes('purple') ? 'border-purple-500/20 hover:border-purple-500/40' : ''}
+          ${className}
+        `}
+      >
+        <div className="text-xs font-semibold mb-2 text-gray-700">{metadata.title}</div>
+        <div className="text-3xl font-bold mb-1 text-gray-900">
+          {data ? formatValue(data.value) : '---'}
+        </div>
+        {data?.change !== undefined && (
+          <div className={`text-xs ${data.trend === 'up' ? 'text-green-600' : data.trend === 'down' ? 'text-red-600' : 'text-gray-600'}`}>
+            {formatPercentage(data.change, 0)}
+          </div>
+        )}
+        {!data?.change && (
+          <div className="text-xs text-gray-500">{metadata.description.substring(0, 20)}...</div>
+        )}
+      </div>
+    );
+  }
+
+  // Modo normal (original)
   return (
     <div
       onClick={onClick}

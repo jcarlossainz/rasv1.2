@@ -39,7 +39,7 @@ import type { WidgetId } from '@/types/dashboard'
 /**
  * Sortable Widget Wrapper
  */
-function SortableWidget({ widgetId, data, onClick }: { widgetId: WidgetId; data: any; onClick?: () => void }) {
+function SortableWidget({ widgetId, data, onClick, compact }: { widgetId: WidgetId; data: any; onClick?: () => void; compact?: boolean }) {
   const {
     attributes,
     listeners,
@@ -61,6 +61,7 @@ function SortableWidget({ widgetId, data, onClick }: { widgetId: WidgetId; data:
         data={data}
         onClick={onClick}
         isDragging={isDragging}
+        compact={compact}
       />
     </div>
   )
@@ -285,146 +286,66 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Dashboard Controls */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Mi Dashboard</h2>
-            <p className="text-sm text-gray-600 mt-1">
-              {isEditMode ? 'Arrastra para reordenar widgets' : 'Vista general de tus métricas'}
-            </p>
-          </div>
+        {/* DASHBOARD - Ocupa 3 columnas como antes */}
+        <div className="lg:col-span-3">
+          <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-200 p-6">
+            {/* Título y botón editar */}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold text-gray-800">Dashboard</h2>
 
-          <div className="flex items-center gap-3">
-            {/* Refresh Button */}
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="px-4 py-2 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-lg transition-all flex items-center gap-2 text-gray-700 font-medium disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              Actualizar
-            </button>
-
-            {/* Edit Mode Toggle */}
-            <button
-              onClick={() => setIsEditMode(!isEditMode)}
-              className={`px-4 py-2 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 font-medium ${
-                isEditMode
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-blue-400'
-              }`}
-            >
-              {isEditMode ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  Listo
-                </>
-              ) : (
-                <>
-                  <Edit3 className="w-4 h-4" />
-                  Editar
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Dashboard Grid: Widgets + Chart */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Column: Widgets */}
-          <div className="space-y-4">
-            {config && config.visible_widgets && (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
+              <button
+                onClick={() => setIsEditMode(!isEditMode)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  isEditMode
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
               >
-                <SortableContext
-                  items={config.visible_widgets}
-                  strategy={verticalListSortingStrategy}
-                  disabled={!isEditMode}
-                >
-                  {config.visible_widgets.map((widgetId) => (
-                    <SortableWidget
-                      key={widgetId}
-                      widgetId={widgetId}
-                      data={widgets[widgetId]}
-                    />
-                  ))}
-                </SortableContext>
-              </DndContext>
-            )}
+                {isEditMode ? 'Listo' : 'Editar'}
+              </button>
+            </div>
 
-            {/* Add Widget Placeholder (only in edit mode) */}
-            {isEditMode && config && config.visible_widgets.length < 4 && (
-              <DashboardWidgetPlaceholder
-                onAddWidget={() => {
-                  toast.info('Función de agregar widget próximamente')
-                }}
-              />
-            )}
-          </div>
+            {/* Grid: Gráfica (izquierda) + 4 Widgets (derecha 2x2) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-          {/* Right Column: Chart */}
-          <div className="space-y-4">
-            {/* Chart Controls */}
-            {isEditMode && config && (
-              <div className="bg-white rounded-2xl shadow-lg p-4 border border-gray-200">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-semibold text-gray-700">Configuración de Gráfica</span>
-                </div>
-
-                <div className="space-y-3">
-                  {/* Chart Type */}
-                  <div>
-                    <label className="text-xs text-gray-600 block mb-2">Tipo de Gráfica</label>
-                    <div className="flex gap-2">
-                      {(['line', 'bar', 'area'] as const).map((type) => (
-                        <button
-                          key={type}
-                          onClick={() => handleChartTypeChange(type)}
-                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                            config.chart_type === type
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                        >
-                          {type === 'line' ? 'Línea' : type === 'bar' ? 'Barras' : 'Área'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Chart Days */}
-                  <div>
-                    <label className="text-xs text-gray-600 block mb-2">Periodo</label>
-                    <div className="flex gap-2">
-                      {([7, 15, 30, 60, 90] as const).map((days) => (
-                        <button
-                          key={days}
-                          onClick={() => handleChartDaysChange(days)}
-                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                            config.chart_days === days
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                        >
-                          {days}d
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+              {/* IZQUIERDA: Gráfica - Ocupa 2 columnas */}
+              <div className="lg:col-span-2">
+                <IncomeExpenseChart
+                  data={chartData}
+                  chartType={config?.chart_type || 'line'}
+                  showComparison={config?.show_comparison || false}
+                  loading={chartLoading}
+                  className="h-full"
+                />
               </div>
-            )}
 
-            {/* Chart Component */}
-            <IncomeExpenseChart
-              data={chartData}
-              chartType={config?.chart_type || 'line'}
-              showComparison={config?.show_comparison || true}
-              loading={chartLoading}
-            />
+              {/* DERECHA: 4 Widgets en grid 2x2 - Ocupa 1 columna */}
+              <div className="grid grid-cols-2 gap-3">
+                {config && config.visible_widgets && (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext
+                      items={config.visible_widgets}
+                      strategy={verticalListSortingStrategy}
+                      disabled={!isEditMode}
+                    >
+                      {config.visible_widgets.map((widgetId) => (
+                        <SortableWidget
+                          key={widgetId}
+                          widgetId={widgetId}
+                          data={widgets[widgetId]}
+                          compact={true}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                )}
+              </div>
+
+            </div>
           </div>
         </div>
       </main>

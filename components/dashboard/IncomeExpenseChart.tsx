@@ -303,22 +303,14 @@ export function IncomeExpenseChart({
   };
 
   return (
-    <div className={`bg-white rounded-2xl shadow-lg p-6 ${className}`}>
-      {/* Título */}
-      <div className="mb-6">
-        <h3 className="text-xl font-bold text-gray-900">
-          Ingresos y Egresos
-        </h3>
-        <p className="text-sm text-gray-600 mt-1">
-          Seguimiento de movimientos financieros
-        </p>
+    <div className={`bg-white rounded-xl shadow-md p-4 border border-gray-200 ${className}`}>
+      {/* Título simple */}
+      <div className="mb-3">
+        <h3 className="text-sm font-bold text-gray-700">Ingresos y Egresos (últimos {chartData.length} días)</h3>
       </div>
 
-      {/* Resumen estadístico */}
-      <ChartSummary data={data} />
-
       {/* Gráfica */}
-      <div className="w-full h-[400px]">
+      <div className="w-full h-[420px]">
         <ResponsiveContainer width="100%" height="100%">
           {renderChart()}
         </ResponsiveContainer>
