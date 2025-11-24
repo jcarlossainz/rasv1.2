@@ -248,10 +248,13 @@ export function useDashboardConfig(): UseDashboardConfigReturn {
   useEffect(() => {
     if (!config) return;
 
-    const { data: { user } } = supabase.auth.getUser().then(({ data }) => {
+    let channel: any = null;
+
+    const setupRealtimeSubscription = async () => {
+      const { data } = await supabase.auth.getUser();
       if (!data.user) return;
 
-      const channel = supabase
+      channel = supabase
         .channel('dashboard-config-changes')
         .on(
           'postgres_changes',
@@ -267,11 +270,15 @@ export function useDashboardConfig(): UseDashboardConfigReturn {
           }
         )
         .subscribe();
+    };
 
-      return () => {
+    setupRealtimeSubscription();
+
+    return () => {
+      if (channel) {
         supabase.removeChannel(channel);
-      };
-    });
+      }
+    };
   }, [config]);
 
   return {
