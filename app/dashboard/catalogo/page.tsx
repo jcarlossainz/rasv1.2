@@ -403,6 +403,7 @@ export default function CatalogoPage() {
                       <button
                         onClick={(e) => { e.stopPropagation(); abrirHome(prop.id); }}
                         className="w-12 h-12 rounded-lg border-2 border-green-200 bg-green-50 hover:bg-green-100 hover:border-green-400 hover:scale-110 transition-all flex items-center justify-center group"
+                        title="Home"
                       >
                         <svg className="w-7 h-7 text-green-600 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
@@ -413,6 +414,7 @@ export default function CatalogoPage() {
                       <button
                         onClick={(e) => { e.stopPropagation(); abrirCalendario(prop.id); }}
                         className="w-12 h-12 rounded-lg border-2 border-cyan-200 bg-cyan-50 hover:bg-cyan-100 hover:border-cyan-400 hover:scale-110 transition-all flex items-center justify-center group"
+                        title="Calendario"
                       >
                         <svg className="w-7 h-7 text-cyan-600 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
@@ -425,6 +427,7 @@ export default function CatalogoPage() {
                       <button
                         onClick={(e) => { e.stopPropagation(); abrirTickets(prop.id); }}
                         className="w-12 h-12 rounded-lg border-2 border-orange-200 bg-orange-50 hover:bg-orange-100 hover:border-orange-400 hover:scale-110 transition-all flex items-center justify-center group"
+                        title="Tickets"
                       >
                         <svg className="w-7 h-7 text-orange-600 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
@@ -437,6 +440,7 @@ export default function CatalogoPage() {
                       <button
                         onClick={(e) => { e.stopPropagation(); abrirInventario(prop.id); }}
                         className="w-12 h-12 rounded-lg border-2 border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-gray-400 hover:scale-110 transition-all flex items-center justify-center group"
+                        title="Inventario"
                       >
                         <svg className="w-7 h-7 text-gray-600 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
@@ -448,6 +452,7 @@ export default function CatalogoPage() {
                       <button
                         onClick={(e) => { e.stopPropagation(); abrirGaleria(prop.id); }}
                         className="w-12 h-12 rounded-lg border-2 border-pink-200 bg-pink-50 hover:bg-pink-100 hover:border-pink-400 hover:scale-110 transition-all flex items-center justify-center group"
+                        title="Galería"
                       >
                         <svg className="w-7 h-7 text-pink-600 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <rect x="3" y="3" width="18" height="18" rx="2"/>
@@ -459,6 +464,7 @@ export default function CatalogoPage() {
                       <button
                         onClick={(e) => { e.stopPropagation(); abrirAnuncio(prop.id); }}
                         className="w-12 h-12 rounded-lg border-2 border-yellow-200 bg-yellow-50 hover:bg-yellow-100 hover:border-yellow-400 hover:scale-110 transition-all flex items-center justify-center group"
+                        title="Anuncio"
                       >
                         <svg className="w-7 h-7 text-yellow-600 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
@@ -469,6 +475,7 @@ export default function CatalogoPage() {
                       <button
                         onClick={(e) => { e.stopPropagation(); abrirBalance(prop.id); }}
                         className="w-12 h-12 rounded-lg border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 hover:border-emerald-400 hover:scale-110 transition-all flex items-center justify-center group"
+                        title="Balance"
                       >
                         <svg className="w-7 h-7 text-emerald-600 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M12 2C6.5 2 2 4.5 2 7.5v1C2 11.5 6.5 14 12 14s10-2.5 10-5.5v-1C22 4.5 17.5 2 12 2z"/><path d="M2 12c0 3 4.5 5.5 10 5.5S22 15 22 12"/><path d="M2 16.5c0 3 4.5 5.5 10 5.5s10-2.5 10-5.5"/>
@@ -478,10 +485,13 @@ export default function CatalogoPage() {
                       <button
                         onClick={(e) => { e.stopPropagation(); abrirArchivo(prop.id); }}
                         className="w-12 h-12 rounded-lg border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 hover:scale-110 transition-all flex items-center justify-center group"
+                        title="Archivo"
                       >
                         <svg className="w-7 h-7 text-amber-600 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
-                          <polyline points="13 2 13 9 20 9"/>
+                          <rect x="4" y="3" width="16" height="18" rx="2" ry="2"/>
+                          <line x1="4" y1="9" x2="20" y2="9"/>
+                          <line x1="4" y1="15" x2="20" y2="15"/>
+                          <line x1="9" y1="6" x2="15" y2="6"/>
                         </svg>
                       </button>
                     </div>

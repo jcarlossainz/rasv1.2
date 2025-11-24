@@ -129,6 +129,12 @@ export default function ArchivoPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
+    // Validar que sea .zip
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+      toast.error('Solo se permiten archivos .zip')
+      return
+    }
+
     // Validar tamaño (máximo 50MB)
     if (file.size > 50 * 1024 * 1024) {
       toast.error('El archivo es demasiado grande. Máximo 50MB.')
@@ -317,7 +323,7 @@ export default function ArchivoPage() {
         onLogout={handleLogout}
       />
 
-      <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
+      <main className="max-w-5xl mx-auto p-4 md:p-6 space-y-4">
         {/* Header con filtros y botón de subida */}
         <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
           {/* Filtro de categoría */}
@@ -348,7 +354,7 @@ export default function ArchivoPage() {
           <label className="cursor-pointer">
             <input
               type="file"
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip"
+              accept=".zip"
               onChange={handleFileSelect}
               className="hidden"
             />
@@ -356,7 +362,7 @@ export default function ArchivoPage() {
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              Subir archivo
+              Subir archivo ZIP
             </div>
           </label>
         </div>
@@ -371,7 +377,7 @@ export default function ArchivoPage() {
         {archivosFiltrados.length === 0 ? (
           <EmptyState
             title="No hay archivos"
-            description={searchQuery ? "No se encontraron archivos con ese criterio de búsqueda." : "Sube tu primer documento importante."}
+            description={searchQuery ? "No se encontraron archivos con ese criterio de búsqueda." : "Sube tu primer documento en formato ZIP."}
             icon="📁"
           />
         ) : (
