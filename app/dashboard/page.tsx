@@ -287,11 +287,11 @@ export default function DashboardPage() {
         {/* DASHBOARD - Ocupa 3 columnas como antes */}
         <div className="lg:col-span-3">
           <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-200 p-6">
-            {/* Grid: Gráfica (izquierda 2 cols) + 4 Widgets (derecha 1 col, grid 2x2) */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Grid: Gráfica (izquierda 50%) + 4 Widgets (derecha 50%, grid 2x2) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-              {/* IZQUIERDA: Gráfica - Ocupa 2 columnas */}
-              <div className="lg:col-span-2">
+              {/* IZQUIERDA: Gráfica - Ocupa 50% */}
+              <div>
                 <IncomeExpenseChart
                   data={chartData}
                   chartType={config?.chart_type || 'line'}
@@ -300,7 +300,7 @@ export default function DashboardPage() {
                 />
               </div>
 
-              {/* DERECHA: 4 Widgets en grid 2x2 - Ocupa 1 columna */}
+              {/* DERECHA: 4 Widgets en grid 2x2 - Ocupa 50% */}
               <div className="grid grid-cols-2 gap-3">
                 {config && config.visible_widgets && (
                   <DndContext
