@@ -95,13 +95,74 @@ export default function CalendarioPropiedadPage() {
     }
   }, [semanaActual, tickets])
 
+  // Función auxiliar para recargar solo eventos después de sincronización
+  const cargarEventos = async () => {
+    if (!propiedadId) return
+
+    try {
+      const hoy = new Date()
+      const fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)
+      const fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 3, 0)
+
+      const { data: eventosData, error: eventosError } = await supabase
+        .from('calendar_events')
+        .select('*')
+        .eq('propiedad_id', propiedadId)
+        .gte('fecha_inicio', fechaInicio.toISOString().split('T')[0])
+        .lte('fecha_fin', fechaFin.toISOString().split('T')[0])
+        .order('fecha_inicio', { ascending: true })
+
+      if (eventosError) {
+        console.error('Error cargando eventos:', eventosError)
+        return
+      }
+
+      const eventosTransformados = (eventosData || []).map(evento => ({
+        id: evento.id,
+        titulo: evento.titulo || `Reserva ${evento.origen}`,
+        fecha_inicio: evento.fecha_inicio,
+        fecha_fin: evento.fecha_fin,
+        origen: evento.origen,
+        estado: evento.estado,
+        reserva_id: evento.reserva_id,
+        notas: evento.notas
+      }))
+
+      setEventos(eventosTransformados)
+      console.log('✅ Eventos recargados después de sincronización')
+    } catch (error) {
+      console.error('Error recargando eventos:', error)
+    }
+  }
+
   const cargarDatos = useCallback(async () => {
     if (!propiedadId) return
 
     try {
       setLoading(true)
 
-      // Cargar propiedad
+      // 1. Sincronizar calendarios OTA en segundo plano (no bloqueante)
+      console.log('🔄 Iniciando sincronización de calendarios OTA...')
+      fetch('/api/calendar/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ propiedadId })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            console.log('✅ Calendarios sincronizados:', data.stats)
+            // Recargar eventos después de la sincronización
+            cargarEventos()
+          } else {
+            console.warn('⚠️ Sincronización completada con errores:', data.errors)
+          }
+        })
+        .catch(err => {
+          console.error('❌ Error en sincronización:', err)
+        })
+
+      // 2. Cargar propiedad
       const { data: propData, error: propError } = await supabase
         .from('propiedades')
         .select('id, nombre_propiedad, tipo_propiedad')
