@@ -20,7 +20,7 @@ USING (
       SELECT 1
       FROM propiedades
       WHERE propiedades.id::text = split_part(storage.objects.name, '/', 1)
-      AND propiedades.propietario_id = auth.uid()
+      AND propiedades.owner_id = auth.uid()
     )
   )
 );
@@ -36,7 +36,7 @@ WITH CHECK (
       SELECT 1
       FROM propiedades
       WHERE propiedades.id::text = split_part(storage.objects.name, '/', 1)
-      AND propiedades.propietario_id = auth.uid()
+      AND propiedades.owner_id = auth.uid()
     )
   )
 );
@@ -51,7 +51,7 @@ USING (
       SELECT 1
       FROM propiedades
       WHERE propiedades.id::text = split_part(storage.objects.name, '/', 1)
-      AND propiedades.propietario_id = auth.uid()
+      AND propiedades.owner_id = auth.uid()
     )
   )
 );
@@ -66,7 +66,7 @@ USING (
       SELECT 1
       FROM propiedades
       WHERE propiedades.id::text = split_part(storage.objects.name, '/', 1)
-      AND propiedades.propietario_id = auth.uid()
+      AND propiedades.owner_id = auth.uid()
     )
   )
 );

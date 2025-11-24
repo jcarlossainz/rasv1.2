@@ -37,7 +37,7 @@ CREATE POLICY "Users can view archivos from their properties"
     EXISTS (
       SELECT 1 FROM propiedades
       WHERE propiedades.id = property_archivos.property_id
-      AND propiedades.propietario_id = auth.uid()
+      AND propiedades.owner_id = auth.uid()
     )
   );
 
@@ -48,7 +48,7 @@ CREATE POLICY "Users can insert archivos to their properties"
     EXISTS (
       SELECT 1 FROM propiedades
       WHERE propiedades.id = property_archivos.property_id
-      AND propiedades.propietario_id = auth.uid()
+      AND propiedades.owner_id = auth.uid()
     )
   );
 
@@ -59,7 +59,7 @@ CREATE POLICY "Users can update archivos from their properties"
     EXISTS (
       SELECT 1 FROM propiedades
       WHERE propiedades.id = property_archivos.property_id
-      AND propiedades.propietario_id = auth.uid()
+      AND propiedades.owner_id = auth.uid()
     )
   );
 
@@ -70,7 +70,7 @@ CREATE POLICY "Users can delete archivos from their properties"
     EXISTS (
       SELECT 1 FROM propiedades
       WHERE propiedades.id = property_archivos.property_id
-      AND propiedades.propietario_id = auth.uid()
+      AND propiedades.owner_id = auth.uid()
     )
   );
 
