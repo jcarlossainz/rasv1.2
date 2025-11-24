@@ -179,6 +179,10 @@ export default function CatalogoPage() {
     router.push(`/dashboard/catalogo/propiedad/${propiedadId}/anuncio`)
   }, [router])
 
+  const abrirArchivo = useCallback((propiedadId: string) => {
+    router.push(`/dashboard/catalogo/propiedad/${propiedadId}/archivo`)
+  }, [router])
+
   const editarPropiedad = useCallback((propiedadId: string) => {
     toast.info('Función de edición en desarrollo')
     logger.log('Editar propiedad:', propiedadId)
@@ -468,6 +472,16 @@ export default function CatalogoPage() {
                       >
                         <svg className="w-7 h-7 text-emerald-600 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M12 2C6.5 2 2 4.5 2 7.5v1C2 11.5 6.5 14 12 14s10-2.5 10-5.5v-1C22 4.5 17.5 2 12 2z"/><path d="M2 12c0 3 4.5 5.5 10 5.5S22 15 22 12"/><path d="M2 16.5c0 3 4.5 5.5 10 5.5s10-2.5 10-5.5"/>
+                        </svg>
+                      </button>
+
+                      <button
+                        onClick={(e) => { e.stopPropagation(); abrirArchivo(prop.id); }}
+                        className="w-12 h-12 rounded-lg border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 hover:scale-110 transition-all flex items-center justify-center group"
+                      >
+                        <svg className="w-7 h-7 text-amber-600 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                          <polyline points="13 2 13 9 20 9"/>
                         </svg>
                       </button>
                     </div>
