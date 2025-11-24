@@ -74,6 +74,7 @@ export default function TicketsGlobalPage() {
 
   // Modal de Nuevo Ticket
   const [showNuevoTicketModal, setShowNuevoTicketModal] = useState(false)
+  const [ticketEditar, setTicketEditar] = useState<Ticket | null>(null)
 
   // Modal de Detalles de Ticket
   const [showDetallesModal, setShowDetallesModal] = useState(false)
@@ -388,8 +389,9 @@ ${ticket.proveedor ? `🏢 Proveedor: ${ticket.proveedor}` : ''}
     if (ticket.servicio_id) {
       router.push(`/dashboard/propiedad/${ticket.propiedad_id}/servicios?edit=${ticket.servicio_id}`)
     } else {
-      // TODO: Abrir modal de edición de ticket manual
-      toast.info('Función de edición de tickets manuales en desarrollo')
+      // Abrir modal de edición con datos del ticket
+      setTicketEditar(ticket)
+      setShowNuevoTicketModal(true)
     }
   }
 
@@ -692,13 +694,29 @@ ${ticket.proveedor ? `🏢 Proveedor: ${ticket.proveedor}` : ''}
         {/* Modal de Nuevo Ticket */}
         <NuevoTicket
           isOpen={showNuevoTicketModal}
-          onClose={() => setShowNuevoTicketModal(false)}
+          onClose={() => {
+            setShowNuevoTicketModal(false)
+            setTicketEditar(null) // Limpiar ticket de edición al cerrar
+          }}
           propiedades={propiedades}
           onTicketCreado={() => {
             if (user?.id) {
               cargarDatos(user.id)
             }
           }}
+          ticketExistente={ticketEditar ? {
+            id: ticketEditar.id,
+            propiedad_id: ticketEditar.propiedad_id,
+            tipo_ticket: ticketEditar.tipo_ticket,
+            titulo: ticketEditar.titulo,
+            descripcion: ticketEditar.descripcion || null,
+            fecha_programada: ticketEditar.fecha_programada,
+            monto_estimado: ticketEditar.monto_estimado,
+            prioridad: ticketEditar.prioridad,
+            estado: ticketEditar.estado,
+            responsable: ticketEditar.responsable,
+            proveedor: ticketEditar.proveedor
+          } : null}
         />
 
         {/* Modal de Detalles de Ticket */}
