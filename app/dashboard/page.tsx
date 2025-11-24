@@ -304,10 +304,8 @@ export default function DashboardPage() {
         {/* DASHBOARD - Ocupa 3 columnas como antes */}
         <div className="lg:col-span-3">
           <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-200 p-6">
-            {/* Título y botones */}
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-gray-800">Dashboard</h2>
-
+            {/* Solo botones en la esquina superior derecha */}
+            <div className="flex items-center justify-end mb-6">
               <div className="flex items-center gap-2">
                 {/* Botón Seleccionar Widgets */}
                 {isEditMode && (
@@ -319,35 +317,30 @@ export default function DashboardPage() {
                   </button>
                 )}
 
-                {/* Botón Editar/Listo */}
+                {/* Botón Editar/Listo - Solo ícono */}
                 <button
                   onClick={() => setIsEditMode(!isEditMode)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  className={`p-2 rounded-lg transition-all ${
                     isEditMode
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
+                  title={isEditMode ? 'Terminar edición' : 'Editar dashboard'}
                 >
-                  {isEditMode ? 'Listo' : 'Editar'}
+                  {isEditMode ? (
+                    <Check className="w-5 h-5" />
+                  ) : (
+                    <Edit3 className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
 
-            {/* Grid: Gráfica (izquierda) + 4 Widgets (derecha 2x2) */}
+            {/* Grid: 4 Widgets (izquierda 2x2) + Gráfica (derecha) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-              {/* IZQUIERDA: Gráfica - Ocupa 2 columnas */}
-              <div className="lg:col-span-2">
-                <IncomeExpenseChart
-                  data={chartData}
-                  chartType={config?.chart_type || 'line'}
-                  showComparison={config?.show_comparison || false}
-                  loading={chartLoading}
-                />
-              </div>
-
-              {/* DERECHA: 4 Widgets en grid 2x2 - Ocupa 1 columna */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* IZQUIERDA: 4 Widgets en grid 2x2 - Ocupa 2 columnas */}
+              <div className="lg:col-span-2 grid grid-cols-2 gap-4">
                 {config && config.visible_widgets && (
                   <DndContext
                     sensors={sensors}
@@ -370,6 +363,16 @@ export default function DashboardPage() {
                     </SortableContext>
                   </DndContext>
                 )}
+              </div>
+
+              {/* DERECHA: Gráfica - Ocupa 1 columna */}
+              <div className="lg:col-span-1">
+                <IncomeExpenseChart
+                  data={chartData}
+                  chartType={config?.chart_type || 'line'}
+                  showComparison={config?.show_comparison || false}
+                  loading={chartLoading}
+                />
               </div>
 
             </div>
