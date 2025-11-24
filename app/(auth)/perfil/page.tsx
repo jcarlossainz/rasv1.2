@@ -133,6 +133,7 @@ export default function PerfilPage() {
         title="Configuración"
         showHomeButton={true}
         showBackButton={true}
+        showAddButton={true}
         showUserInfo={true}
         userEmail={user?.email}
         onLogout={handleLogout}

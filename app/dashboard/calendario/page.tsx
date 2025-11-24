@@ -16,6 +16,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/useToast'
 import { useAuth } from '@/hooks/useAuth'
+import { useLogout } from '@/hooks/useLogout'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
 import NuevoTicket from '@/app/dashboard/tickets/NuevoTicket'
@@ -62,6 +63,7 @@ export default function CalendarioGlobalPage() {
   const router = useRouter()
   const toast = useToast()
   const { user, loading: authLoading } = useAuth()
+  const logout = useLogout()
 
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [ticketsFiltrados, setTicketsFiltrados] = useState<Ticket[]>([])
@@ -432,6 +434,12 @@ export default function CalendarioGlobalPage() {
 
   const nombreSemana = getNombreSemana()
 
+  const handleLogout = async () => {
+    if (confirm('¿Estás seguro que deseas cerrar sesión?')) {
+      await logout()
+    }
+  }
+
   if (authLoading) {
     return <Loading message="Cargando calendario..." />
   }
@@ -443,8 +451,11 @@ export default function CalendarioGlobalPage() {
         showHomeButton
         showBackButton
         showAddButton
+        showUserInfo={true}
+        userEmail={user?.email}
         onBackClick={() => router.push('/dashboard')}
         onNuevoTicket={() => setShowNuevoTicketModal(true)}
+        onLogout={handleLogout}
       />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

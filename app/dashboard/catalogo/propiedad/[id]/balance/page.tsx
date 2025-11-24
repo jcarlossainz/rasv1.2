@@ -330,6 +330,7 @@ export default function BalancePropiedadPage() {
         title={`Balance - ${propiedad?.nombre_propiedad || 'Propiedad'}`}
         showHomeButton
         showBackButton
+        showAddButton
         onBackClick={volverCatalogo}
         showUserInfo={true}
         userEmail={user?.email}

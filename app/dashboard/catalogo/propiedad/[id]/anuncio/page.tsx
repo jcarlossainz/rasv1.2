@@ -407,6 +407,7 @@ export default function AnuncioEditPage() {
         title={`Anuncio - ${propiedad.nombre_propiedad}`}
         showHomeButton
         showBackButton
+        showAddButton
         onBackClick={volverCatalogo}
         showUserInfo={true}
         userEmail={user?.email}

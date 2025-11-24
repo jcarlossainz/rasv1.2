@@ -272,6 +272,7 @@ export default function InventarioPage() {
         title={`Inventario - ${property?.nombre || ''}`}
         showHomeButton={true}
         showBackButton={true}
+        showAddButton={true}
         showUserInfo={true}
         userEmail={user?.email}
         onLogout={handleLogout}

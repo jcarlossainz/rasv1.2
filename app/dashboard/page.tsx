@@ -182,7 +182,7 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gradient-to-br from-ras-crema via-white to-ras-crema">
       <TopBar
         title="Inicio"
-        showAddButton={false}
+        showAddButton={true}
         showUserInfo={true}
         userEmail={user?.email}
         onLogout={handleLogout}

@@ -569,6 +569,7 @@ export default function HomePropiedad() {
         title={propiedad.nombre_propiedad}
         showHomeButton={true}
         showBackButton={true}
+        showAddButton={true}
         showUserInfo={true}
         userEmail={user?.email}
         onLogout={handleLogout}

@@ -90,9 +90,9 @@ export default function TopBar({
 
               {/* Dropdown */}
               {showDropdown && (
-                <div className="absolute top-14 left-0 w-60 bg-white rounded-2xl shadow-2xl border border-gray-200 p-2 z-50">
+                <div className="absolute top-14 left-0 w-56 bg-white rounded-2xl shadow-2xl border border-gray-200 p-2 z-50">
                   {/* Agregar Propiedad */}
-                  <button 
+                  <button
                     onClick={() => {
                       setShowDropdown(false)
                       router.push('/dashboard/catalogo')
@@ -100,39 +100,84 @@ export default function TopBar({
                         window.dispatchEvent(new CustomEvent('openWizard'))
                       }, 100)
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-50 transition-colors text-left group"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-red-50 transition-colors text-left group"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center group-hover:scale-110 transition-transform">
                       <svg className="w-5 h-5 text-red-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M3 11.5 12 4l9 7.5M5 10.5V20h14v-9.5" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     </div>
-                    <div>
-                      <div className="font-semibold text-gray-800">Agregar propiedad</div>
-                      <div className="text-xs text-gray-500">Registrar nueva propiedad</div>
-                    </div>
+                    <span className="font-semibold text-gray-800">Agregar propiedad</span>
                   </button>
 
                   {/* Nuevo Ticket */}
-                  {onNuevoTicket && (
-                    <button 
-                      onClick={() => {
-                        setShowDropdown(false)
+                  <button
+                    onClick={() => {
+                      setShowDropdown(false)
+                      if (onNuevoTicket) {
                         onNuevoTicket()
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 transition-colors text-left group"
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <svg className="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-gray-800">Nuevo ticket</div>
-                        <div className="text-xs text-gray-500">Crear ticket manual</div>
-                      </div>
-                    </button>
-                  )}
+                      } else {
+                        window.dispatchEvent(new CustomEvent('openNewTicketModal'))
+                      }
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-blue-50 transition-colors text-left group"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <svg className="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <span className="font-semibold text-gray-800">Nuevo ticket</span>
+                  </button>
+
+                  {/* Nueva Cuenta */}
+                  <button
+                    onClick={() => {
+                      setShowDropdown(false)
+                      window.dispatchEvent(new CustomEvent('openNewCuentaModal'))
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-green-50 transition-colors text-left group"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <svg className="w-5 h-5 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="2" y="4" width="20" height="16" rx="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M7 15h0M2 9.5h20" strokeLinecap="round"/>
+                      </svg>
+                    </div>
+                    <span className="font-semibold text-gray-800">Nueva cuenta</span>
+                  </button>
+
+                  {/* Nuevo Proveedor */}
+                  <button
+                    onClick={() => {
+                      setShowDropdown(false)
+                      window.dispatchEvent(new CustomEvent('openNewProveedorModal'))
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-purple-50 transition-colors text-left group"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-purple-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <svg className="w-5 h-5 text-purple-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 21h18M3 7v1a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3V7m-18 0h18M3 7l1.8-3.6A1 1 0 0 1 5.7 3h12.6a1 1 0 0 1 .9.6L21 7M9 11v6m6-6v6" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                    <span className="font-semibold text-gray-800">Nuevo proveedor</span>
+                  </button>
+
+                  {/* Nuevo Contacto */}
+                  <button
+                    onClick={() => {
+                      setShowDropdown(false)
+                      window.dispatchEvent(new CustomEvent('openNewContactoModal'))
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-yellow-50 transition-colors text-left group"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-yellow-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <svg className="w-5 h-5 text-yellow-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M12.5 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM20 8v6m3-3h-6" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                    <span className="font-semibold text-gray-800">Nuevo contacto</span>
+                  </button>
                 </div>
               )}
             </div>

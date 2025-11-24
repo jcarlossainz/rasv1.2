@@ -397,6 +397,12 @@ export default function CuentasGlobalPage() {
     { id: 'ingreso', label: 'Ingresos' }
   ]
 
+  const handleLogout = async () => {
+    if (confirm('¿Estás seguro que deseas cerrar sesión?')) {
+      await logout()
+    }
+  }
+
   if (authLoading) {
     return <Loading message="Cargando cuentas..." />
   }
@@ -407,7 +413,11 @@ export default function CuentasGlobalPage() {
         title="Cuentas"
         showHomeButton
         showBackButton
+        showAddButton
+        showUserInfo={true}
+        userEmail={user?.email}
         onBackClick={() => router.push('/dashboard')}
+        onLogout={handleLogout}
       />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

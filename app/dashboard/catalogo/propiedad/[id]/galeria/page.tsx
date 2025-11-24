@@ -378,6 +378,7 @@ export default function GaleriaPage() {
         title={`Galería - ${property?.nombre_propiedad || 'Propiedad'}`}
         showHomeButton={true}
         showBackButton={true}
+        showAddButton={true}
         onBackClick={volverCatalogo}
         showUserInfo={true}
         userEmail={user?.email}

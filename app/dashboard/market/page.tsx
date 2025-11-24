@@ -247,7 +247,7 @@ export default function MarketPage() {
         onClick={() => router.push('/dashboard/market')}
         showHomeButton={true}
         showBackButton={true}
-        showAddButton={false}
+        showAddButton={true}
         showUserInfo={true}
         userEmail={user?.email}
         onLogout={handleLogout}
