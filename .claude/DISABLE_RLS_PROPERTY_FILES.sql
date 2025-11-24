@@ -47,7 +47,7 @@ DROP POLICY IF EXISTS "Users can delete archivos from their properties" ON prope
 -- Verificación final
 SELECT
   'property-files bucket' as item,
-  public as is_public
+  CASE WHEN public THEN 'PUBLIC' ELSE 'PRIVATE' END as status
 FROM storage.buckets
 WHERE id = 'property-files'
 
@@ -58,6 +58,6 @@ SELECT
   CASE
     WHEN relrowsecurity THEN 'ENABLED'
     ELSE 'DISABLED'
-  END as is_public
+  END as status
 FROM pg_class
 WHERE relname = 'property_archivos';
