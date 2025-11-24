@@ -4,11 +4,13 @@
  * ARCHIVERO DE PROPIEDAD
  * Sistema de gestión de documentos importantes
  * (contratos, estados de cuenta, escrituras, etc.)
+ * Los archivos se comprimen automáticamente antes de subirlos
  */
 
 import { useParams, useRouter } from 'next/navigation'
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import { compressFile, formatFileSize as formatSize } from '@/lib/supabase/file-compression'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
 import EmptyState from '@/components/ui/emptystate'
@@ -129,19 +131,14 @@ export default function ArchivoPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validar que sea .zip
-    if (!file.name.toLowerCase().endsWith('.zip')) {
-      toast.error('Solo se permiten archivos .zip')
-      return
-    }
-
-    // Validar tamaño (máximo 50MB)
+    // Validar tamaño (máximo 50MB antes de compresión)
     if (file.size > 50 * 1024 * 1024) {
       toast.error('El archivo es demasiado grande. Máximo 50MB.')
       return
     }
 
     setUploadFile(file)
+    // Mantener el nombre original (sin .zip), se agregará automáticamente al comprimir
     setUploadNombre(file.name)
     setShowUploadModal(true)
   }
@@ -155,39 +152,47 @@ export default function ArchivoPage() {
     try {
       setIsUploading(true)
 
-      // Generar nombre único para el archivo
+      // 1. Comprimir archivo automáticamente
+      toast.info('Comprimiendo archivo...')
+      const { compressed, originalSize, compressedSize, compressionRatio } = await compressFile(uploadFile)
+
+      logger.log(`📦 Compresión: ${formatSize(originalSize)} → ${formatSize(compressedSize)} (${compressionRatio.toFixed(1)}% reducción)`)
+
+      // 2. Generar nombre único para el archivo comprimido
       const timestamp = Date.now()
-      const fileExt = uploadFile.name.split('.').pop()
-      const fileName = `${timestamp}_${uploadNombre.replace(/[^a-zA-Z0-9._-]/g, '_')}.${fileExt}`
+      const baseNombre = uploadNombre.replace(/\.[^/.]+$/, '') // Quitar extensión original
+      const fileName = `${timestamp}_${baseNombre.replace(/[^a-zA-Z0-9._-]/g, '_')}.zip`
       const filePath = `${propertyId}/archivos/${fileName}`
 
-      // Subir archivo a Supabase Storage
+      // 3. Subir archivo comprimido a Supabase Storage
+      toast.info('Subiendo archivo...')
       const { error: uploadError } = await supabase.storage
         .from('property-files')
-        .upload(filePath, uploadFile, {
+        .upload(filePath, compressed, {
           cacheControl: '3600',
-          upsert: false
+          upsert: false,
+          contentType: 'application/zip'
         })
 
       if (uploadError) throw uploadError
 
-      // Guardar metadata en la base de datos
+      // 4. Guardar metadata en la base de datos
       const { error: dbError } = await supabase
         .from('property_archivos')
         .insert({
           property_id: propertyId,
-          nombre_archivo: uploadNombre,
+          nombre_archivo: uploadNombre, // Nombre original sin .zip
           descripcion: uploadDescripcion || null,
           categoria: uploadCategoria,
           file_path: filePath,
-          file_size: uploadFile.size,
-          file_type: uploadFile.type,
+          file_size: compressedSize, // Tamaño comprimido
+          file_type: 'application/zip',
           subido_por: user?.id
         })
 
       if (dbError) throw dbError
 
-      toast.success('Archivo subido correctamente')
+      toast.success(`Archivo subido (${compressionRatio.toFixed(0)}% reducción)`)
       setShowUploadModal(false)
       setUploadFile(null)
       setUploadNombre('')
@@ -283,11 +288,7 @@ export default function ArchivoPage() {
 
   const formatFileSize = (bytes: number | null) => {
     if (!bytes) return '-'
-    const kb = bytes / 1024
-    const mb = kb / 1024
-    if (mb >= 1) return `${mb.toFixed(2)} MB`
-    if (kb >= 1) return `${kb.toFixed(2)} KB`
-    return `${bytes} bytes`
+    return formatSize(bytes)
   }
 
   const formatDate = (dateString: string) => {
@@ -354,7 +355,7 @@ export default function ArchivoPage() {
           <label className="cursor-pointer">
             <input
               type="file"
-              accept=".zip"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.txt,.zip,.rar"
               onChange={handleFileSelect}
               className="hidden"
             />
@@ -362,7 +363,7 @@ export default function ArchivoPage() {
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              Subir archivo ZIP
+              Subir archivo
             </div>
           </label>
         </div>
@@ -377,7 +378,7 @@ export default function ArchivoPage() {
         {archivosFiltrados.length === 0 ? (
           <EmptyState
             title="No hay archivos"
-            description={searchQuery ? "No se encontraron archivos con ese criterio de búsqueda." : "Sube tu primer documento en formato ZIP."}
+            description={searchQuery ? "No se encontraron archivos con ese criterio de búsqueda." : "Sube tu primer documento. Se comprimirá automáticamente."}
             icon="📁"
           />
         ) : (
