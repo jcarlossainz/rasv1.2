@@ -14,7 +14,7 @@ import { useDashboardChartData } from '@/hooks/useDashboardChartData'
 import TopBar from '@/components/ui/topbar'
 import Card from '@/components/ui/card'
 import Loading from '@/components/ui/loading'
-import { DashboardWidget, DashboardWidgetPlaceholder } from '@/components/dashboard'
+import { DashboardWidget, DashboardWidgetPlaceholder, WidgetSelectorModal } from '@/components/dashboard'
 import { IncomeExpenseChart } from '@/components/dashboard'
 import { Settings, RefreshCw, Edit3, Check } from 'lucide-react'
 import {
@@ -85,6 +85,7 @@ export default function DashboardPage() {
   // Local state
   const [isEditMode, setIsEditMode] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [showWidgetSelector, setShowWidgetSelector] = useState(false)
 
   // Drag & drop sensors
   const sensors = useSensors(
@@ -171,6 +172,20 @@ export default function DashboardPage() {
       toast.success('Periodo actualizado')
     } catch (error) {
       logger.error('Error actualizando periodo:', error)
+      toast.error('Error al actualizar')
+    }
+  }
+
+  // Handle widget selection
+  const handleSelectWidgets = async (newWidgets: WidgetId[]) => {
+    try {
+      await updateConfig({
+        visible_widgets: newWidgets,
+        widget_order: newWidgets,
+      })
+      toast.success('Widgets actualizados')
+    } catch (error) {
+      logger.error('Error actualizando widgets:', error)
       toast.error('Error al actualizar')
     }
   }
@@ -289,20 +304,33 @@ export default function DashboardPage() {
         {/* DASHBOARD - Ocupa 3 columnas como antes */}
         <div className="lg:col-span-3">
           <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-200 p-6">
-            {/* Título y botón editar */}
+            {/* Título y botones */}
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold text-gray-800">Dashboard</h2>
 
-              <button
-                onClick={() => setIsEditMode(!isEditMode)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  isEditMode
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {isEditMode ? 'Listo' : 'Editar'}
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Botón Seleccionar Widgets */}
+                {isEditMode && (
+                  <button
+                    onClick={() => setShowWidgetSelector(true)}
+                    className="px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-all"
+                  >
+                    Seleccionar Widgets
+                  </button>
+                )}
+
+                {/* Botón Editar/Listo */}
+                <button
+                  onClick={() => setIsEditMode(!isEditMode)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    isEditMode
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {isEditMode ? 'Listo' : 'Editar'}
+                </button>
+              </div>
             </div>
 
             {/* Grid: Gráfica (izquierda) + 4 Widgets (derecha 2x2) */}
@@ -349,6 +377,16 @@ export default function DashboardPage() {
           </div>
         </div>
       </main>
+
+      {/* Modal de Selección de Widgets */}
+      {config && (
+        <WidgetSelectorModal
+          isOpen={showWidgetSelector}
+          onClose={() => setShowWidgetSelector(false)}
+          currentWidgets={config.visible_widgets}
+          onSelectWidgets={handleSelectWidgets}
+        />
+      )}
     </div>
   )
 }
