@@ -75,7 +75,7 @@ export function useDashboardConfig(): UseDashboardConfigReturn {
         visible_widgets: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income'] as WidgetId[],
         widget_order: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income'] as WidgetId[],
         chart_type: 'line' as ChartType,
-        chart_days: 15 as const,
+        chart_days: 7 as const,
         show_comparison: true,
       };
 

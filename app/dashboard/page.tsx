@@ -78,7 +78,7 @@ export default function DashboardPage() {
   const { config, loading: configLoading, updateConfig, reorderWidgets } = useDashboardConfig()
   const { widgets, loading: widgetsLoading, refreshWidgets } = useDashboardWidgets()
   const { chartData, loading: chartLoading, refreshChartData } = useDashboardChartData(
-    config?.chart_days || 15,
+    config?.chart_days || 7,
     config?.show_comparison || true
   )
 
@@ -141,7 +141,7 @@ export default function DashboardPage() {
     try {
       await Promise.all([
         refreshWidgets(),
-        refreshChartData(config?.chart_days || 15, config?.show_comparison || true),
+        refreshChartData(config?.chart_days || 7, config?.show_comparison || true),
       ])
       toast.success('Dashboard actualizado')
     } catch (error) {
