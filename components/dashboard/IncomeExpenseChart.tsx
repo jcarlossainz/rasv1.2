@@ -309,8 +309,8 @@ export function IncomeExpenseChart({
         <h3 className="text-sm font-bold text-gray-700">Ingresos y Egresos (últimos {chartData.length} días)</h3>
       </div>
 
-      {/* Gráfica */}
-      <div className="w-full h-[420px]">
+      {/* Gráfica - altura fija ajustada a widgets */}
+      <div className="w-full h-[240px]">
         <ResponsiveContainer width="100%" height="100%">
           {renderChart()}
         </ResponsiveContainer>

@@ -343,7 +343,6 @@ export default function DashboardPage() {
                   chartType={config?.chart_type || 'line'}
                   showComparison={config?.show_comparison || false}
                   loading={chartLoading}
-                  className="h-full"
                 />
               </div>
 
