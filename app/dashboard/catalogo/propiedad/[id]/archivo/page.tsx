@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * ARCHIVO DE PROPIEDAD
+ * ARCHIVERO DE PROPIEDAD
  * Sistema de gestión de documentos importantes
  * (contratos, estados de cuenta, escrituras, etc.)
  */
@@ -303,7 +303,7 @@ export default function ArchivoPage() {
   }
 
   if (authLoading || loading) {
-    return <Loading message="Cargando archivo..." />
+    return <Loading message="Cargando archivero..." />
   }
 
   if (!property) {
@@ -313,7 +313,7 @@ export default function ArchivoPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <TopBar
-        title={`Archivo - ${property.nombre_propiedad}`}
+        title={`Archivero - ${property.nombre_propiedad}`}
         showHomeButton={true}
         showBackButton={true}
         showAddButton={true}
@@ -399,7 +399,7 @@ export default function ArchivoPage() {
                     return (
                       <tr key={archivo.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4">
-                          <div className="flex items-start gap-3">
+                          <div className="flex items-center gap-3">
                             <div className="text-3xl">{catInfo.icon}</div>
                             <div>
                               <div className="font-medium text-gray-900">{archivo.nombre_archivo}</div>

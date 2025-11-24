@@ -332,6 +332,7 @@ export default function CatalogoPage() {
                   <div className="w-12 text-center text-xs font-semibold text-pink-600">Galería</div>
                   <div className="w-12 text-center text-xs font-semibold text-yellow-600">Anuncio</div>
                   <div className="w-12 text-center text-xs font-semibold text-emerald-600">Balance</div>
+                  <div className="w-12 text-center text-xs font-semibold text-amber-600">Archivero</div>
                 </div>
               </div>
             </div>
