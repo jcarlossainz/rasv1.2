@@ -115,7 +115,10 @@ export default function TicketsGlobalPage() {
       const todasPropiedades = [
         ...(propsPropias || []),
         ...propsCompartidasData
-      ]
+      ].map(p => ({
+        id: p.id,
+        nombre: p.nombre_propiedad  // Mapear nombre_propiedad a nombre
+      }))
       setPropiedades(todasPropiedades)
 
       if (todasPropiedades.length === 0) {

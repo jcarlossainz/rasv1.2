@@ -161,12 +161,12 @@ export default function NuevoTicket({
               <select
                 value={formData.propiedad_id}
                 onChange={(e) => setFormData({ ...formData, propiedad_id: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ras-turquesa focus:border-transparent font-medium"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ras-turquesa focus:border-transparent font-medium text-gray-900 bg-white"
                 required
               >
-                <option value="">Selecciona una propiedad</option>
+                <option value="" className="text-gray-500">Selecciona una propiedad</option>
                 {propiedades.map((prop) => (
-                  <option key={prop.id} value={prop.id}>
+                  <option key={prop.id} value={prop.id} className="text-gray-900">
                     {prop.nombre}
                   </option>
                 ))}
@@ -278,11 +278,11 @@ export default function NuevoTicket({
               <select
                 value={formData.responsable}
                 onChange={(e) => setFormData({ ...formData, responsable: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ras-turquesa focus:border-transparent font-medium"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ras-turquesa focus:border-transparent font-medium text-gray-900 bg-white"
               >
-                <option value="">Seleccionar responsable</option>
+                <option value="" className="text-gray-500">Seleccionar responsable</option>
                 {responsables.map((resp) => (
-                  <option key={resp.value} value={resp.value}>
+                  <option key={resp.value} value={resp.value} className="text-gray-900">
                     {resp.label}
                   </option>
                 ))}
