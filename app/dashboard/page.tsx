@@ -206,7 +206,7 @@ export default function DashboardPage() {
       />
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="max-w-5xl mx-auto px-4 py-8">
         {/* Navigation Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
           {/* CATÁLOGO */}
