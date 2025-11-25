@@ -92,17 +92,17 @@ export default function RegisterPage() {
 
         {/* Header con logo */}
         <div className="pt-4 pb-2 px-8 text-center">
-          <h2 className="text-2xl font-bold text-white mb-4">Crear Cuenta</h2>
+          <h1 className="text-6xl font-bold text-white mb-4">OHANA</h1>
           <div className="inline-flex items-center justify-center mb-3">
             <Image
               src="/logo-ras-wizard.png"
               alt="Ohana Logo"
-              width={140}
-              height={140}
+              width={180}
+              height={180}
               className="object-contain"
             />
           </div>
-          <h1 className="text-5xl font-bold text-white mb-4">OHANA</h1>
+          <h2 className="text-2xl font-bold text-white mb-4">Crear Cuenta</h2>
         </div>
 
         {/* Formulario */}
@@ -171,6 +171,7 @@ export default function RegisterPage() {
               {errors.password && (
                 <p className="mt-1 text-sm text-red-300">{errors.password.message}</p>
               )}
+              <p className="text-xs text-white/70 mt-1">Mínimo 8 caracteres, 1 mayúscula, 1 número</p>
             </div>
 
             {/* Confirmar Contraseña */}
@@ -275,7 +276,7 @@ export default function RegisterPage() {
           {/* Link para login */}
           <div className="mt-6 text-center">
             <p className="text-sm text-white">
-              Ya tienes cuenta?{' '}
+              ¿Ya tienes cuenta?{' '}
               <Link
                 href="/login"
                 className="text-yellow-400 font-semibold hover:text-yellow-300 transition-colors"
@@ -290,7 +291,7 @@ export default function RegisterPage() {
       {/* Footer */}
       <div className="absolute bottom-4 left-0 right-0 text-center">
         <p className="text-white/70 text-xs">
-          2025 OHANA. Sistema profesional de administración inmobiliaria.
+          © 2025 OHANA. Sistema profesional de administración inmobiliaria.
         </p>
       </div>
     </div>
