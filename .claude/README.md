@@ -1,8 +1,24 @@
-# 📚 Documentación RAS v1.2 - Sistema de Administración de Propiedades
+# 📚 Documentación RAS v1.2 → Ohana - Sistema de Administración de Propiedades
 
-**Fecha última actualización:** 22 de Noviembre 2025
-**Sesión activa:** claude/fix-public-ads-error-011ZdAZ3o5AApCQAajtAdGAY
-**Estado del proyecto:** 🚨 **AUDITORÍA CRÍTICA COMPLETADA - ACCIÓN REQUERIDA**
+**Fecha última actualización:** 25 de Noviembre 2025
+**Sesión activa:** claude/calendar-integration-stage-1-01JfNSVHtw7mdNEiaMq7ZRm1
+**Estado del proyecto:** 🚀 **DEPLOYMENT EN PROGRESO - ohana.mx**
+
+---
+
+## 🚀 DEPLOYMENT EN PROGRESO
+
+**Estamos desplegando el sistema en producción con el dominio ohana.mx**
+
+📖 **Ver documentación completa:** [DEPLOYMENT_OHANA.md](./DEPLOYMENT_OHANA.md)
+
+**Resumen rápido:**
+- ✅ Dominio comprado: ohana.mx (GoDaddy)
+- ✅ Cuenta Vercel creada y repositorio conectado
+- 🟡 Configurando variables de entorno
+- ⏳ Pendiente: Deploy inicial + configuración DNS
+
+**Próximo paso:** Configurar variables de entorno en Vercel
 
 ---
 
