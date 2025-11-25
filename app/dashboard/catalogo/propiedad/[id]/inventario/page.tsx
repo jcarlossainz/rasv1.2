@@ -70,17 +70,26 @@ export default function InventarioPage() {
       // Cargar propiedad
       const { data: propertyData, error: propError } = await supabase
         .from('propiedades')
-        .select('id, nombre_propiedad, tipo_propiedad')
+        .select('id, nombre_propiedad, tipo_propiedad, espacios')
         .eq('id', propertyId)
         .single();
 
       if (propError) throw propError;
       setProperty(propertyData);
 
-      // NOTA: Las tablas property_spaces y property_inventory aún no existen
-      // Esta funcionalidad se implementará en una fase futura
-      setSpaces([]);
-      setInventory([]);
+      // Cargar inventario desde property_inventory
+      await loadInventory();
+
+      // Espacios: se extraen de la propiedad (JSONB espacios)
+      if (propertyData.espacios && Array.isArray(propertyData.espacios)) {
+        const spacesData = propertyData.espacios.map((esp: any) => ({
+          id: esp.id || esp.type,
+          nombre: esp.name || esp.type || 'Sin nombre'
+        }));
+        setSpaces(spacesData);
+      } else {
+        setSpaces([]);
+      }
 
     } catch (error: any) {
       logger.error('Error cargando datos:', error);
@@ -259,13 +268,30 @@ export default function InventarioPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-ras-crema via-white to-ras-crema">
-      <TopBar 
+      <TopBar
         title={`Inventario - ${property?.nombre || ''}`}
+        showHomeButton={true}
         showBackButton={true}
+        showAddButton={true}
         showUserInfo={true}
         userEmail={user?.email}
         onLogout={handleLogout}
       />
+
+      {/* Loading overlay durante análisis */}
+      {analyzing && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md mx-4">
+            <Loading />
+            <p className="text-center mt-4 text-gray-700 font-medium">
+              Analizando imágenes con Google Vision AI...
+            </p>
+            <p className="text-center mt-2 text-sm text-gray-500">
+              Esto puede tomar varios minutos
+            </p>
+          </div>
+        </div>
+      )}
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         {/* Barra de acción superior */}
@@ -338,11 +364,11 @@ export default function InventarioPage() {
             {/* Encabezados */}
             <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 px-6 py-3">
               <div className="grid grid-cols-12 gap-4 items-center text-sm font-semibold text-gray-600">
-                <div className="col-span-1">Imagen</div>
+                <div className="col-span-1"></div>
                 <div className="col-span-3">Objeto</div>
                 <div className="col-span-3">Etiquetas</div>
                 <div className="col-span-3">Espacio</div>
-                <div className="col-span-2 text-center">Acciones</div>
+                <div className="col-span-2 text-center"></div>
               </div>
             </div>
 

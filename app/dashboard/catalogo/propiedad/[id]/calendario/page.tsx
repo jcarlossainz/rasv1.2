@@ -95,13 +95,74 @@ export default function CalendarioPropiedadPage() {
     }
   }, [semanaActual, tickets])
 
+  // Función auxiliar para recargar solo eventos después de sincronización
+  const cargarEventos = async () => {
+    if (!propiedadId) return
+
+    try {
+      const hoy = new Date()
+      const fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)
+      const fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 3, 0)
+
+      const { data: eventosData, error: eventosError } = await supabase
+        .from('calendar_events')
+        .select('*')
+        .eq('propiedad_id', propiedadId)
+        .gte('fecha_inicio', fechaInicio.toISOString().split('T')[0])
+        .lte('fecha_fin', fechaFin.toISOString().split('T')[0])
+        .order('fecha_inicio', { ascending: true })
+
+      if (eventosError) {
+        console.error('Error cargando eventos:', eventosError)
+        return
+      }
+
+      const eventosTransformados = (eventosData || []).map(evento => ({
+        id: evento.id,
+        titulo: evento.titulo || `Reserva ${evento.origen}`,
+        fecha_inicio: evento.fecha_inicio,
+        fecha_fin: evento.fecha_fin,
+        origen: evento.origen,
+        estado: evento.estado,
+        reserva_id: evento.reserva_id,
+        notas: evento.notas
+      }))
+
+      setEventos(eventosTransformados)
+      console.log('✅ Eventos recargados después de sincronización')
+    } catch (error) {
+      console.error('Error recargando eventos:', error)
+    }
+  }
+
   const cargarDatos = useCallback(async () => {
     if (!propiedadId) return
 
     try {
       setLoading(true)
 
-      // Cargar propiedad
+      // 1. Sincronizar calendarios OTA en segundo plano (no bloqueante)
+      console.log('🔄 Iniciando sincronización de calendarios OTA...')
+      fetch('/api/calendar/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ propiedadId })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            console.log('✅ Calendarios sincronizados:', data.stats)
+            // Recargar eventos después de la sincronización
+            cargarEventos()
+          } else {
+            console.warn('⚠️ Sincronización completada con errores:', data.errors)
+          }
+        })
+        .catch(err => {
+          console.error('❌ Error en sincronización:', err)
+        })
+
+      // 2. Cargar propiedad
       const { data: propData, error: propError } = await supabase
         .from('propiedades')
         .select('id, nombre_propiedad, tipo_propiedad')
@@ -117,19 +178,25 @@ export default function CalendarioPropiedadPage() {
 
       setPropiedad(propData)
 
-      // Cargar TODOS los tickets de los próximos 3 meses para esta propiedad
+      // Cargar TODOS los tickets de los próximos 3 meses (de AMBAS tablas)
       const hoy = new Date()
       const fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)
       const fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 3, 0)
 
-      const { data: ticketsData, error: ticketsError } = await supabase
+      // 1. Cargar tickets manuales de la tabla 'tickets'
+      const { data: ticketsManuales, error: ticketsError } = await supabase
         .from('tickets')
         .select(`
-          *,
-          servicios_inmueble:servicio_id(
-            nombre,
-            tipo_servicio
-          )
+          id,
+          titulo,
+          fecha_programada,
+          monto_estimado,
+          pagado,
+          servicio_id,
+          tipo_ticket,
+          estado,
+          prioridad,
+          propiedad_id
         `)
         .eq('propiedad_id', propiedadId)
         .gte('fecha_programada', fechaInicio.toISOString().split('T')[0])
@@ -137,22 +204,43 @@ export default function CalendarioPropiedadPage() {
         .order('fecha_programada', { ascending: true })
 
       if (ticketsError) {
-        console.error('Error cargando tickets:', ticketsError)
-        toast.error('Error al cargar tickets')
-        return
+        console.error('Error cargando tickets manuales:', ticketsError)
       }
 
-      const ticketsTransformados = (ticketsData || []).map(ticket => {
-        const servicio = ticket.servicios_inmueble
+      // 2. Cargar pagos de servicios de la tabla 'fechas_pago_servicios'
+      const { data: pagosPendientes, error: pagosError } = await supabase
+        .from('fechas_pago_servicios')
+        .select(`
+          id,
+          fecha_pago,
+          monto_estimado,
+          pagado,
+          propiedad_id,
+          servicio_id,
+          servicios_inmueble (
+            nombre,
+            tipo_servicio
+          )
+        `)
+        .eq('propiedad_id', propiedadId)
+        .gte('fecha_pago', fechaInicio.toISOString().split('T')[0])
+        .lte('fecha_pago', fechaFin.toISOString().split('T')[0])
+        .order('fecha_pago', { ascending: true })
 
+      if (pagosError) {
+        console.error('Error cargando pagos de servicios:', pagosError)
+      }
+
+      // Transformar tickets manuales
+      const ticketsManualesTransformados = (ticketsManuales || []).map(ticket => {
         return {
           id: ticket.id,
-          titulo: servicio?.nombre || ticket.titulo || 'Ticket sin título',
+          titulo: ticket.titulo || 'Ticket sin título',
           fecha_programada: ticket.fecha_programada,
           monto_estimado: ticket.monto_estimado || 0,
           pagado: ticket.pagado || false,
           servicio_id: ticket.servicio_id,
-          tipo_ticket: ticket.tipo_ticket || 'servicio',
+          tipo_ticket: ticket.tipo_ticket || 'Manual',
           estado: ticket.estado || 'pendiente',
           prioridad: ticket.prioridad || 'media',
           propiedad_id: ticket.propiedad_id,
@@ -160,7 +248,34 @@ export default function CalendarioPropiedadPage() {
         }
       })
 
-      setTickets(ticketsTransformados)
+      // Transformar pagos de servicios
+      const ticketsServiciosTransformados = (pagosPendientes || []).map(pago => {
+        const servicio = pago.servicios_inmueble as { nombre?: string; tipo_servicio?: string } | null
+
+        return {
+          id: pago.id,
+          titulo: `Pago: ${servicio?.nombre || 'Servicio'}`,
+          fecha_programada: pago.fecha_pago,
+          monto_estimado: pago.monto_estimado || 0,
+          pagado: pago.pagado || false,
+          servicio_id: pago.servicio_id,
+          tipo_ticket: servicio?.tipo_servicio || 'Servicio',
+          estado: 'pendiente',
+          prioridad: 'media',
+          propiedad_id: pago.propiedad_id,
+          propiedad_nombre: propData.nombre_propiedad
+        }
+      })
+
+      // Combinar y ordenar todos los tickets
+      const todosLosTickets = [
+        ...ticketsManualesTransformados,
+        ...ticketsServiciosTransformados
+      ].sort((a, b) => {
+        return new Date(a.fecha_programada).getTime() - new Date(b.fecha_programada).getTime()
+      })
+
+      setTickets(todosLosTickets)
 
     } catch (error) {
       console.error('Error cargando datos:', error)
@@ -274,44 +389,6 @@ export default function CalendarioPropiedadPage() {
     router.push('/login')
   }, [router])
 
-  const getTipoIcon = (tipo: string) => {
-    const iconos: { [key: string]: JSX.Element } = {
-      agua: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-      luz: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-      gas: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-      internet: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" strokeLinecap="round"/>
-        </svg>
-      ),
-      mantenimiento: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-      seguridad: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      )
-    }
-
-    return iconos[tipo] || iconos.mantenimiento
-  }
-
   const nombreMes = mesActual.toLocaleDateString('es-MX', {
     month: 'long',
     year: 'numeric'
@@ -339,26 +416,6 @@ export default function CalendarioPropiedadPage() {
 
   const nombreSemana = getNombreSemana()
 
-  // Obtener tickets de la semana actual
-  const obtenerTicketsSemanaActual = () => {
-    const hoy = new Date()
-    const diaSemana = hoy.getDay()
-    const lunes = new Date(hoy)
-    lunes.setDate(hoy.getDate() - (diaSemana === 0 ? 6 : diaSemana - 1))
-    lunes.setHours(0, 0, 0, 0)
-
-    const domingo = new Date(lunes)
-    domingo.setDate(lunes.getDate() + 6)
-    domingo.setHours(23, 59, 59, 999)
-
-    return tickets.filter(ticket => {
-      const fecha = new Date(ticket.fecha_programada)
-      return fecha >= lunes && fecha <= domingo
-    })
-  }
-
-  const ticketsSemana = obtenerTicketsSemanaActual()
-
   if (loading || authLoading) {
     return <Loading message="Cargando calendario..." />
   }
@@ -367,6 +424,7 @@ export default function CalendarioPropiedadPage() {
     <div className="min-h-screen bg-gradient-to-br from-ras-crema via-white to-ras-crema">
       <TopBar
         title={`${propiedad?.nombre_propiedad || 'Propiedad'}`}
+        showHomeButton
         showBackButton
         showAddButton
         onBackClick={volverCatalogo}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, lazy, Suspense } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
@@ -8,12 +8,9 @@ import { useToast } from '@/hooks/useToast'
 import { useConfirm } from '@/components/ui/confirm-modal'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
-import CompartirPropiedad from '@/components/CompartirPropiedad'
 import { getPropertyImages } from '@/lib/supabase/supabase-storage'
 import type { PropertyImage } from '@/types/property'
-
-// ⚡ LAZY LOADING: Modal pesado solo se carga cuando se necesita
-const WizardModal = lazy(() => import('@/app/dashboard/catalogo/nueva/components/WizardModal'))
+import { calcularCapacidadPersonas } from '@/types/property'
 
 interface Espacio {
   id: string
@@ -52,7 +49,6 @@ interface PropiedadData {
   tipo_propiedad: string
   estados: string[]
   mobiliario: string
-  capacidad_personas: number | null
   tamano_terreno: number | null
   tamano_construccion: number | null
 
@@ -283,23 +279,22 @@ export default function HomePropiedad() {
   const toast = useToast()
   const confirm = useConfirm()
   const propiedadId = params?.id as string
-  
+
   const [loading, setLoading] = useState(true)
   const [propiedad, setPropiedad] = useState<PropiedadData | null>(null)
   const [user, setUser] = useState<any>(null)
+
+  // Calcular capacidad de personas dinámicamente desde los espacios
+  const capacidadPersonas = useMemo(() => {
+    if (!propiedad?.espacios) return null
+    return calcularCapacidadPersonas(propiedad.espacios)
+  }, [propiedad?.espacios])
 
   const [colaboradores, setColaboradores] = useState<Array<{
     id: string
     email: string
     pendiente: boolean
   }>>([])
-
-  // Estados para modales
-  const [showCompartir, setShowCompartir] = useState(false)
-  const [showDuplicarModal, setShowDuplicarModal] = useState(false)
-  const [showEditarModal, setShowEditarModal] = useState(false)
-  const [nombreDuplicado, setNombreDuplicado] = useState('')
-  const [duplicando, setDuplicando] = useState(false)
 
   useEffect(() => {
     checkUser()
@@ -461,82 +456,6 @@ export default function HomePropiedad() {
     router.push(`/dashboard/propiedad/${propiedadId}/cuentas`)
   }
 
-  const editarPropiedad = () => {
-    setShowEditarModal(true)
-  }
-
-  const duplicarPropiedad = async () => {
-    if (!nombreDuplicado.trim()) {
-      toast.error('Ingresa un nombre para la propiedad duplicada')
-      return
-    }
-
-    setDuplicando(true)
-
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-
-      if (!authUser) {
-        toast.error('Usuario no autenticado')
-        setDuplicando(false)
-        return
-      }
-
-      // Crear copia sin campos que no deben duplicarse
-      const { id, es_propio, created_at, updated_at, ...datosPropiedad } = propiedad!
-
-      const nuevaPropiedad = {
-        ...datosPropiedad,
-        nombre_propiedad: nombreDuplicado,
-        owner_id: authUser.id, // Asignar al usuario actual
-        wizard_completed: true,
-        is_draft: false
-      }
-
-      const { data, error } = await supabase
-        .from('propiedades')
-        .insert(nuevaPropiedad)
-        .select()
-        .single()
-
-      if (error) throw error
-
-      toast.success('Propiedad duplicada correctamente')
-      setShowDuplicarModal(false)
-      setNombreDuplicado('')
-      router.push(`/dashboard/catalogo/propiedad/${data.id}/home`)
-    } catch (error: any) {
-      logger.error('Error al duplicar propiedad:', error)
-      toast.error('Error al duplicar la propiedad')
-    } finally {
-      setDuplicando(false)
-    }
-  }
-
-  const eliminarPropiedad = async () => {
-    const confirmed = await confirm.danger(
-      `¿Eliminar "${propiedad?.nombre_propiedad}"?`,
-      'Esta acción NO se puede deshacer. Se eliminarán todos los datos, colaboradores, fotos, tickets y todo el historial.'
-    )
-
-    if (!confirmed) return
-
-    try {
-      const { error } = await supabase
-        .from('propiedades')
-        .delete()
-        .eq('id', propiedadId)
-
-      if (error) throw error
-
-      toast.success('Propiedad eliminada correctamente')
-      router.push('/dashboard/catalogo')
-    } catch (error: any) {
-      logger.error('Error al eliminar propiedad:', error)
-      toast.error('Error al eliminar la propiedad')
-    }
-  }
-
   if (loading) {
     return <Loading />
   }
@@ -561,7 +480,9 @@ export default function HomePropiedad() {
     <div className="min-h-screen bg-gray-50">
       <TopBar
         title={propiedad.nombre_propiedad}
+        showHomeButton={true}
         showBackButton={true}
+        showAddButton={true}
         showUserInfo={true}
         userEmail={user?.email}
         onLogout={handleLogout}
@@ -639,10 +560,10 @@ export default function HomePropiedad() {
                   </>
                 )}
                 
-                {propiedad.capacidad_personas && (
+                {capacidadPersonas && (
                   <div className="flex justify-between items-center py-2 border-b border-gray-100">
                     <span className="text-gray-600 font-medium">Capacidad:</span>
-                    <span className="text-gray-900 font-semibold">{propiedad.capacidad_personas} personas</span>
+                    <span className="text-gray-900 font-semibold">{capacidadPersonas} personas</span>
                   </div>
                 )}
                 
@@ -1057,134 +978,10 @@ export default function HomePropiedad() {
                 </div>
               </div>
             )}
-
-            {/* Botones de acción */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <button
-                  onClick={() => setShowCompartir(true)}
-                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center justify-center gap-2"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                  </svg>
-                  Compartir
-                </button>
-
-                <button
-                  onClick={editarPropiedad}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center gap-2"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  Editar
-                </button>
-
-                <button
-                  onClick={() => setShowDuplicarModal(true)}
-                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center justify-center gap-2"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-                  </svg>
-                  Duplicar
-                </button>
-              </div>
-
-              <button
-                onClick={eliminarPropiedad}
-                className="w-full mt-3 px-6 py-3 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-medium border-2 border-red-200 flex items-center justify-center gap-2"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="3 6 5 6 21 6"/>
-                  <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                  <line x1="10" y1="11" x2="10" y2="17"/>
-                  <line x1="14" y1="11" x2="14" y2="17"/>
-                </svg>
-                Eliminar propiedad
-              </button>
-            </div>
           </div>
 
         </div>
       </main>
-
-      {/* Modal Compartir */}
-      {showCompartir && (
-        <CompartirPropiedad
-          isOpen={showCompartir}
-          onClose={async () => {
-            setShowCompartir(false)
-            await cargarPropiedad() // ✅ Recargar colaboradores al cerrar
-          }}
-          propiedadId={propiedadId}
-          propiedadNombre={propiedad.nombre_propiedad}
-          userId={user.id}
-          esPropio={propiedad.es_propio}
-        />
-      )}
-
-      {/* Modal Duplicar */}
-      {showDuplicarModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Duplicar Propiedad</h3>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nombre de la nueva propiedad
-              </label>
-              <input
-                type="text"
-                value={nombreDuplicado}
-                onChange={(e) => setNombreDuplicado(e.target.value)}
-                placeholder={`Copia de ${propiedad.nombre_propiedad}`}
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowDuplicarModal(false)
-                  setNombreDuplicado('')
-                }}
-                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                disabled={duplicando}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={duplicarPropiedad}
-                disabled={duplicando || !nombreDuplicado.trim()}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {duplicando ? 'Duplicando...' : 'Duplicar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Editar - Wizard en modo edición */}
-      {showEditarModal && (
-        <Suspense fallback={<Loading />}>
-          <WizardModal
-            key={`edit-wizard-${propiedadId}`}
-            isOpen={showEditarModal}
-            onClose={() => setShowEditarModal(false)}
-            mode="edit"
-            propertyId={propiedadId}
-            onComplete={async (id) => {
-              setShowEditarModal(false)
-              toast.success('Propiedad actualizada correctamente')
-              await cargarPropiedad() // Recargar datos actualizados
-            }}
-          />
-        </Suspense>
-      )}
     </div>
   )
 }

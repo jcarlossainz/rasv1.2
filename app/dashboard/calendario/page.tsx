@@ -20,7 +20,6 @@ import { useLogout } from '@/hooks/useLogout'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
 import NuevoTicket from '@/app/dashboard/tickets/NuevoTicket'
-import { autoRegenerateTickets } from '@/lib/supabase/generate-service-tickets'
 
 interface Ticket {
   id: string
@@ -115,11 +114,7 @@ export default function CalendarioGlobalPage() {
 
   const cargarDatos = async (userId: string) => {
     try {
-      // 1. Primero regenerar tickets automáticamente para asegurar 1 año de cobertura
-      console.log('🔄 Regenerando tickets automáticamente...')
-      await autoRegenerateTickets(userId)
-
-      // 2. Cargar propiedades
+      // Cargar propiedades
       const { data: propsPropias } = await supabase
         .from('propiedades')
         .select('id, nombre_propiedad, owner_id')
@@ -130,7 +125,7 @@ export default function CalendarioGlobalPage() {
         .select('propiedad_id')
         .eq('user_id', userId)
 
-      let propsCompartidasData: any[] = []
+      let propsCompartidasData: Propiedad[] = []
       if (propsCompartidas && propsCompartidas.length > 0) {
         const ids = propsCompartidas.map(p => p.propiedad_id)
         const { data } = await supabase
@@ -166,20 +161,27 @@ export default function CalendarioGlobalPage() {
         return
       }
 
-      // Cargar TODOS los tickets del próximo año (automáticos + manuales)
+      // Cargar TODOS los tickets del próximo año (de AMBAS tablas)
       const hoy = new Date()
       const fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1) // Incluir mes anterior
       const fechaFin = new Date(hoy.getFullYear() + 1, hoy.getMonth(), hoy.getDate()) // Hasta 1 año adelante
 
       const propIds = todasPropiedades.map(p => p.id)
-      const { data: ticketsData, error: ticketsError } = await supabase
+
+      // 1. Cargar tickets manuales de la tabla 'tickets'
+      const { data: ticketsManuales, error: ticketsError } = await supabase
         .from('tickets')
         .select(`
-          *,
-          servicios_inmueble:servicio_id(
-            nombre,
-            tipo_servicio
-          )
+          id,
+          titulo,
+          fecha_programada,
+          monto_estimado,
+          pagado,
+          servicio_id,
+          tipo,
+          estado,
+          prioridad,
+          propiedad_id
         `)
         .in('propiedad_id', propIds)
         .gte('fecha_programada', fechaInicio.toISOString().split('T')[0])
@@ -188,28 +190,47 @@ export default function CalendarioGlobalPage() {
 
       if (ticketsError) {
         console.error('Error cargando tickets:', ticketsError)
-        toast.error('Error al cargar tickets')
-        return
       }
 
-      const ticketsTransformados = (ticketsData || []).map(ticket => {
+      // 2. Cargar pagos de servicios de la tabla 'fechas_pago_servicios'
+      const { data: pagosPendientes, error: pagosError } = await supabase
+        .from('fechas_pago_servicios')
+        .select(`
+          id,
+          fecha_pago,
+          monto_estimado,
+          pagado,
+          propiedad_id,
+          servicio_id,
+          servicios_inmueble (
+            nombre,
+            tipo_servicio
+          )
+        `)
+        .in('propiedad_id', propIds)
+        .gte('fecha_pago', fechaInicio.toISOString().split('T')[0])
+        .lte('fecha_pago', fechaFin.toISOString().split('T')[0])
+        .order('fecha_pago', { ascending: true })
+
+      if (pagosError) {
+        console.error('Error cargando pagos de servicios:', pagosError)
+      }
+
+      // Transformar tickets manuales
+      const ticketsManualesTransformados = (ticketsManuales || []).map(ticket => {
         const propiedad = todasPropiedades.find(p => p.id === ticket.propiedad_id)
         const propietario = propietariosUnicos.find(p => p.id === propiedad?.owner_id)
-        const servicio = ticket.servicios_inmueble
 
         return {
           id: ticket.id,
-          titulo: ticket.titulo || servicio?.nombre || 'Ticket sin título',
-          descripcion: ticket.descripcion,
+          titulo: ticket.titulo || 'Ticket sin título',
           fecha_programada: ticket.fecha_programada,
           monto_estimado: ticket.monto_estimado || 0,
-          monto_real: ticket.monto_real,
           pagado: ticket.pagado || false,
           servicio_id: ticket.servicio_id,
-          tipo_ticket: ticket.tipo || 'General',
+          tipo_ticket: ticket.tipo || 'Manual',
           estado: ticket.estado || 'pendiente',
           prioridad: ticket.prioridad || 'Media',
-          asignado_a: ticket.asignado_a,
           propiedad_id: ticket.propiedad_id,
           propiedad_nombre: propiedad?.nombre_propiedad || 'Sin nombre',
           propietario_id: propiedad?.owner_id || '',
@@ -217,7 +238,38 @@ export default function CalendarioGlobalPage() {
         }
       })
 
-      setTickets(ticketsTransformados)
+      // Transformar pagos de servicios
+      const ticketsServiciosTransformados = (pagosPendientes || []).map(pago => {
+        const propiedad = todasPropiedades.find(p => p.id === pago.propiedad_id)
+        const propietario = propietariosUnicos.find(p => p.id === propiedad?.owner_id)
+        const servicio = pago.servicios_inmueble as { nombre?: string; tipo_servicio?: string } | null
+
+        return {
+          id: pago.id,
+          titulo: `Pago: ${servicio?.nombre || 'Servicio'}`,
+          fecha_programada: pago.fecha_pago,
+          monto_estimado: pago.monto_estimado || 0,
+          pagado: pago.pagado || false,
+          servicio_id: pago.servicio_id,
+          tipo_ticket: servicio?.tipo_servicio || 'Servicio',
+          estado: 'pendiente',
+          prioridad: 'Media',
+          propiedad_id: pago.propiedad_id,
+          propiedad_nombre: propiedad?.nombre_propiedad || 'Sin nombre',
+          propietario_id: propiedad?.owner_id || '',
+          propietario_nombre: propietario?.nombre || 'Desconocido'
+        }
+      })
+
+      // Combinar y ordenar todos los tickets
+      const todosLosTickets = [
+        ...ticketsManualesTransformados,
+        ...ticketsServiciosTransformados
+      ].sort((a, b) => {
+        return new Date(a.fecha_programada).getTime() - new Date(b.fecha_programada).getTime()
+      })
+
+      setTickets(todosLosTickets)
 
     } catch (error) {
       console.error('Error cargando datos:', error)
@@ -355,44 +407,6 @@ export default function CalendarioGlobalPage() {
     setSemanaActual(nuevaFecha)
   }
 
-  const getTipoIcon = (tipo: string) => {
-    const iconos: { [key: string]: JSX.Element } = {
-      agua: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-      luz: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-      gas: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-      internet: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" strokeLinecap="round"/>
-        </svg>
-      ),
-      mantenimiento: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-      seguridad: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      )
-    }
-    
-    return iconos[tipo] || iconos.mantenimiento
-  }
-
   const nombreMes = mesActual.toLocaleDateString('es-MX', {
     month: 'long',
     year: 'numeric'
@@ -420,25 +434,11 @@ export default function CalendarioGlobalPage() {
 
   const nombreSemana = getNombreSemana()
 
-  // Obtener tickets de la semana actual
-  const obtenerTicketsSemanaActual = () => {
-    const hoy = new Date()
-    const diaSemana = hoy.getDay()
-    const lunes = new Date(hoy)
-    lunes.setDate(hoy.getDate() - (diaSemana === 0 ? 6 : diaSemana - 1))
-    lunes.setHours(0, 0, 0, 0)
-
-    const domingo = new Date(lunes)
-    domingo.setDate(lunes.getDate() + 6)
-    domingo.setHours(23, 59, 59, 999)
-
-    return ticketsFiltrados.filter(ticket => {
-      const fecha = new Date(ticket.fecha_programada)
-      return fecha >= lunes && fecha <= domingo
-    })
+  const handleLogout = async () => {
+    if (confirm('¿Estás seguro que deseas cerrar sesión?')) {
+      await logout()
+    }
   }
-
-  const ticketsSemana = obtenerTicketsSemanaActual()
 
   if (authLoading) {
     return <Loading message="Cargando calendario..." />
@@ -448,10 +448,14 @@ export default function CalendarioGlobalPage() {
     <div className="min-h-screen bg-gradient-to-br from-ras-crema via-white to-ras-crema">
       <TopBar
         title="Planificador"
+        showHomeButton
         showBackButton
         showAddButton
+        showUserInfo={true}
+        userEmail={user?.email}
         onBackClick={() => router.push('/dashboard')}
         onNuevoTicket={() => setShowNuevoTicketModal(true)}
+        onLogout={handleLogout}
       />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

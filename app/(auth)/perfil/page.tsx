@@ -5,16 +5,22 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 import { useLogout } from '@/hooks/useLogout'
+import { useToast } from '@/hooks/useToast'
+import { useDashboardConfig } from '@/hooks/useDashboardConfig'
 import TopBar from '@/components/ui/topbar'
 import Input from '@/components/ui/input'
 import Button from '@/components/ui/button'
 import Loading from '@/components/ui/loading'
 import Modal from '@/components/ui/modal'
+import { WidgetSelectorModal } from '@/components/dashboard'
+import type { WidgetId } from '@/types/dashboard'
 
 export default function PerfilPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
   const logout = useLogout()
+  const toast = useToast()
+  const { config, loading: configLoading, updateConfig } = useDashboardConfig()
   const [guardando, setGuardando] = useState(false)
 
   // Estados para el formulario de información personal
@@ -28,6 +34,9 @@ export default function PerfilPage() {
   const [passwordNueva, setPasswordNueva] = useState('')
   const [passwordConfirmar, setPasswordConfirmar] = useState('')
   const [cambiandoPassword, setCambiandoPassword] = useState(false)
+
+  // Estado para modal de selección de widgets
+  const [showWidgetSelector, setShowWidgetSelector] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -53,7 +62,6 @@ export default function PerfilPage() {
       if (error) throw error
 
       alert('✅ Información actualizada correctamente')
-      setUser({ ...user, full_name: nombre, telefono: telefono })
     } catch (err) {
       alert('Error: ' + (err as Error).message)
     } finally {
@@ -102,15 +110,30 @@ export default function PerfilPage() {
     }
   }
 
+  const handleSelectWidgets = async (newWidgets: WidgetId[]) => {
+    try {
+      await updateConfig({
+        visible_widgets: newWidgets,
+        widget_order: newWidgets,
+      })
+      toast.success('Widgets actualizados correctamente')
+    } catch (error) {
+      console.error('Error actualizando widgets:', error)
+      toast.error('Error al actualizar widgets')
+    }
+  }
+
   if (authLoading) {
     return <Loading message="Cargando perfil..." />
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-ras-crema via-white to-ras-crema">
-      <TopBar 
+      <TopBar
         title="Configuración"
+        showHomeButton={true}
         showBackButton={true}
+        showAddButton={true}
         showUserInfo={true}
         userEmail={user?.email}
         onLogout={handleLogout}
@@ -189,17 +212,33 @@ export default function PerfilPage() {
         </div>
 
         {/* Sección: Seguridad */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 mb-6">
           <h2 className="text-2xl font-bold font-poppins text-gray-800 mb-2">Seguridad</h2>
           <p className="text-sm text-gray-500 mb-6 font-roboto">
             Mantén tu cuenta segura actualizando tu contraseña regularmente.
           </p>
-          
+
           <Button
             onClick={() => setShowModalPassword(true)}
             variant="outline"
           >
             🔒 Cambiar Contraseña
+          </Button>
+        </div>
+
+        {/* Sección: Personalizar Dashboard */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
+          <h2 className="text-2xl font-bold font-poppins text-gray-800 mb-2">Personalizar Dashboard</h2>
+          <p className="text-sm text-gray-500 mb-6 font-roboto">
+            Elige hasta 4 widgets para mostrar en tu dashboard principal.
+          </p>
+
+          <Button
+            onClick={() => setShowWidgetSelector(true)}
+            variant="outline"
+            disabled={configLoading}
+          >
+            🎨 Seleccionar Widgets
           </Button>
         </div>
 
@@ -283,6 +322,16 @@ export default function PerfilPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Modal de Selección de Widgets */}
+      {config && (
+        <WidgetSelectorModal
+          isOpen={showWidgetSelector}
+          onClose={() => setShowWidgetSelector(false)}
+          currentWidgets={config.visible_widgets}
+          onSelectWidgets={handleSelectWidgets}
+        />
+      )}
     </div>
   )
 }

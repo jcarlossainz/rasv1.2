@@ -1,8 +1,55 @@
-# 📚 Documentación RAS v1.2 - Sistema de Cuentas e Ingresos
+# 📚 Documentación RAS v1.2 → Ohana - Sistema de Administración de Propiedades
 
-**Fecha última actualización:** 21 de Noviembre 2025
-**Sesión activa:** claude/check-branch-status-01KMoup97XyrQnjrFn7mv7Ea
-**Estado del proyecto:** Backend 100% | Frontend 30% | **En desarrollo activo**
+**Fecha última actualización:** 25 de Noviembre 2025
+**Sesión activa:** claude/calendar-integration-stage-1-01JfNSVHtw7mdNEiaMq7ZRm1
+**Estado del proyecto:** 🚀 **DEPLOYMENT EN PROGRESO - ohana.mx**
+
+---
+
+## 🚀 DEPLOYMENT EN PROGRESO
+
+**Estamos desplegando el sistema en producción con el dominio ohana.mx**
+
+📖 **Ver documentación completa:** [DEPLOYMENT_OHANA.md](./DEPLOYMENT_OHANA.md)
+
+**Resumen rápido:**
+- ✅ Dominio comprado: ohana.mx (GoDaddy)
+- ✅ Cuenta Vercel creada y repositorio conectado
+- 🟡 Configurando variables de entorno
+- ⏳ Pendiente: Deploy inicial + configuración DNS
+
+**Próximo paso:** Configurar variables de entorno en Vercel
+
+---
+
+## 🚨 ALERTA CRÍTICA - LEE PRIMERO
+
+Se ha completado una **auditoría de escalabilidad** que identifica **PROBLEMAS CRÍTICOS** que deben resolverse:
+
+### Problemas Críticos Detectados
+
+1. ⛔ **CRÍTICO**: `getPropertyImages()` sin límite - puede cargar 300k imágenes
+2. ⛔ **CRÍTICO**: Row Level Security (RLS) desactivado - riesgo de seguridad grave
+3. 🔴 **ALTO**: Sistema de tickets sin filtros de fecha - colapsará con 6M registros/año
+4. 🔴 **ALTO**: Paginación offset-based - lenta con millones de registros
+
+**📖 VER REPORTE COMPLETO:** `.claude/AUDITORIA_ESCALABILIDAD_2025-11-22.md`
+
+**SIN ESTOS CAMBIOS, EL SISTEMA COLAPSARÁ ALREDEDOR DE:**
+- ~500 propiedades
+- ~50,000 tickets
+- ~15,000 imágenes
+
+---
+
+## 📊 Números Objetivo vs Estado Actual
+
+| Métrica | Objetivo | Estado Actual | Viable |
+|---------|----------|---------------|--------|
+| **Usuarios** | 1,000 | ~10 | ⚠️ Requiere cambios |
+| **Propiedades** | 10,000 | ~5 | ⚠️ Requiere cambios |
+| **Imágenes** | 300,000 | ~50 | ❌ CRÍTICO - No viable |
+| **Tickets/año** | 6,000,000 | ~100 | ❌ CRÍTICO - No viable |
 
 ---
 

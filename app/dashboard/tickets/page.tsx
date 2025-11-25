@@ -19,6 +19,7 @@ import EmptyState from '@/components/ui/emptystate'
 
 import RegistrarPagoModal from '@/components/RegistrarPagoModal'
 import NuevoTicket from '@/app/dashboard/tickets/NuevoTicket'
+import TicketDetalles from '@/app/dashboard/tickets/TicketDetalles'
 
 interface Ticket {
   id: string
@@ -35,6 +36,7 @@ interface Ticket {
   propiedad_id: string
   propiedad_nombre: string
   dias_restantes: number
+  descripcion?: string | null
 }
 
 interface Propiedad {
@@ -72,6 +74,11 @@ export default function TicketsGlobalPage() {
 
   // Modal de Nuevo Ticket
   const [showNuevoTicketModal, setShowNuevoTicketModal] = useState(false)
+  const [ticketEditar, setTicketEditar] = useState<Ticket | null>(null)
+
+  // Modal de Detalles de Ticket
+  const [showDetallesModal, setShowDetallesModal] = useState(false)
+  const [ticketDetalles, setTicketDetalles] = useState<Ticket | null>(null)
 
   // Estados para paginación
   const [paginaActual, setPaginaActual] = useState(1)
@@ -115,7 +122,10 @@ export default function TicketsGlobalPage() {
       const todasPropiedades = [
         ...(propsPropias || []),
         ...propsCompartidasData
-      ]
+      ].map(p => ({
+        id: p.id,
+        nombre: p.nombre_propiedad  // Mapear nombre_propiedad a nombre
+      }))
       setPropiedades(todasPropiedades)
 
       if (todasPropiedades.length === 0) {
@@ -126,12 +136,17 @@ export default function TicketsGlobalPage() {
       // Cargar todos los tickets pendientes - SELECT ESPECÍFICO
       const propIds = todasPropiedades.map(p => p.id)
 
+      // Filtro de fecha: últimos 12 meses (para ver hasta 1 año de tickets)
+      const fechaInicio = new Date()
+      fechaInicio.setMonth(fechaInicio.getMonth() - 12)
+
       // 1. Cargar tickets manuales
       const { data: ticketsManuales, error: ticketsError } = await supabase
         .from('tickets')
         .select(`
           id,
           titulo,
+          descripcion,
           fecha_programada,
           monto_estimado,
           pagado,
@@ -145,6 +160,7 @@ export default function TicketsGlobalPage() {
         `)
         .in('propiedad_id', propIds)
         .eq('pagado', false)
+        .gte('fecha_programada', fechaInicio.toISOString()) // ← CRÍTICO: Filtro de fecha
         .order('fecha_programada', { ascending: true })
         .limit(200)
 
@@ -171,6 +187,7 @@ export default function TicketsGlobalPage() {
         `)
         .in('propiedad_id', propIds)
         .eq('pagado', false)
+        .gte('fecha_pago', fechaInicio.toISOString()) // ← CRÍTICO: Filtro de fecha
         .order('fecha_pago', { ascending: true })
         .limit(200)
 
@@ -186,6 +203,7 @@ export default function TicketsGlobalPage() {
         return {
           id: ticket.id,
           titulo: ticket.titulo,
+          descripcion: ticket.descripcion,
           fecha_programada: ticket.fecha_programada,
           monto_estimado: ticket.monto_estimado,
           pagado: ticket.pagado,
@@ -196,7 +214,7 @@ export default function TicketsGlobalPage() {
           responsable: ticket.responsable,
           proveedor: ticket.proveedor,
           propiedad_id: ticket.propiedad_id,
-          propiedad_nombre: propiedad?.nombre || 'Sin nombre',
+          propiedad_nombre: propiedad?.nombre_propiedad || 'Sin nombre',
           dias_restantes: diasRestantes
         }
       })
@@ -220,7 +238,7 @@ export default function TicketsGlobalPage() {
           responsable: servicio?.responsable,
           proveedor: servicio?.proveedor,
           propiedad_id: pago.propiedad_id,
-          propiedad_nombre: propiedad?.nombre || 'Sin nombre',
+          propiedad_nombre: propiedad?.nombre_propiedad || 'Sin nombre',
           dias_restantes: diasRestantes
         }
       })
@@ -324,6 +342,16 @@ export default function TicketsGlobalPage() {
     }
   }
 
+  const handleVerDetalles = (ticket: Ticket) => {
+    setTicketDetalles(ticket)
+    setShowDetallesModal(true)
+  }
+
+  const handleRegistrarPagoDirecto = () => {
+    setTicketSeleccionado(null) // Sin ticket preseleccionado
+    setShowPagoModal(true)
+  }
+
   const handleCompartir = async (ticket: Ticket) => {
     const texto = `
 📋 *Ticket: ${ticket.titulo}*
@@ -361,8 +389,9 @@ ${ticket.proveedor ? `🏢 Proveedor: ${ticket.proveedor}` : ''}
     if (ticket.servicio_id) {
       router.push(`/dashboard/propiedad/${ticket.propiedad_id}/servicios?edit=${ticket.servicio_id}`)
     } else {
-      // TODO: Abrir modal de edición de ticket manual
-      toast.info('Función de edición de tickets manuales en desarrollo')
+      // Abrir modal de edición con datos del ticket
+      setTicketEditar(ticket)
+      setShowNuevoTicketModal(true)
     }
   }
 
@@ -388,12 +417,14 @@ ${ticket.proveedor ? `🏢 Proveedor: ${ticket.proveedor}` : ''}
     <div className="min-h-screen bg-gradient-to-br from-ras-crema via-white to-ras-crema">
       <TopBar
         title="RAS v1.2 - Tickets"
+        showHomeButton
         showBackButton
         showAddButton
         showUserInfo={true}
         userEmail={user?.email}
         onBackClick={() => router.push('/dashboard')}
         onNuevoTicket={() => setShowNuevoTicketModal(true)}
+        onRegistrarPago={handleRegistrarPagoDirecto}
         onLogout={logout}
       />
 
@@ -522,9 +553,9 @@ ${ticket.proveedor ? `🏢 Proveedor: ${ticket.proveedor}` : ''}
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                               </svg>
                             </button>
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/propiedad/${ticket.propiedad_id}/tickets`) }} 
-                              className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 hover:scale-110 transition-all" 
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleVerDetalles(ticket) }}
+                              className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 hover:scale-110 transition-all"
                               title="Ver detalles"
                             >
                               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -663,13 +694,37 @@ ${ticket.proveedor ? `🏢 Proveedor: ${ticket.proveedor}` : ''}
         {/* Modal de Nuevo Ticket */}
         <NuevoTicket
           isOpen={showNuevoTicketModal}
-          onClose={() => setShowNuevoTicketModal(false)}
+          onClose={() => {
+            setShowNuevoTicketModal(false)
+            setTicketEditar(null) // Limpiar ticket de edición al cerrar
+          }}
           propiedades={propiedades}
           onTicketCreado={() => {
             if (user?.id) {
               cargarDatos(user.id)
             }
           }}
+          ticketExistente={ticketEditar ? {
+            id: ticketEditar.id,
+            propiedad_id: ticketEditar.propiedad_id,
+            tipo_ticket: ticketEditar.tipo_ticket,
+            titulo: ticketEditar.titulo,
+            descripcion: ticketEditar.descripcion || null,
+            fecha_programada: ticketEditar.fecha_programada,
+            monto_estimado: ticketEditar.monto_estimado,
+            prioridad: ticketEditar.prioridad,
+            estado: ticketEditar.estado,
+            responsable: ticketEditar.responsable,
+            proveedor: ticketEditar.proveedor
+          } : null}
+        />
+
+        {/* Modal de Detalles de Ticket */}
+        <TicketDetalles
+          isOpen={showDetallesModal}
+          onClose={() => { setShowDetallesModal(false); setTicketDetalles(null) }}
+          ticket={ticketDetalles}
+          onRegistrarPago={handleMarcarPagado}
         />
       </main>
     </div>

@@ -173,7 +173,8 @@ export async function getPropertyImages(propertyId: string) {
       .from('property_images')
       .select('*')
       .eq('property_id', propertyId)
-      .order('created_at', { ascending: true }); // Ordenar por fecha de creación en lugar de order_index
+      .order('created_at', { ascending: true })
+      .limit(50); // ← CRÍTICO: Limitar a 50 imágenes para evitar cargar 300k+ en memoria
 
     if (error) throw error;
     return data || [];

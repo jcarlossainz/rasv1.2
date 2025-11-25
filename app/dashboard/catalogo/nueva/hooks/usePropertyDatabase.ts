@@ -224,10 +224,12 @@ function transformDatabaseToForm(dbData: any): PropertyFormData {
     espacios: dbData.espacios || [],
 
     // STEP 4: Condicionales
+    // ✅ COMPATIBILIDAD: Lee primero del campo nuevo (precios JSONB),
+    // si está vacío, lee de los campos antiguos (deprecated) para propiedades antiguas
     precios: {
-      mensual: dbData.precios?.mensual || null,
-      noche: dbData.precios?.noche || null,
-      venta: dbData.precios?.venta || null
+      mensual: dbData.precios?.mensual || dbData.costo_renta_mensual || null,
+      noche: dbData.precios?.noche || dbData.precio_noche || null,
+      venta: dbData.precios?.venta || dbData.precio_venta_number || (typeof dbData.precio_venta === 'number' ? dbData.precio_venta : null)
     },
 
     inquilinos_email: dbData.inquilinos_email || [],

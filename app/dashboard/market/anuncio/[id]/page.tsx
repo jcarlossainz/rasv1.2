@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import Loading from '@/components/ui/loading'
+import { calcularCapacidadPersonas } from '@/types/property'
 
 interface PropiedadData {
   id: string
@@ -11,7 +12,6 @@ interface PropiedadData {
   tipo_propiedad: string
   estados: string[]
   mobiliario: string
-  capacidad_personas: number | null
   tamano_terreno: number | null
   tamano_terreno_unit: string | null
   tamano_construccion: number | null
@@ -46,11 +46,17 @@ interface Contacto {
 export default function AnuncioPublico() {
   const params = useParams()
   const propiedadId = params?.id as string
-  
+
   const [loading, setLoading] = useState(true)
   const [propiedad, setPropiedad] = useState<PropiedadData | null>(null)
   const [propietario, setPropietario] = useState<Contacto | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // Calcular capacidad de personas dinámicamente desde los espacios
+  const capacidadPersonas = useMemo(() => {
+    if (!propiedad?.espacios) return null
+    return calcularCapacidadPersonas(propiedad.espacios)
+  }, [propiedad?.espacios])
 
   useEffect(() => {
     cargarPropiedad()
@@ -339,7 +345,7 @@ export default function AnuncioPublico() {
                   <p className="font-bold text-gray-900">{propiedad.mobiliario}</p>
                 </div>
                 
-                {propiedad.capacidad_personas && (
+                {capacidadPersonas && (
                   <div className="p-4 bg-green-50 rounded-xl border border-green-200">
                     <div className="flex items-center gap-2 mb-2">
                       <svg className="w-5 h-5 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -350,7 +356,7 @@ export default function AnuncioPublico() {
                       </svg>
                       <span className="text-xs text-green-700 font-medium">Capacidad</span>
                     </div>
-                    <p className="font-bold text-gray-900">{propiedad.capacidad_personas} personas</p>
+                    <p className="font-bold text-gray-900">{capacidadPersonas} personas</p>
                   </div>
                 )}
                 

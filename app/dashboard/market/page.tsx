@@ -20,10 +20,14 @@ interface Propiedad {
   tipo_propiedad: string
   estados: string[]
   codigo_postal: string | null
-  costo_renta_mensual: number | null
-  precio_noche: number | null
-  precio_venta: number | null
+  precios: {
+    mensual?: number | null
+    noche?: number | null
+    venta?: number | null
+  } | null
   estado_anuncio: 'borrador' | 'publicado' | 'pausado' | null
+  anuncio_titulo: string | null
+  anuncio_tagline: string | null
   created_at: string
   es_propio: boolean
   foto_portada?: string | null
@@ -145,7 +149,7 @@ export default function MarketPage() {
   }
 
   const abrirAnuncio = (propiedadId: string) => {
-    router.push(`/dashboard/anuncio/${propiedadId}`)
+    router.push(`/dashboard/catalogo/propiedad/${propiedadId}/anuncio`)
   }
 
   const handleLogout = async () => {
@@ -163,6 +167,35 @@ export default function MarketPage() {
       logger.error('Error al cerrar sesión:', error)
       toast.error('Error al cerrar sesión')
     }
+  }
+
+  // Helper functions - DEBEN estar ANTES del useMemo
+  const getOperacionTipo = (prop: Propiedad): string[] => {
+    const tipos: string[] = []
+    if (prop.precios?.venta) tipos.push('venta')
+    if (prop.precios?.mensual) tipos.push('renta')
+    if (prop.precios?.noche) tipos.push('vacacional')
+    return tipos
+  }
+
+  const getOperacionLabel = (prop: Propiedad): string => {
+    if (prop.precios?.noche) return 'Renta Vacacional'
+    if (prop.precios?.mensual) return 'Renta Largo Plazo'
+    if (prop.precios?.venta) return 'Venta'
+    return 'Sin modalidad'
+  }
+
+  const getPrecioDisplay = (prop: Propiedad) => {
+    if (prop.precios?.venta) {
+      return { monto: `$${prop.precios.venta.toLocaleString('es-MX')}`, periodo: '' }
+    }
+    if (prop.precios?.mensual) {
+      return { monto: `$${prop.precios.mensual.toLocaleString('es-MX')}`, periodo: '/ mes' }
+    }
+    if (prop.precios?.noche) {
+      return { monto: `$${prop.precios.noche.toLocaleString('es-MX')}`, periodo: '/ noche' }
+    }
+    return { monto: 'Sin precio', periodo: '' }
   }
 
   // Filtrar propiedades con useMemo para optimización
@@ -203,45 +236,18 @@ export default function MarketPage() {
     setPaginaActual(1)
   }, [busqueda, filtroEstado, filtroOperacion])
 
-  const getOperacionTipo = (prop: Propiedad): string[] => {
-    const tipos: string[] = []
-    if (prop.precio_venta) tipos.push('venta')
-    if (prop.costo_renta_mensual) tipos.push('renta')
-    if (prop.precio_noche) tipos.push('vacacional')
-    return tipos
-  }
-
-  const getOperacionLabel = (prop: Propiedad): string => {
-    if (prop.precio_noche) return 'Renta Vacacional'
-    if (prop.costo_renta_mensual) return 'Renta Largo Plazo'
-    if (prop.precio_venta) return 'Venta'
-    return 'Sin modalidad'
-  }
-
-  const getPrecioDisplay = (prop: Propiedad) => {
-    if (prop.precio_venta) {
-      return { monto: `$${prop.precio_venta.toLocaleString('es-MX')}`, periodo: '' }
-    }
-    if (prop.costo_renta_mensual) {
-      return { monto: `$${prop.costo_renta_mensual.toLocaleString('es-MX')}`, periodo: '/ mes' }
-    }
-    if (prop.precio_noche) {
-      return { monto: `USD ${prop.precio_noche.toFixed(2)}`, periodo: '/ noche' }
-    }
-    return { monto: 'Sin precio', periodo: '' }
-  }
-
   if (authLoading) {
     return <Loading message="Cargando anuncios..." />
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-ras-crema via-white to-ras-crema">
-      <TopBar 
+      <TopBar
         title="Market - Anuncios"
         onClick={() => router.push('/dashboard/market')}
+        showHomeButton={true}
         showBackButton={true}
-        showAddButton={false}
+        showAddButton={true}
         showUserInfo={true}
         userEmail={user?.email}
         onLogout={handleLogout}
@@ -329,11 +335,19 @@ export default function MarketPage() {
                       </div>
                     )}
                     
-                    {/* Badge Activo/Inactivo */}
-                    <div className="absolute top-3 right-3">
+                    {/* Badges */}
+                    <div className="absolute top-3 right-3 flex flex-col gap-2 items-end">
+                      {/* Badge Premium */}
+                      {(prop.anuncio_titulo || prop.anuncio_tagline) && (
+                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-ras-turquesa to-ras-azul text-white backdrop-blur-sm shadow-lg">
+                          ✨ PREMIUM
+                        </span>
+                      )}
+
+                      {/* Badge Activo/Inactivo */}
                       <span className={`px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm ${
-                        isActivo 
-                          ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' 
+                        isActivo
+                          ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
                           : 'bg-gray-200/90 text-gray-700'
                       }`}>
                         {isActivo ? 'Activo' : 'Inactivo'}
@@ -344,13 +358,20 @@ export default function MarketPage() {
                   {/* Contenido */}
                   <div className="p-4">
                     {/* Título */}
-                    <h3 
+                    <h3
                       onClick={() => abrirAnuncio(prop.id)}
                       className="text-lg font-bold text-gray-900 mb-1 cursor-pointer hover:text-ras-azul line-clamp-1"
                     >
-                      {prop.nombre}
+                      {prop.anuncio_titulo || prop.nombre}
                     </h3>
-                    
+
+                    {/* Tagline o Ubicación */}
+                    {prop.anuncio_tagline ? (
+                      <p className="text-sm text-gray-600 mb-2 line-clamp-2 italic">
+                        {prop.anuncio_tagline}
+                      </p>
+                    ) : null}
+
                     {/* Ubicación y código */}
                     <p className="text-xs text-gray-500 mb-3">
                       {prop.id.slice(0, 11).toUpperCase()} • {prop.estados?.[0] || 'Sin ubicación'}

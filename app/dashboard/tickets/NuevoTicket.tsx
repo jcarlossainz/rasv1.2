@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/useToast';
 
@@ -10,6 +10,19 @@ interface NuevoTicketProps {
   propiedadId?: string;
   propiedades: { id: string; nombre: string }[];
   onTicketCreado?: () => void;
+  ticketExistente?: {
+    id: string;
+    propiedad_id: string;
+    tipo_ticket: string;
+    titulo: string;
+    descripcion: string | null;
+    fecha_programada: string;
+    monto_estimado: number | null;
+    prioridad: string;
+    estado: string;
+    responsable: string | null;
+    proveedor: string | null;
+  } | null;
 }
 
 export default function NuevoTicket({
@@ -17,7 +30,8 @@ export default function NuevoTicket({
   onClose,
   propiedadId,
   propiedades,
-  onTicketCreado
+  onTicketCreado,
+  ticketExistente
 }: NuevoTicketProps) {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
@@ -57,6 +71,38 @@ export default function NuevoTicket({
     { value: 'urgente', label: 'Urgente', color: 'bg-red-100 text-red-700 border-red-300' }
   ];
 
+  // Cargar datos del ticket existente si es edición
+  useEffect(() => {
+    if (ticketExistente) {
+      setFormData({
+        propiedad_id: ticketExistente.propiedad_id,
+        tipo_ticket: ticketExistente.tipo_ticket,
+        titulo: ticketExistente.titulo,
+        descripcion: ticketExistente.descripcion || '',
+        fecha_pago: ticketExistente.fecha_programada,
+        monto_estimado: ticketExistente.monto_estimado?.toString() || '',
+        prioridad: ticketExistente.prioridad,
+        estado: ticketExistente.estado,
+        responsable: ticketExistente.responsable || '',
+        proveedor: ticketExistente.proveedor || ''
+      });
+    } else {
+      // Resetear formulario si no hay ticket existente
+      setFormData({
+        propiedad_id: propiedadId || '',
+        tipo_ticket: 'compra',
+        titulo: '',
+        descripcion: '',
+        fecha_pago: '',
+        monto_estimado: '',
+        prioridad: 'media',
+        estado: 'pendiente',
+        responsable: '',
+        proveedor: ''
+      });
+    }
+  }, [ticketExistente, propiedadId]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const nuevosArchivos = Array.from(e.target.files);
@@ -73,31 +119,44 @@ export default function NuevoTicket({
     setLoading(true);
 
     try {
-      const { error } = await supabase
-        .from('tickets')
-        .insert({
-          propiedad_id: formData.propiedad_id,
-          servicio_id: null, // NULL para tickets manuales
-          tipo_ticket: formData.tipo_ticket,
-          titulo: formData.titulo,
-          descripcion: formData.descripcion || null,
-          fecha_programada: formData.fecha_pago,
-          monto_estimado: formData.monto_estimado ? parseFloat(formData.monto_estimado) : null,
-          prioridad: formData.prioridad,
-          estado: formData.estado,
-          responsable: formData.responsable || null,
-          proveedor: formData.proveedor || null,
-          pagado: false,
-          tiene_factura: false
-        });
+      const ticketData = {
+        propiedad_id: formData.propiedad_id,
+        tipo_ticket: formData.tipo_ticket,
+        titulo: formData.titulo,
+        descripcion: formData.descripcion || null,
+        fecha_programada: formData.fecha_pago,
+        monto_estimado: formData.monto_estimado ? parseFloat(formData.monto_estimado) : null,
+        prioridad: formData.prioridad,
+        estado: formData.estado,
+        responsable: formData.responsable || null,
+        proveedor: formData.proveedor || null
+      };
 
-      if (error) throw error;
+      if (ticketExistente) {
+        // Actualizar ticket existente
+        const { error } = await supabase
+          .from('tickets')
+          .update(ticketData)
+          .eq('id', ticketExistente.id);
+
+        if (error) throw error;
+        toast.success('✅ Ticket actualizado exitosamente');
+      } else {
+        // Crear nuevo ticket
+        const { error } = await supabase
+          .from('tickets')
+          .insert({
+            ...ticketData,
+            servicio_id: null, // NULL para tickets manuales
+            pagado: false
+          });
+
+        if (error) throw error;
+        toast.success('✅ Ticket creado exitosamente');
+      }
 
       // TODO: Subir archivos a Supabase Storage si hay archivos seleccionados
       // Implementar después de crear el bucket en Supabase Storage
-
-      // Notificar éxito
-      toast.success('✅ Ticket creado exitosamente');
 
       // Resetear form
       setFormData({
@@ -117,8 +176,8 @@ export default function NuevoTicket({
       onTicketCreado?.();
       onClose();
     } catch (error) {
-      console.error('Error al crear ticket:', error);
-      toast.error('❌ Error al crear el ticket. Por favor intenta de nuevo.');
+      console.error('Error al guardar ticket:', error);
+      toast.error(`❌ Error al ${ticketExistente ? 'actualizar' : 'crear'} el ticket. Por favor intenta de nuevo.`);
     } finally {
       setLoading(false);
     }
@@ -137,7 +196,7 @@ export default function NuevoTicket({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold font-poppins">Nuevo Ticket</h2>
+            <h2 className="text-xl font-bold font-poppins">{ticketExistente ? 'Editar Ticket' : 'Nuevo Ticket'}</h2>
           </div>
           <button
             onClick={onClose}
@@ -161,12 +220,12 @@ export default function NuevoTicket({
               <select
                 value={formData.propiedad_id}
                 onChange={(e) => setFormData({ ...formData, propiedad_id: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ras-turquesa focus:border-transparent font-medium"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ras-turquesa focus:border-transparent font-medium text-gray-900 bg-white"
                 required
               >
-                <option value="">Selecciona una propiedad</option>
+                <option value="" className="text-gray-500">Selecciona una propiedad</option>
                 {propiedades.map((prop) => (
-                  <option key={prop.id} value={prop.id}>
+                  <option key={prop.id} value={prop.id} className="text-gray-900">
                     {prop.nombre}
                   </option>
                 ))}
@@ -278,11 +337,11 @@ export default function NuevoTicket({
               <select
                 value={formData.responsable}
                 onChange={(e) => setFormData({ ...formData, responsable: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ras-turquesa focus:border-transparent font-medium"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ras-turquesa focus:border-transparent font-medium text-gray-900 bg-white"
               >
-                <option value="">Seleccionar responsable</option>
+                <option value="" className="text-gray-500">Seleccionar responsable</option>
                 {responsables.map((resp) => (
-                  <option key={resp.value} value={resp.value}>
+                  <option key={resp.value} value={resp.value} className="text-gray-900">
                     {resp.label}
                   </option>
                 ))}
@@ -400,7 +459,7 @@ export default function NuevoTicket({
               disabled={loading}
               className="flex-1 px-6 py-3 bg-gradient-to-r from-ras-azul to-ras-turquesa text-white rounded-xl hover:shadow-xl transition-all disabled:opacity-50 font-bold"
             >
-              {loading ? 'Creando...' : 'Crear Ticket'}
+              {loading ? (ticketExistente ? 'Actualizando...' : 'Creando...') : (ticketExistente ? 'Actualizar Ticket' : 'Crear Ticket')}
             </button>
           </div>
         </form>

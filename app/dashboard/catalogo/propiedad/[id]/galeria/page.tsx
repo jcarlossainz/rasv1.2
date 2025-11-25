@@ -376,7 +376,9 @@ export default function GaleriaPage() {
     <div className="min-h-screen bg-gray-50">
       <TopBar
         title={`Galería - ${property?.nombre_propiedad || 'Propiedad'}`}
+        showHomeButton={true}
         showBackButton={true}
+        showAddButton={true}
         onBackClick={volverCatalogo}
         showUserInfo={true}
         userEmail={user?.email}
