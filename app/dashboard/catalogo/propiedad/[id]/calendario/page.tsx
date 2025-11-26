@@ -181,7 +181,6 @@ export default function CalendarioPropiedadPage() {
       }))
 
       setEventos(eventosTransformados)
-      console.log('✅ Eventos cargados:', eventosTransformados.length)
     } catch (error) {
       console.error('Error recargando eventos:', error)
     }
@@ -194,7 +193,6 @@ export default function CalendarioPropiedadPage() {
       setLoading(true)
 
       // 1. Sincronizar calendarios OTA en segundo plano (no bloqueante)
-      console.log('🔄 Iniciando sincronización de calendarios OTA...')
       fetch('/api/calendar/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -203,16 +201,11 @@ export default function CalendarioPropiedadPage() {
         .then(res => res.json())
         .then(data => {
           if (data.success) {
-            console.log('✅ Calendarios sincronizados:', data.stats)
             // Recargar eventos después de la sincronización
             cargarEventos()
-          } else {
-            console.warn('⚠️ Sincronización completada con errores:', data.errors)
           }
         })
-        .catch(err => {
-          console.error('❌ Error en sincronización:', err)
-        })
+        .catch(() => {})
 
       // 2. Cargar propiedad
       const { data: propData, error: propError } = await supabase

@@ -191,7 +191,6 @@ export default function DirectorioPage() {
       }
     }))
 
-    console.log('Colaboradores cargados:', colaboradoresConDatos)
     setColaboradores(colaboradoresConDatos)
   }
 

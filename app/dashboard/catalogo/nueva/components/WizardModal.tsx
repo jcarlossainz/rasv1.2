@@ -50,8 +50,6 @@ export default function WizardModal({
   };
 
   const handleComplete = async (propertyId: string) => {
-    console.log('✅ Propiedad completada:', propertyId);
-    
     // Llamar callback antes de cerrar
     if (onComplete) {
       try {

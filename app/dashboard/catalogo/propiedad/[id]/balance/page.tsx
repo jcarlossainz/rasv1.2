@@ -430,10 +430,7 @@ export default function BalancePropiedadPage() {
           <GestionCuentas
             propiedadId={propiedadId}
             propiedadNombre={propiedad?.nombre_propiedad || 'Propiedad'}
-            onCuentaSeleccionada={(cuenta) => {
-              // Opcional: hacer algo cuando se selecciona una cuenta
-              console.log('Cuenta seleccionada:', cuenta)
-            }}
+            onCuentaSeleccionada={() => {}}
           />
         </div>
 

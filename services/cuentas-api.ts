@@ -187,11 +187,6 @@ export async function registrarMovimientoYActualizarSaldo(
     ? cuenta.saldo_actual + monto
     : cuenta.saldo_actual - monto
 
-  console.log(`💰 Actualizando saldo de cuenta ${cuentaId}:`)
-  console.log(`   Saldo anterior: $${cuenta.saldo_actual.toFixed(2)}`)
-  console.log(`   Movimiento: ${tipo === 'ingreso' ? '+' : '-'}$${monto.toFixed(2)}`)
-  console.log(`   Nuevo saldo: $${nuevoSaldo.toFixed(2)}`)
-
   // Actualizar el saldo
   const { data, error } = await supabase
     .from('cuentas')
@@ -204,8 +199,6 @@ export async function registrarMovimientoYActualizarSaldo(
     .single()
 
   if (error) throw error
-
-  console.log(`✅ Saldo actualizado correctamente`)
   return data
 }
 

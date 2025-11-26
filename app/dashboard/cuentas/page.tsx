@@ -180,8 +180,6 @@ export default function CuentasGlobalPage() {
         }
       })
 
-      console.log('📊 Movimientos CONCRETADOS cargados:', movimientosEgresos.length)
-
       // TODO: Aquí agregarás los INGRESOS cuando estén en la BD
       const movimientosIngresos: Movimiento[] = []
 
@@ -419,17 +417,6 @@ export default function CuentasGlobalPage() {
     }
     
     return dentroDelRango
-  })
-
-  // Debug del comparativo
-  console.log('🔍 COMPARATIVO DEBUG:', {
-    fechaDesde,
-    fechaHasta,
-    totalMovimientos: movimientos.length,
-    movimientosEnRango: movimientosRangoPersonalizado.length,
-    propiedadComparativo,
-    primeraFecha: movimientos[0]?.fecha,
-    ultimaFecha: movimientos[movimientos.length - 1]?.fecha
   })
 
   const statsRangoPersonalizado = {

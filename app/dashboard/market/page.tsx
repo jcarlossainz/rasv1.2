@@ -119,9 +119,6 @@ export default function MarketPage() {
     todasPropiedades.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
     setPropiedades(todasPropiedades)
-
-    // ✅ Log de optimización
-    console.log(`✅ Market cargado con ${todasPropiedades.length} propiedades usando solo 3 queries (antes: ${todasPropiedades.length + 3})`)
   }
 
   const toggleEstadoAnuncio = async (propiedadId: string, estadoActual: string | null) => {

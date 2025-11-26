@@ -70,8 +70,6 @@ export default function WizardContainer({
       hasLoadedRef.current = true;
 
       const loadData = async () => {
-        console.log(`📖 Cargando propiedad en modo edición: ${initialPropertyId}`);
-
         const result = await loadProperty(initialPropertyId);
 
         if (result.success && result.data) {
@@ -114,8 +112,6 @@ export default function WizardContainer({
   // ============================================================================
   
   const handleSave = useCallback(async (): Promise<boolean> => {
-    console.log('💾 Guardando propiedad...');
-    
     // Actualizar wizard_step antes de guardar
     const dataToSave: PropertyFormData = {
       ...formData,
@@ -130,7 +126,6 @@ export default function WizardContainer({
       // Si es la primera vez que se guarda, guardar el ID
       if (!propertyId && result.propertyId) {
         setPropertyId(result.propertyId);
-        console.log(`✅ Propiedad creada con ID: ${result.propertyId}`);
       }
       
       toast.success('✅ Cambios guardados correctamente');
