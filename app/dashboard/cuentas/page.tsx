@@ -15,7 +15,7 @@ import { useLogout } from '@/hooks/useLogout'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
 import EmptyState from '@/components/ui/emptystate'
-import { obtenerTodasLasCuentas, crearCuenta } from '@/services/cuentas-api'
+import { obtenerTodasLasCuentas, crearCuenta, actualizarCuenta, eliminarCuenta } from '@/services/cuentas-api'
 import type { CuentaBancaria, NuevaCuentaBancaria } from '@/types/property'
 
 interface Movimiento {
@@ -55,6 +55,9 @@ export default function CuentasGlobalPage() {
   const [descripcion, setDescripcion] = useState('')
   const [color, setColor] = useState('#3B82F6')
   const [guardandoCuenta, setGuardandoCuenta] = useState(false)
+  const [cuentaEditando, setCuentaEditando] = useState<CuentaBancaria | null>(null)
+  const [cuentaAEliminar, setCuentaAEliminar] = useState<CuentaBancaria | null>(null)
+  const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false)
 
   // Filtros
   const [busqueda, setBusqueda] = useState('')
@@ -205,6 +208,7 @@ export default function CuentasGlobalPage() {
   }
 
   const abrirModalNuevaCuenta = () => {
+    setCuentaEditando(null)
     setNombreCuenta('')
     setPropiedadCuenta('')
     setTipoMoneda('MXN')
@@ -217,13 +221,48 @@ export default function CuentasGlobalPage() {
     setMostrarModalCuenta(true)
   }
 
+  const abrirModalEditarCuenta = (cuenta: CuentaBancaria) => {
+    setCuentaEditando(cuenta)
+    setNombreCuenta(cuenta.nombre_cuenta)
+    setPropiedadCuenta('') // No se puede cambiar la propiedad al editar
+    setTipoMoneda(cuenta.moneda)
+    setTipoCuenta(cuenta.tipo_cuenta)
+    setBanco(cuenta.banco || '')
+    setNumeroCuenta(cuenta.numero_cuenta || '')
+    setBalanceInicial(cuenta.saldo_inicial?.toString() || '0')
+    setDescripcion(cuenta.descripcion || '')
+    setColor('#3B82F6') // Color fijo ya que no está en la BD
+    setMostrarModalCuenta(true)
+  }
+
+  const abrirModalEliminar = (cuenta: CuentaBancaria) => {
+    setCuentaAEliminar(cuenta)
+    setMostrarModalEliminar(true)
+  }
+
+  const handleConfirmarEliminar = async () => {
+    if (!cuentaAEliminar) return
+
+    try {
+      await eliminarCuenta(cuentaAEliminar.id)
+      toast.success('Cuenta eliminada correctamente')
+      await cargarCuentas()
+      setMostrarModalEliminar(false)
+      setCuentaAEliminar(null)
+    } catch (error: any) {
+      console.error('Error eliminando cuenta:', error)
+      toast.error(error.message || 'Error al eliminar la cuenta')
+    }
+  }
+
   const handleGuardarCuenta = async () => {
     if (!nombreCuenta.trim()) {
       toast.error('El nombre de la cuenta es obligatorio')
       return
     }
 
-    if (!propiedadCuenta) {
+    // Solo requerir propiedad si es cuenta nueva
+    if (!cuentaEditando && !propiedadCuenta) {
       toast.error('Debes seleccionar una propiedad')
       return
     }
@@ -247,13 +286,19 @@ export default function CuentasGlobalPage() {
         propiedades_ids: propiedadCuenta ? [propiedadCuenta] : undefined
       }
 
-      await crearCuenta(cuentaData)
+      if (cuentaEditando) {
+        await actualizarCuenta(cuentaEditando.id, cuentaData)
+        toast.success('Cuenta actualizada correctamente')
+      } else {
+        await crearCuenta(cuentaData)
+        toast.success('Cuenta creada exitosamente')
+      }
+
       await cargarCuentas()
       setMostrarModalCuenta(false)
-      toast.success('Cuenta creada exitosamente')
     } catch (error: any) {
       console.error('Error guardando cuenta:', error)
-      toast.error(error.message || 'Error al crear la cuenta')
+      toast.error(error.message || 'Error al guardar la cuenta')
     } finally {
       setGuardandoCuenta(false)
     }
@@ -619,9 +664,29 @@ export default function CuentasGlobalPage() {
                     <div className="flex items-center gap-2">
                       <div
                         className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: cuenta.color || '#3B82F6' }}
+                        style={{ backgroundColor: '#3B82F6' }}
                       />
-                      <h4 className="font-semibold text-gray-900">{cuenta.nombre}</h4>
+                      <h4 className="font-semibold text-gray-900">{cuenta.nombre_cuenta}</h4>
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => abrirModalEditarCuenta(cuenta)}
+                        className="p-1 text-gray-400 hover:text-ras-azul transition-colors"
+                        title="Editar"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => abrirModalEliminar(cuenta)}
+                        className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                        title="Eliminar"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
 
@@ -1145,13 +1210,15 @@ export default function CuentasGlobalPage() {
           />
         )}
 
-        {/* Modal para crear cuenta */}
+        {/* Modal para crear/editar cuenta */}
         {mostrarModalCuenta && (
           <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
               {/* Header */}
               <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Nueva Cuenta</h2>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {cuentaEditando ? 'Editar Cuenta' : 'Nueva Cuenta'}
+                </h2>
                 <button
                   onClick={() => setMostrarModalCuenta(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -1179,22 +1246,24 @@ export default function CuentasGlobalPage() {
                   />
                 </div>
 
-                {/* Propiedad (dropdown obligatorio) */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Propiedad <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={propiedadCuenta}
-                    onChange={(e) => setPropiedadCuenta(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ras-turquesa"
-                  >
-                    <option value="">Seleccionar propiedad...</option>
-                    {propiedades.map(prop => (
-                      <option key={prop.id} value={prop.id}>{prop.nombre}</option>
-                    ))}
-                  </select>
-                </div>
+                {/* Propiedad (dropdown obligatorio - solo para nueva cuenta) */}
+                {!cuentaEditando && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Propiedad <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={propiedadCuenta}
+                      onChange={(e) => setPropiedadCuenta(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ras-turquesa"
+                    >
+                      <option value="">Seleccionar propiedad...</option>
+                      {propiedades.map(prop => (
+                        <option key={prop.id} value={prop.id}>{prop.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* Tipo de cuenta y moneda */}
                 <div className="grid grid-cols-2 gap-4">
@@ -1320,7 +1389,48 @@ export default function CuentasGlobalPage() {
                   disabled={guardandoCuenta}
                   className="px-4 py-2 bg-ras-azul text-white rounded-md hover:bg-ras-turquesa transition-colors disabled:opacity-50"
                 >
-                  {guardandoCuenta ? 'Guardando...' : 'Crear Cuenta'}
+                  {guardandoCuenta ? 'Guardando...' : cuentaEditando ? 'Actualizar' : 'Crear Cuenta'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de confirmación para eliminar */}
+        {mostrarModalEliminar && cuentaAEliminar && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900">Eliminar Cuenta</h2>
+              </div>
+
+              {/* Body */}
+              <div className="px-6 py-4">
+                <p className="text-gray-700">
+                  ¿Estás seguro de eliminar la cuenta <span className="font-semibold">"{cuentaAEliminar.nombre_cuenta}"</span>?
+                </p>
+                <p className="text-sm text-red-600 mt-2">
+                  Esta acción no se puede deshacer.
+                </p>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3 rounded-b-lg">
+                <button
+                  onClick={() => {
+                    setMostrarModalEliminar(false)
+                    setCuentaAEliminar(null)
+                  }}
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConfirmarEliminar}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                >
+                  Eliminar
                 </button>
               </div>
             </div>
