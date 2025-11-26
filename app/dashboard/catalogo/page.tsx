@@ -26,6 +26,7 @@ interface Propiedad {
   es_propio: boolean
   foto_portada?: string | null
   colaboradores?: { user_id: string; nombre: string; email: string }[]
+  rol?: 'propietario' | 'supervisor' | null // Rol del usuario en propiedades compartidas
 }
 
 export default function CatalogoPage() {
@@ -95,17 +96,20 @@ export default function CatalogoPage() {
         colaboradores: prop.propiedades_colaboradores || []
       }))
 
-      // ✅ QUERY 2: IDs de propiedades compartidas
-      const { data: idsCompartidos } = await supabase
+      // ✅ QUERY 2: IDs de propiedades compartidas CON ROL
+      const { data: colaboraciones } = await supabase
         .from('propiedades_colaboradores')
-        .select('propiedad_id')
+        .select('propiedad_id, rol')
         .eq('user_id', userId)
 
       let propiedadesCompartidas: any[] = []
 
       // ✅ QUERY 3: Propiedades compartidas con JOINs (solo si hay)
-      if (idsCompartidos && idsCompartidos.length > 0) {
-        const ids = idsCompartidos.map(p => p.propiedad_id)
+      if (colaboraciones && colaboraciones.length > 0) {
+        const ids = colaboraciones.map(p => p.propiedad_id)
+
+        // Crear mapa de roles por propiedad_id
+        const rolesMap = new Map(colaboraciones.map(c => [c.propiedad_id, c.rol]))
 
         const { data: propsCompartidas } = await supabase
           .from('propiedades')
@@ -118,7 +122,7 @@ export default function CatalogoPage() {
           `)
           .in('id', ids)
 
-        // Transformar propiedades compartidas
+        // Transformar propiedades compartidas CON ROL
         propiedadesCompartidas = (propsCompartidas || []).map((prop: any) => ({
           id: prop.id,
           owner_id: prop.owner_id,
@@ -127,7 +131,8 @@ export default function CatalogoPage() {
           created_at: prop.created_at,
           es_propio: false,
           foto_portada: prop.property_images?.find((img: any) => img.is_cover)?.url_thumbnail || null,
-          colaboradores: []
+          colaboradores: [],
+          rol: rolesMap.get(prop.id) || null
         }))
       }
 
@@ -462,30 +467,36 @@ export default function CatalogoPage() {
                         </svg>
                       </button>
 
-                      <button
-                        onClick={(e) => { e.stopPropagation(); abrirBalance(prop.id); }}
-                        className="w-12 h-12 rounded-lg border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 hover:border-emerald-400 hover:scale-110 transition-all flex items-center justify-center group"
-                        title="Balance"
-                      >
-                        <svg className="w-7 h-7 text-emerald-600 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M12 2C6.5 2 2 4.5 2 7.5v1C2 11.5 6.5 14 12 14s10-2.5 10-5.5v-1C22 4.5 17.5 2 12 2z"/><path d="M2 12c0 3 4.5 5.5 10 5.5S22 15 22 12"/><path d="M2 16.5c0 3 4.5 5.5 10 5.5s10-2.5 10-5.5"/>
-                        </svg>
-                      </button>
+                      {/* Balance - Admin y Propietario (no supervisor) */}
+                      {(prop.es_propio || prop.rol === 'propietario') && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); abrirBalance(prop.id); }}
+                          className="w-12 h-12 rounded-lg border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 hover:border-emerald-400 hover:scale-110 transition-all flex items-center justify-center group"
+                          title="Balance"
+                        >
+                          <svg className="w-7 h-7 text-emerald-600 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 2C6.5 2 2 4.5 2 7.5v1C2 11.5 6.5 14 12 14s10-2.5 10-5.5v-1C22 4.5 17.5 2 12 2z"/><path d="M2 12c0 3 4.5 5.5 10 5.5S22 15 22 12"/><path d="M2 16.5c0 3 4.5 5.5 10 5.5s10-2.5 10-5.5"/>
+                          </svg>
+                        </button>
+                      )}
 
-                      <button
-                        onClick={(e) => { e.stopPropagation(); abrirArchivo(prop.id); }}
-                        className="w-12 h-12 rounded-lg border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 hover:scale-110 transition-all flex items-center justify-center group"
-                        title="Archivo"
-                      >
-                        <svg className="w-7 h-7 text-amber-600 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <rect x="4" y="3" width="16" height="18" rx="2" ry="2"/>
-                          <line x1="4" y1="9" x2="20" y2="9"/>
-                          <line x1="4" y1="15" x2="20" y2="15"/>
-                          <line x1="9" y1="6" x2="15" y2="6"/>
-                        </svg>
-                      </button>
+                      {/* Archivero - Admin y Propietario (no supervisor) */}
+                      {(prop.es_propio || prop.rol === 'propietario') && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); abrirArchivo(prop.id); }}
+                          className="w-12 h-12 rounded-lg border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 hover:scale-110 transition-all flex items-center justify-center group"
+                          title="Archivo"
+                        >
+                          <svg className="w-7 h-7 text-amber-600 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="4" y="3" width="16" height="18" rx="2" ry="2"/>
+                            <line x1="4" y1="9" x2="20" y2="9"/>
+                            <line x1="4" y1="15" x2="20" y2="15"/>
+                            <line x1="9" y1="6" x2="15" y2="6"/>
+                          </svg>
+                        </button>
+                      )}
 
-                      {/* Config - Solo para administrador (propietario) */}
+                      {/* Config - Solo para administrador (owner) */}
                       {prop.es_propio && (
                         <button
                           onClick={(e) => { e.stopPropagation(); abrirConfig(prop.id); }}
