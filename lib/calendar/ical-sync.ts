@@ -100,29 +100,45 @@ async function verificarSuperposicion(
   reservaIdExcluir?: string
 ): Promise<boolean> {
   try {
-    // Buscar eventos que se superpongan con el rango de fechas
-    // Superposición: (inicio1 < fin2) AND (fin1 > inicio2)
-    let query = supabase
+    // Buscar TODOS los eventos de esta propiedad
+    const { data: eventosExistentes, error } = await supabase
       .from('calendar_events')
-      .select('id, fecha_inicio, fecha_fin, reserva_id')
+      .select('id, fecha_inicio, fecha_fin, reserva_id, titulo')
       .eq('propiedad_id', propiedadId)
-      .lt('fecha_inicio', fechaFin)  // inicio existente < fin nuevo
-      .gt('fecha_fin', fechaInicio)   // fin existente > inicio nuevo
-
-    const { data: eventosSuperpuestos, error } = await query
 
     if (error) {
       console.error('Error verificando superposición:', error)
-      return false // En caso de error, permitir (fail-open)
+      return false
     }
 
-    // Si hay que excluir un reserva_id (para updates), filtrarlo
-    if (reservaIdExcluir && eventosSuperpuestos) {
-      const filtrados = eventosSuperpuestos.filter(e => e.reserva_id !== reservaIdExcluir)
-      return filtrados.length > 0
+    if (!eventosExistentes || eventosExistentes.length === 0) {
+      return false // No hay eventos, no hay superposición
     }
 
-    return (eventosSuperpuestos?.length || 0) > 0
+    // Convertir fechas del nuevo evento a timestamps para comparación
+    const nuevoInicio = new Date(fechaInicio).getTime()
+    const nuevoFin = new Date(fechaFin).getTime()
+
+    // Verificar superposición manualmente
+    for (const evento of eventosExistentes) {
+      // Si hay que excluir un reserva_id (para updates), saltarlo
+      if (reservaIdExcluir && evento.reserva_id === reservaIdExcluir) {
+        continue
+      }
+
+      const existenteInicio = new Date(evento.fecha_inicio).getTime()
+      const existenteFin = new Date(evento.fecha_fin).getTime()
+
+      // Superposición: (inicio1 < fin2) AND (fin1 > inicio2)
+      // Dos rangos se superponen si uno empieza antes de que el otro termine
+      // Y termina después de que el otro empiece
+      if (nuevoInicio < existenteFin && nuevoFin > existenteInicio) {
+        console.log(`🚫 Superposición detectada con: ${evento.titulo} (${evento.fecha_inicio} - ${evento.fecha_fin})`)
+        return true
+      }
+    }
+
+    return false
   } catch (error) {
     console.error('Error en verificarSuperposicion:', error)
     return false
