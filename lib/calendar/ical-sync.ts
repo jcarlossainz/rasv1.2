@@ -90,6 +90,46 @@ function determinarEstado(event: any): 'bloqueado' | 'reservado' {
 }
 
 /**
+ * Verifica si un evento se superpone con eventos existentes en la propiedad
+ * Retorna true si HAY superposición (conflicto)
+ */
+async function verificarSuperposicion(
+  propiedadId: string,
+  fechaInicio: string,
+  fechaFin: string,
+  reservaIdExcluir?: string
+): Promise<boolean> {
+  try {
+    // Buscar eventos que se superpongan con el rango de fechas
+    // Superposición: (inicio1 < fin2) AND (fin1 > inicio2)
+    let query = supabase
+      .from('calendar_events')
+      .select('id, fecha_inicio, fecha_fin, reserva_id')
+      .eq('propiedad_id', propiedadId)
+      .lt('fecha_inicio', fechaFin)  // inicio existente < fin nuevo
+      .gt('fecha_fin', fechaInicio)   // fin existente > inicio nuevo
+
+    const { data: eventosSuperpuestos, error } = await query
+
+    if (error) {
+      console.error('Error verificando superposición:', error)
+      return false // En caso de error, permitir (fail-open)
+    }
+
+    // Si hay que excluir un reserva_id (para updates), filtrarlo
+    if (reservaIdExcluir && eventosSuperpuestos) {
+      const filtrados = eventosSuperpuestos.filter(e => e.reserva_id !== reservaIdExcluir)
+      return filtrados.length > 0
+    }
+
+    return (eventosSuperpuestos?.length || 0) > 0
+  } catch (error) {
+    console.error('Error en verificarSuperposicion:', error)
+    return false
+  }
+}
+
+/**
  * Parsea un feed iCal y extrae eventos
  */
 async function parsearFeedICal(url: string, propiedadId: string, origen: 'airbnb' | 'booking' | 'expedia' | 'manual'): Promise<CalendarEvent[]> {
@@ -229,7 +269,19 @@ async function sincronizarEventos(eventos: CalendarEvent[], propiedadId: string,
         eventosExistentesMap.delete(evento.reserva_id)
 
       } else {
-        // Insertar nuevo evento
+        // VERIFICAR SUPERPOSICIÓN antes de insertar
+        const haySuperposicion = await verificarSuperposicion(
+          propiedadId,
+          evento.fecha_inicio,
+          evento.fecha_fin
+        )
+
+        if (haySuperposicion) {
+          console.log(`⚠️ Saltando evento por superposición: ${evento.titulo} (${evento.fecha_inicio} - ${evento.fecha_fin})`)
+          continue // Saltar este evento, ya hay una reserva en esas fechas
+        }
+
+        // Insertar nuevo evento (sin superposición)
         const { error: insertError } = await supabase
           .from('calendar_events')
           .insert(evento)
