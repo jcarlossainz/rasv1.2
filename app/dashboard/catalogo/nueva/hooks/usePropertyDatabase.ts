@@ -500,12 +500,12 @@ export function usePropertyDatabase() {
           data.inquilinos_email || []
         );
 
-        // Generar tickets automáticos desde los servicios
+        // Generar tickets automáticos desde los servicios usando RPC
         if (data.servicios && data.servicios.length > 0) {
-          const ticketResult = await generateServiceTickets({
-            propertyId: newProperty.id,
-            services: data.servicios
-          });
+          const ticketResult = await generarTicketsAutomaticos(
+            newProperty.id,
+            data.servicios
+          );
 
           if (ticketResult.success) {
             console.log(`✅ ${ticketResult.ticketsCreated} tickets automáticos generados`);

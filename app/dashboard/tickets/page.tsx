@@ -687,7 +687,8 @@ ${ticket.proveedor ? `🏢 Proveedor: ${ticket.proveedor}` : ''}
             fecha_pago: ticketSeleccionado.fecha_programada,
             monto_estimado: ticketSeleccionado.monto_estimado,
             propiedad_id: ticketSeleccionado.propiedad_id,
-            servicio_nombre: ticketSeleccionado.titulo
+            servicio_nombre: ticketSeleccionado.titulo,
+            servicio_id: ticketSeleccionado.servicio_id // Indica si es ticket manual o pago de servicio
           } : null}
         />
 

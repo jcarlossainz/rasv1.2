@@ -167,6 +167,48 @@ export async function ajustarBalance(cuentaId: string, nuevoBalance: number): Pr
   return data
 }
 
+/**
+ * Registrar un movimiento y actualizar el saldo de la cuenta
+ * @param cuentaId - ID de la cuenta
+ * @param monto - Monto del movimiento (siempre positivo)
+ * @param tipo - 'ingreso' suma al saldo, 'egreso' resta del saldo
+ */
+export async function registrarMovimientoYActualizarSaldo(
+  cuentaId: string,
+  monto: number,
+  tipo: 'ingreso' | 'egreso'
+): Promise<CuentaBancaria> {
+  // Primero obtener el saldo actual
+  const cuenta = await obtenerCuentaPorId(cuentaId)
+  if (!cuenta) throw new Error('Cuenta no encontrada')
+
+  // Calcular nuevo saldo
+  const nuevoSaldo = tipo === 'ingreso'
+    ? cuenta.saldo_actual + monto
+    : cuenta.saldo_actual - monto
+
+  console.log(`💰 Actualizando saldo de cuenta ${cuentaId}:`)
+  console.log(`   Saldo anterior: $${cuenta.saldo_actual.toFixed(2)}`)
+  console.log(`   Movimiento: ${tipo === 'ingreso' ? '+' : '-'}$${monto.toFixed(2)}`)
+  console.log(`   Nuevo saldo: $${nuevoSaldo.toFixed(2)}`)
+
+  // Actualizar el saldo
+  const { data, error } = await supabase
+    .from('cuentas')
+    .update({
+      saldo_actual: nuevoSaldo,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', cuentaId)
+    .select()
+    .single()
+
+  if (error) throw error
+
+  console.log(`✅ Saldo actualizado correctamente`)
+  return data
+}
+
 // ============================================================================
 // INGRESOS
 // ============================================================================

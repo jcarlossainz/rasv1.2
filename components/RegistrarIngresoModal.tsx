@@ -8,7 +8,7 @@
 
 import { useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase/client'
-import { crearIngreso } from '@/services/cuentas-api'
+import { crearIngreso, registrarMovimientoYActualizarSaldo } from '@/services/cuentas-api'
 import type { CuentaBancaria } from '@/types/property'
 
 interface RegistrarIngresoModalProps {
@@ -183,6 +183,17 @@ export default function RegistrarIngresoModal({
         comprobante_url: urlComprobante || undefined,
         notas: notas || undefined
       })
+
+      // ACTUALIZAR SALDO DE LA CUENTA (si se seleccionó una)
+      if (cuentaId) {
+        try {
+          await registrarMovimientoYActualizarSaldo(cuentaId, parseFloat(monto), 'ingreso')
+          console.log('✅ Saldo de cuenta actualizado (ingreso)')
+        } catch (saldoError) {
+          console.error('⚠️ Error actualizando saldo de cuenta:', saldoError)
+          // No lanzamos error porque el ingreso ya se registró
+        }
+      }
 
       onSuccess()
       onClose()
