@@ -1,10 +1,10 @@
 /**
- * DESIGN TOKENS - Sistema de Diseño Centralizado RAS V_1.0
+ * DESIGN TOKENS - Sistema de Diseño Centralizado Ohana v1.0
  * =========================================================
- * 
+ *
  * Este archivo centraliza TODOS los valores de diseño de la aplicación.
  * Cualquier cambio visual debe hacerse aquí, no en componentes individuales.
- * 
+ *
  * Uso:
  * import { colors, spacing, borderRadius } from '@/lib/constants/design-tokens'
  */
@@ -14,7 +14,7 @@
 // ============================================================================
 
 export const colors = {
-  // Colores principales de la marca RAS
+  // Colores principales de la marca Ohana
   primary: {
     azul: '#0B5D7A',        // ras-azul - Color principal
     turquesa: '#14A19C',    // ras-turquesa - Color secundario

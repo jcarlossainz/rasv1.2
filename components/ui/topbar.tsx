@@ -274,9 +274,9 @@ export default function TopBar({
             </div>
           )}
 
-          {/* Versión RAS */}
+          {/* Versión Ohana */}
           <div className="hidden sm:block px-3 py-1.5 rounded-full border border-white/30 bg-white/10 text-ras-crema text-xs font-medium">
-            RAS V_1.0
+            Ohana v1.0
           </div>
 
           {/* Fecha */}

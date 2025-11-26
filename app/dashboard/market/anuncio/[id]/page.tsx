@@ -543,7 +543,7 @@ export default function AnuncioPublico() {
       <footer className="bg-gray-900 text-white mt-16 py-8">
         <div className="max-w-6xl mx-auto px-4 text-center">
           <p className="text-gray-400">
-            Anuncio publicado con <span className="text-red-400">♥</span> usando RAS V_1.0
+            Anuncio publicado con <span className="text-red-400">♥</span> usando Ohana v1.0
           </p>
           <p className="text-gray-500 text-sm mt-2">
             Sistema de Administración de Propiedades

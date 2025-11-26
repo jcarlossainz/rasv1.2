@@ -11,7 +11,7 @@ const config: Config = {
     extend: {
       colors: {
         // ============================================================================
-        // COLORES PRINCIPALES DE LA MARCA RAS
+        // COLORES PRINCIPALES DE LA MARCA OHANA
         // ============================================================================
         'ras-azul': colors.primary.azul,
         'ras-turquesa': colors.primary.turquesa,

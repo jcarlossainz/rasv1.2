@@ -21,7 +21,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "RAS - Realty Administration System",
+  title: "Ohana - Property Management System",
   description: "Sistema profesional de administración inmobiliaria",
 };
 

@@ -768,10 +768,10 @@ export default function AnuncioPublicoApple() {
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center">
             <div className="text-4xl font-bold mb-4 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-              RAS
+              Ohana
             </div>
             <p className="text-gray-400 mb-2">
-              Anuncio publicado con <span className="text-red-400">♥</span> usando RAS v1.2
+              Anuncio publicado con <span className="text-red-400">♥</span> usando Ohana v1.0
             </p>
             <p className="text-gray-500 text-sm">
               Sistema de Administración de Propiedades

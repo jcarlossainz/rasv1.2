@@ -366,7 +366,7 @@ ${ticket.proveedor ? `🏢 Proveedor: ${ticket.proveedor}` : ''}
   return (
     <div className="min-h-screen bg-gradient-to-br from-ras-crema via-white to-ras-crema">
       <TopBar
-        title="RAS v1.2 - Tickets"
+        title="Tickets"
         showHomeButton
         showBackButton
         showAddButton
