@@ -2,13 +2,22 @@
 -- SISTEMA RLS (Row Level Security) - RASV1.2
 -- ============================================================================
 -- Fecha: 2025-11-26
--- Versión: 2.0 (Corregido según tablas existentes)
+-- Versión: 2.0 (Producción)
+-- Estado: IMPLEMENTADO EN SUPABASE
 --
 -- ROLES:
---   - administrador: Dueño de la propiedad, acceso total
+--   - administrador: Dueño de la propiedad (owner_id), acceso total
 --   - propietario: Todo excepto Config
 --   - supervisor: Sin acceso a Config, Archivero, Balance
 --   - promotor: Solo acceso a Anuncio (datos públicos)
+--
+-- TABLAS CUBIERTAS:
+--   - propiedades, propiedades_colaboradores, profiles
+--   - tickets, calendar_events
+--   - property_images, property_archivos, property_inventory
+--   - cuentas, ingresos
+--   - user_dashboard_config
+--   - servicios_inmueble, documentos, contactos
 -- ============================================================================
 
 -- ============================================================================
@@ -587,41 +596,23 @@ CREATE POLICY "contactos_delete" ON contactos
     FOR DELETE USING (user_id = auth.uid());
 
 -- ============================================================================
--- VERIFICACIÓN FINAL
+-- QUERIES DE VERIFICACIÓN
 -- ============================================================================
 
 -- Query para verificar que RLS está habilitado en todas las tablas
-SELECT
-    schemaname,
-    tablename,
-    rowsecurity
-FROM pg_tables
-WHERE schemaname = 'public'
-AND tablename IN (
-    'propiedades',
-    'propiedades_colaboradores',
-    'profiles',
-    'tickets',
-    'calendar_events',
-    'property_images',
-    'property_archivos',
-    'property_inventory',
-    'cuentas',
-    'ingresos',
-    'user_dashboard_config',
-    'servicios_inmueble',
-    'documentos',
-    'contactos'
-);
+-- SELECT schemaname, tablename, rowsecurity
+-- FROM pg_tables
+-- WHERE schemaname = 'public'
+-- AND tablename IN (
+--     'propiedades', 'propiedades_colaboradores', 'profiles',
+--     'tickets', 'calendar_events', 'property_images',
+--     'property_archivos', 'property_inventory', 'cuentas',
+--     'ingresos', 'user_dashboard_config', 'servicios_inmueble',
+--     'documentos', 'contactos'
+-- );
 
 -- Query para listar todas las políticas creadas
-SELECT
-    schemaname,
-    tablename,
-    policyname,
-    permissive,
-    roles,
-    cmd
-FROM pg_policies
-WHERE schemaname = 'public'
-ORDER BY tablename, policyname;
+-- SELECT schemaname, tablename, policyname, permissive, roles, cmd
+-- FROM pg_policies
+-- WHERE schemaname = 'public'
+-- ORDER BY tablename, policyname;

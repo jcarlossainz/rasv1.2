@@ -1,257 +1,166 @@
-# 🔐 Sistema de Roles y Control de Acceso - OHANA
+# Sistema de Roles y Control de Acceso - OHANA
 
 **Fecha:** 26 de Noviembre 2025
-**Branch:** `claude/continue-previous-session-01XwfwTDtHYvTUvfUafitNgY`
-**Último commit:** `bf639a0`
+**Estado:** RLS IMPLEMENTADO EN PRODUCCION
 
 ---
 
-## 📋 Resumen de Cambios en esta Sesión
+## Sistema de Roles
 
-### Commits Realizados
+### Definicion de Roles
 
-1. `802f12b` - REFACTOR: Mover Config a navegación de catálogo (solo admin)
-2. `3a3d874` - REFACTOR: Mover acciones de propiedad a página Config
-3. `34664b4` - STYLE: Simplificar tarjetas de propiedad en catálogo
-4. `af91b1f` - STYLE: Agregar etiqueta Config en barra de navegación
-5. `bf639a0` - FEAT: Implementar control de acceso por roles en catálogo
-
----
-
-## 🎭 Sistema de Roles
-
-### Definición de Roles
-
-| Rol | Descripción | Cómo se identifica |
+| Rol | Descripcion | Como se identifica |
 |-----|-------------|-------------------|
 | **Administrador** | Propietario/creador de la propiedad | `propiedad.owner_id === user.id` |
 | **Propietario** | Colaborador con rol 'propietario' | `propiedades_colaboradores.rol = 'propietario'` |
 | **Supervisor** | Colaborador con rol 'supervisor' | `propiedades_colaboradores.rol = 'supervisor'` |
+| **Promotor** | Colaborador con rol 'promotor' | `propiedades_colaboradores.rol = 'promotor'` |
 
-### Matriz de Acceso
+### Matriz de Acceso por Seccion
 
-| Sección | Admin | Propietario | Supervisor |
-|---------|-------|-------------|------------|
-| Home | ✅ | ✅ | ✅ |
-| Calendario | ✅ | ✅ | ✅ |
-| Tickets | ✅ | ✅ | ✅ |
-| Inventario | ✅ | ✅ | ✅ |
-| Galería | ✅ | ✅ | ✅ |
-| Anuncio | ✅ | ✅ | ✅ |
-| Balance | ✅ | ✅ | ❌ |
-| Archivero | ✅ | ✅ | ❌ |
-| Config | ✅ | ❌ | ❌ |
+| Seccion | Admin | Propietario | Supervisor | Promotor |
+|---------|-------|-------------|------------|----------|
+| Home | CRUD | CRUD | CRUD | - |
+| Calendario | CRUD | CRUD | CRUD | - |
+| Tickets | CRUD | CRUD | CRUD | - |
+| Inventario | CRUD | CRUD | CRUD | - |
+| Galeria | CRUD | CRUD | R | R |
+| Anuncio | CRUD | CRUD | R | R |
+| Balance | CRUD | CRUD | - | - |
+| Archivero | CRUD | CRUD | - | - |
+| Config | CRUD | - | - | - |
+
+**Leyenda:** CRUD = Create/Read/Update/Delete, R = Solo lectura, - = Sin acceso
 
 ---
 
-## 🏗️ Arquitectura Actual
+## Arquitectura RLS
 
-### Página de Catálogo (`app/dashboard/catalogo/page.tsx`)
+### Funciones Helper (PostgreSQL)
 
-```typescript
-interface Propiedad {
-  id: string
-  owner_id: string
-  nombre: string
-  codigo_postal: string | null
-  created_at: string
-  es_propio: boolean  // true = admin (owner)
-  foto_portada?: string | null
-  colaboradores?: { user_id: string; nombre: string; email: string }[]
-  rol?: 'propietario' | 'supervisor' | null  // rol del colaborador
-}
+```sql
+-- Obtener rol de usuario en una propiedad
+get_user_role_for_property(property_uuid UUID, user_uuid UUID) -> TEXT
+  - Retorna 'administrador' si es owner
+  - Retorna rol de propiedades_colaboradores si es colaborador
+  - Retorna NULL si no tiene acceso
+
+-- Verificar acceso a propiedad
+user_has_property_access(property_uuid UUID) -> BOOLEAN
+  - Retorna TRUE si tiene cualquier rol
+
+-- Verificar roles especificos
+user_has_role(property_uuid UUID, allowed_roles TEXT[]) -> BOOLEAN
+  - Retorna TRUE si el rol del usuario esta en allowed_roles
 ```
+
+### Tablas y sus Politicas RLS
+
+| Tabla | FK Columna | SELECT | INSERT | UPDATE | DELETE |
+|-------|-----------|--------|--------|--------|--------|
+| `propiedades` | owner_id | todos roles | auth user | admin/prop | admin |
+| `propiedades_colaboradores` | propiedad_id | owner/self | owner | owner | owner |
+| `profiles` | id | self/empresa | - | self | - |
+| `tickets` | propiedad_id | admin/prop/sup | admin/prop/sup | admin/prop/sup | admin/prop |
+| `calendar_events` | propiedad_id | admin/prop/sup | admin/prop/sup | admin/prop/sup | admin/prop |
+| `property_images` | property_id | todos | admin/prop | admin/prop | admin/prop |
+| `property_archivos` | property_id | admin/prop | admin/prop | admin/prop | admin/prop |
+| `property_inventory` | property_id | admin/prop/sup | admin/prop/sup | admin/prop/sup | admin/prop |
+| `cuentas` | user_id | self | self | self | self |
+| `ingresos` | propiedad_id | admin/prop | admin/prop | admin/prop | admin/prop |
+| `user_dashboard_config` | user_id | self | self | self | self |
+| `servicios_inmueble` | propiedad_id | admin/prop/sup | admin/prop | admin/prop | admin/prop |
+| `documentos` | propiedad_id/ticket_id | admin/prop(/sup) | admin/prop(/sup) | admin/prop | admin/prop |
+| `contactos` | user_id | self | self | self | self |
+
+**Leyenda:**
+- admin = administrador
+- prop = propietario
+- sup = supervisor
+- self = solo el usuario dueno
+
+---
+
+## Notas de Columnas Importantes
+
+### Inconsistencias de Nomenclatura (ya manejadas en RLS)
+
+| Tabla | Columna FK |
+|-------|-----------|
+| tickets | `propiedad_id` |
+| calendar_events | `propiedad_id` |
+| property_images | `property_id` |
+| property_archivos | `property_id` |
+| property_inventory | `property_id` |
+| ingresos | `propiedad_id` |
+| servicios_inmueble | `propiedad_id` |
+
+### Tablas con logica especial
+
+- **cuentas**: Usa `user_id` directo (no por propiedad). Tiene `propiedades_ids` como array.
+- **contactos**: Usa `user_id` directo (agenda personal del usuario).
+- **documentos**: Puede estar ligado a `propiedad_id` O a `ticket_id`.
+
+---
+
+## Implementacion Frontend
 
 ### Carga de Propiedades con Rol
 
 ```typescript
-// QUERY 2: IDs de propiedades compartidas CON ROL
+// Query colaboraciones con rol
 const { data: colaboraciones } = await supabase
   .from('propiedades_colaboradores')
   .select('propiedad_id, rol')
   .eq('user_id', userId)
 
-// Crear mapa de roles por propiedad_id
+// Mapa de roles
 const rolesMap = new Map(colaboraciones.map(c => [c.propiedad_id, c.rol]))
 
-// Al transformar propiedades compartidas, incluir rol
-propiedadesCompartidas = propsCompartidas.map((prop) => ({
+// Incluir rol en propiedades
+propiedadesCompartidas = props.map((prop) => ({
   ...prop,
   es_propio: false,
   rol: rolesMap.get(prop.id) || null
 }))
 ```
 
-### Renderizado Condicional de Botones
+### Renderizado Condicional
 
 ```tsx
-{/* Balance - Admin y Propietario (no supervisor) */}
+{/* Balance/Archivero - Admin y Propietario */}
 {(prop.es_propio || prop.rol === 'propietario') && (
-  <button onClick={() => abrirBalance(prop.id)}>Balance</button>
+  <button>Balance</button>
 )}
 
-{/* Archivero - Admin y Propietario (no supervisor) */}
-{(prop.es_propio || prop.rol === 'propietario') && (
-  <button onClick={() => abrirArchivo(prop.id)}>Archivero</button>
-)}
-
-{/* Config - Solo para administrador (owner) */}
+{/* Config - Solo Admin */}
 {prop.es_propio && (
-  <button onClick={() => abrirConfig(prop.id)}>Config</button>
+  <button>Config</button>
 )}
 ```
 
 ---
 
-## 📁 Página de Configuración (`/config`)
+## Archivos Relacionados
 
-### Ubicación
-`app/dashboard/catalogo/propiedad/[id]/config/page.tsx`
-
-### Funcionalidades
-- **Acciones**: Compartir, Editar, Duplicar, Calendarios, Eliminar
-- **Información del Sistema**: ID, fechas de creación/actualización
-- **Colaboradores**: Lista de usuarios con acceso y su rol
-
-### Control de Acceso
-```typescript
-// Verificar si es el administrador (owner_id)
-if (propData.owner_id !== authUser.id) {
-  toast.error('No tienes permisos para acceder a esta sección')
-  router.push(`/dashboard/catalogo/propiedad/${propiedadId}/home`)
-  return
-}
-```
+- `.claude/RLS_SYSTEM_V2.sql` - Script SQL completo de RLS
+- `.claude/DATABASE_SCHEMA.md` - Esquema completo de la base de datos
 
 ---
 
-## 🗃️ Estructura de Base de Datos Relevante
+## Estado de Implementacion
 
-### Tabla: `propiedades`
-```sql
-CREATE TABLE propiedades (
-  id UUID PRIMARY KEY,
-  owner_id UUID REFERENCES auth.users(id),  -- Administrador
-  nombre_propiedad TEXT,
-  -- ... otros campos
-);
-```
-
-### Tabla: `propiedades_colaboradores`
-```sql
-CREATE TABLE propiedades_colaboradores (
-  id UUID PRIMARY KEY,
-  propiedad_id UUID REFERENCES propiedades(id),
-  user_id UUID REFERENCES auth.users(id),
-  email_invitado TEXT,  -- Para invitaciones pendientes
-  rol TEXT,  -- 'propietario', 'supervisor', etc.
-  created_at TIMESTAMPTZ
-);
-```
-
----
-
-## 🔜 PRÓXIMA SESIÓN: RLS (Row Level Security)
-
-### Objetivo
-Implementar RLS en Supabase para proteger datos a nivel de base de datos.
-
-### Tablas Prioritarias para RLS
-
-1. **`propiedades`**
-   - Admin: CRUD completo
-   - Colaboradores: Solo SELECT de propiedades compartidas
-
-2. **`propiedades_colaboradores`**
-   - Solo admin puede INSERT/UPDATE/DELETE
-   - Colaboradores pueden ver sus propios registros
-
-3. **`tickets`** / **`fechas_pago_servicios`**
-   - Según rol: admin y propietario CRUD, supervisor solo SELECT
-
-4. **`cuentas_bancarias`** / **`ingresos`**
-   - Solo admin y propietario (supervisor sin acceso)
-
-5. **`property_images`**
-   - Admin: CRUD
-   - Colaboradores: SELECT
-
-### Políticas RLS Sugeridas
-
-```sql
--- Ejemplo para propiedades
-CREATE POLICY "Usuarios ven sus propiedades propias"
-ON propiedades FOR SELECT
-USING (owner_id = auth.uid());
-
-CREATE POLICY "Usuarios ven propiedades compartidas"
-ON propiedades FOR SELECT
-USING (
-  id IN (
-    SELECT propiedad_id
-    FROM propiedades_colaboradores
-    WHERE user_id = auth.uid()
-  )
-);
-
--- Ejemplo para acceso según rol
-CREATE POLICY "Solo admin y propietario ven balance"
-ON cuentas_bancarias FOR SELECT
-USING (
-  propiedad_id IN (
-    SELECT id FROM propiedades WHERE owner_id = auth.uid()
-    UNION
-    SELECT propiedad_id FROM propiedades_colaboradores
-    WHERE user_id = auth.uid() AND rol = 'propietario'
-  )
-);
-```
-
-### Documentación Existente de RLS
-- `.claude/GUIA_RAPIDA_RLS.md`
-- `.claude/README_RLS_AUDIT.md`
-- `.claude/archives/` - Scripts SQL anteriores
-
----
-
-## 📊 Estado del Control de Acceso
-
-### Frontend (Implementado) ✅
-- [x] Botones condicionales en catálogo
-- [x] Página Config solo para admin
+### Frontend
+- [x] Botones condicionales en catalogo
+- [x] Pagina Config solo para admin
 - [x] Carga de rol desde propiedades_colaboradores
-- [x] Navegación con etiquetas
 
-### Backend/RLS (Pendiente) ❌
-- [ ] RLS en tabla `propiedades`
-- [ ] RLS en tabla `propiedades_colaboradores`
-- [ ] RLS en tablas de tickets
-- [ ] RLS en tablas de balance/cuentas
-- [ ] RLS en storage (imágenes)
-- [ ] Tests de políticas RLS
+### Backend/RLS
+- [x] Funciones helper creadas
+- [x] RLS habilitado en todas las tablas
+- [x] Politicas por rol implementadas
+- [x] Probado en produccion
 
 ---
 
-## ⚠️ IMPORTANTE
-
-El control de acceso actual es **solo a nivel de frontend**. Un usuario malicioso con conocimientos técnicos podría:
-1. Llamar directamente a la API de Supabase
-2. Acceder a datos de propiedades que no le pertenecen
-3. Modificar datos sin autorización
-
-**Por eso la implementación de RLS es CRÍTICA para la seguridad del sistema.**
-
----
-
-## 📝 Notas para la Próxima Sesión
-
-1. **Revisar** documentación existente de RLS en `.claude/`
-2. **Analizar** qué políticas ya existen (si hay)
-3. **Implementar** RLS por rol siguiendo la matriz de acceso
-4. **Probar** con usuarios de diferentes roles
-5. **Documentar** políticas implementadas
-
----
-
-**Última actualización:** 26 de Noviembre 2025
-**Sesión:** claude/continue-previous-session-01XwfwTDtHYvTUvfUafitNgY
+**Ultima actualizacion:** 26 de Noviembre 2025
