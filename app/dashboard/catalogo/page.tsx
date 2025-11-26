@@ -337,6 +337,7 @@ export default function CatalogoPage() {
                   <div className="w-12 text-center text-xs font-semibold text-yellow-600">Anuncio</div>
                   <div className="w-12 text-center text-xs font-semibold text-emerald-600">Balance</div>
                   <div className="w-12 text-center text-xs font-semibold text-amber-600">Archivero</div>
+                  <div className="w-12 text-center text-xs font-semibold text-gray-500">Config</div>
                 </div>
               </div>
             </div>
