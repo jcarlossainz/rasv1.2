@@ -274,7 +274,7 @@ async function sincronizarEventos(eventos: CalendarEvent[], propiedadId: string,
 }
 
 /**
- * Crea un ticket para una reservación
+ * Crea tickets de check-in y check-out para una reservación
  */
 async function crearTicketReservacion(evento: CalendarEvent, propiedadId: string, origen: string): Promise<void> {
   try {
@@ -289,40 +289,69 @@ async function crearTicketReservacion(evento: CalendarEvent, propiedadId: string
     const noches = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24))
 
     const origenCapitalizado = origen.charAt(0).toUpperCase() + origen.slice(1)
-    const descripcion = `Check-out: ${evento.fecha_fin}\nNoches: ${noches}\nOrigen: ${origenCapitalizado}\n${evento.notas || ''}`
+    const infoReserva = `Noches: ${noches}\nOrigen: ${origenCapitalizado}\n${evento.notas || ''}`
 
-    const ticketData = {
+    // 1. TICKET DE CHECK-IN (sin costo)
+    const ticketCheckIn = {
       propiedad_id: propiedadId,
       tipo_ticket: 'reservacion',
-      titulo: evento.titulo || `Reservación ${origenCapitalizado}`,
-      descripcion: descripcion.trim(),
-      fecha_programada: evento.fecha_inicio, // Check-in
-      monto_estimado: null,
-      prioridad: 'media',
+      titulo: `🔑 Check-in: ${evento.titulo || 'Huésped'}`,
+      descripcion: `Check-out: ${evento.fecha_fin}\n${infoReserva}`.trim(),
+      fecha_programada: evento.fecha_inicio,
+      monto_estimado: null, // Sin costo en check-in
+      prioridad: 'alta',
       estado: 'pendiente',
       responsable: null,
-      proveedor: origen, // airbnb, booking, expedia
+      proveedor: origen,
       servicio_id: null,
       pagado: false,
-      reserva_id: evento.reserva_id // Para poder identificar y actualizar/eliminar
+      reserva_id: `${evento.reserva_id}_checkin`
     }
 
-    const { error } = await supabase
+    const { error: errorCheckIn } = await supabase
       .from('tickets')
-      .insert(ticketData)
+      .insert(ticketCheckIn)
 
-    if (error) {
-      console.error(`❌ Error al crear ticket de reservación:`, error)
+    if (errorCheckIn) {
+      console.error(`❌ Error al crear ticket de check-in:`, errorCheckIn)
     } else {
-      console.log(`🎫 Ticket creado para reservación: ${evento.titulo}`)
+      console.log(`🔑 Ticket check-in creado: ${evento.titulo}`)
     }
+
+    // 2. TICKET DE CHECK-OUT (con costo/ingreso)
+    const ticketCheckOut = {
+      propiedad_id: propiedadId,
+      tipo_ticket: 'reservacion',
+      titulo: `🚪 Check-out: ${evento.titulo || 'Huésped'}`,
+      descripcion: `Check-in: ${evento.fecha_inicio}\n${infoReserva}`.trim(),
+      fecha_programada: evento.fecha_fin,
+      monto_estimado: null, // Se puede actualizar manualmente con el ingreso real
+      prioridad: 'alta',
+      estado: 'pendiente',
+      responsable: null,
+      proveedor: origen,
+      servicio_id: null,
+      pagado: false,
+      reserva_id: `${evento.reserva_id}_checkout`
+    }
+
+    const { error: errorCheckOut } = await supabase
+      .from('tickets')
+      .insert(ticketCheckOut)
+
+    if (errorCheckOut) {
+      console.error(`❌ Error al crear ticket de check-out:`, errorCheckOut)
+    } else {
+      console.log(`🚪 Ticket check-out creado: ${evento.titulo}`)
+    }
+
   } catch (error) {
-    console.error(`❌ Error creando ticket de reservación:`, error)
+    console.error(`❌ Error creando tickets de reservación:`, error)
   }
 }
 
 /**
- * Actualiza un ticket de reservación existente
+ * Actualiza los tickets de check-in y check-out de una reservación
  */
 async function actualizarTicketReservacion(evento: CalendarEvent, propiedadId: string, origen: string): Promise<void> {
   try {
@@ -333,46 +362,73 @@ async function actualizarTicketReservacion(evento: CalendarEvent, propiedadId: s
     const noches = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24))
 
     const origenCapitalizado = origen.charAt(0).toUpperCase() + origen.slice(1)
-    const descripcion = `Check-out: ${evento.fecha_fin}\nNoches: ${noches}\nOrigen: ${origenCapitalizado}\n${evento.notas || ''}`
+    const infoReserva = `Noches: ${noches}\nOrigen: ${origenCapitalizado}\n${evento.notas || ''}`
+    const estadoTicket = evento.estado === 'bloqueado' ? 'cancelado' : 'pendiente'
 
-    const { error } = await supabase
+    // Actualizar ticket de CHECK-IN
+    const { error: errorCheckIn } = await supabase
       .from('tickets')
       .update({
-        titulo: evento.titulo || `Reservación ${origenCapitalizado}`,
-        descripcion: descripcion.trim(),
+        titulo: `🔑 Check-in: ${evento.titulo || 'Huésped'}`,
+        descripcion: `Check-out: ${evento.fecha_fin}\n${infoReserva}`.trim(),
         fecha_programada: evento.fecha_inicio,
-        estado: evento.estado === 'bloqueado' ? 'cancelado' : 'pendiente'
+        estado: estadoTicket
       })
-      .eq('reserva_id', evento.reserva_id)
+      .eq('reserva_id', `${evento.reserva_id}_checkin`)
       .eq('propiedad_id', propiedadId)
 
-    if (error) {
-      console.error(`❌ Error al actualizar ticket de reservación:`, error)
-    } else {
-      console.log(`🔄 Ticket actualizado para reservación: ${evento.titulo}`)
+    if (errorCheckIn) {
+      console.error(`❌ Error al actualizar ticket check-in:`, errorCheckIn)
+    }
+
+    // Actualizar ticket de CHECK-OUT
+    const { error: errorCheckOut } = await supabase
+      .from('tickets')
+      .update({
+        titulo: `🚪 Check-out: ${evento.titulo || 'Huésped'}`,
+        descripcion: `Check-in: ${evento.fecha_inicio}\n${infoReserva}`.trim(),
+        fecha_programada: evento.fecha_fin,
+        estado: estadoTicket
+      })
+      .eq('reserva_id', `${evento.reserva_id}_checkout`)
+      .eq('propiedad_id', propiedadId)
+
+    if (errorCheckOut) {
+      console.error(`❌ Error al actualizar ticket check-out:`, errorCheckOut)
+    }
+
+    if (!errorCheckIn && !errorCheckOut) {
+      console.log(`🔄 Tickets actualizados para reservación: ${evento.titulo}`)
     }
   } catch (error) {
-    console.error(`❌ Error actualizando ticket de reservación:`, error)
+    console.error(`❌ Error actualizando tickets de reservación:`, error)
   }
 }
 
 /**
- * Elimina tickets de reservaciones canceladas
+ * Elimina tickets de check-in y check-out de reservaciones canceladas
  */
 async function eliminarTicketsReservacion(reservaIds: string[], propiedadId: string): Promise<void> {
   try {
     if (reservaIds.length === 0) return
 
+    // Generar IDs de tickets (check-in y check-out)
+    const ticketIds: string[] = []
+    for (const reservaId of reservaIds) {
+      ticketIds.push(`${reservaId}_checkin`)
+      ticketIds.push(`${reservaId}_checkout`)
+    }
+
     const { error } = await supabase
       .from('tickets')
       .delete()
-      .in('reserva_id', reservaIds)
+      .in('reserva_id', ticketIds)
       .eq('propiedad_id', propiedadId)
 
     if (error) {
       console.error(`❌ Error al eliminar tickets de reservaciones:`, error)
     } else {
-      console.log(`🗑️ ${reservaIds.length} tickets de reservaciones eliminados`)
+      console.log(`🗑️ ${reservaIds.length} reservaciones eliminadas (${ticketIds.length} tickets)`)
     }
   } catch (error) {
     console.error(`❌ Error eliminando tickets de reservaciones:`, error)
