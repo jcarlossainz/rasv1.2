@@ -29,13 +29,59 @@ interface Ticket {
   propiedad_nombre: string
 }
 
+interface Reserva {
+  id: string
+  titulo: string
+  fecha_inicio: string
+  fecha_fin: string
+  origen: 'airbnb' | 'booking' | 'expedia' | 'manual' | 'google_vr'
+  estado: string
+  reserva_id?: string
+  notas?: string
+}
+
 interface DiaCalendario {
   fecha: Date
   dia: number
   esHoy: boolean
   esMesActual: boolean
   tickets: Ticket[]
+  reservas: Reserva[]
   montoTotal: number
+}
+
+// Colores por plataforma
+const COLORES_PLATAFORMA = {
+  airbnb: {
+    bg: 'bg-red-100',
+    border: 'border-red-400',
+    text: 'text-red-700',
+    gradient: 'from-red-500 to-red-600'
+  },
+  booking: {
+    bg: 'bg-blue-100',
+    border: 'border-blue-400',
+    text: 'text-blue-700',
+    gradient: 'from-blue-500 to-blue-600'
+  },
+  expedia: {
+    bg: 'bg-yellow-100',
+    border: 'border-yellow-400',
+    text: 'text-yellow-700',
+    gradient: 'from-yellow-500 to-yellow-600'
+  },
+  manual: {
+    bg: 'bg-gray-100',
+    border: 'border-gray-400',
+    text: 'text-gray-700',
+    gradient: 'from-gray-500 to-gray-600'
+  },
+  google_vr: {
+    bg: 'bg-green-100',
+    border: 'border-green-400',
+    text: 'text-green-700',
+    gradient: 'from-green-500 to-green-600'
+  }
 }
 
 interface Propiedad {
@@ -57,11 +103,13 @@ export default function CalendarioPropiedadPage() {
   const [loading, setLoading] = useState(true)
   const [propiedad, setPropiedad] = useState<Propiedad | null>(null)
   const [tickets, setTickets] = useState<Ticket[]>([])
+  const [eventos, setEventos] = useState<Reserva[]>([])
   const [mesActual, setMesActual] = useState(new Date())
   const [semanaActual, setSemanaActual] = useState(new Date())
   const [diasCalendario, setDiasCalendario] = useState<DiaCalendario[]>([])
   const [diasSemana, setDiasSemana] = useState<DiaCalendario[]>([])
   const [ticketSeleccionado, setTicketSeleccionado] = useState<Ticket | null>(null)
+  const [reservaSeleccionada, setReservaSeleccionada] = useState<Reserva | null>(null)
 
   // Estados para vistas
   const [vista, setVista] = useState<VistaCalendario>('calendario')
@@ -87,22 +135,22 @@ export default function CalendarioPropiedadPage() {
     if (tickets.length >= 0) {
       generarCalendario()
     }
-  }, [mesActual, tickets])
+  }, [mesActual, tickets, eventos])
 
   useEffect(() => {
     if (tickets.length >= 0) {
       generarSemana()
     }
-  }, [semanaActual, tickets])
+  }, [semanaActual, tickets, eventos])
 
   // Función auxiliar para recargar solo eventos después de sincronización
-  const cargarEventos = async () => {
+  const cargarEventos = useCallback(async () => {
     if (!propiedadId) return
 
     try {
       const hoy = new Date()
       const fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)
-      const fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 3, 0)
+      const fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 12, 0) // 1 año adelante
 
       const { data: eventosData, error: eventosError } = await supabase
         .from('calendar_events')
@@ -117,23 +165,23 @@ export default function CalendarioPropiedadPage() {
         return
       }
 
-      const eventosTransformados = (eventosData || []).map(evento => ({
+      const eventosTransformados: Reserva[] = (eventosData || []).map(evento => ({
         id: evento.id,
         titulo: evento.titulo || `Reserva ${evento.origen}`,
         fecha_inicio: evento.fecha_inicio,
         fecha_fin: evento.fecha_fin,
-        origen: evento.origen,
+        origen: evento.origen as Reserva['origen'],
         estado: evento.estado,
         reserva_id: evento.reserva_id,
         notas: evento.notas
       }))
 
       setEventos(eventosTransformados)
-      console.log('✅ Eventos recargados después de sincronización')
+      console.log('✅ Eventos cargados:', eventosTransformados.length)
     } catch (error) {
       console.error('Error recargando eventos:', error)
     }
-  }
+  }, [propiedadId])
 
   const cargarDatos = useCallback(async () => {
     if (!propiedadId) return
@@ -224,13 +272,22 @@ export default function CalendarioPropiedadPage() {
 
       setTickets(todosLosTickets)
 
+      // 4. Cargar eventos de calendario (reservaciones)
+      await cargarEventos()
+
     } catch (error) {
       console.error('Error cargando datos:', error)
       toast.error('Error al cargar calendario')
     } finally {
       setLoading(false)
     }
-  }, [propiedadId, toast, router])
+  }, [propiedadId, toast, router, cargarEventos])
+
+  // Helper: verificar si una fecha cae dentro de una reserva
+  const fechaEnReserva = useCallback((fecha: Date, reserva: Reserva): boolean => {
+    const fechaStr = fecha.toISOString().split('T')[0]
+    return fechaStr >= reserva.fecha_inicio && fechaStr < reserva.fecha_fin
+  }, [])
 
   const generarCalendario = useCallback(() => {
     const año = mesActual.getFullYear()
@@ -259,6 +316,9 @@ export default function CalendarioPropiedadPage() {
                fechaTicket.getFullYear() === fecha.getFullYear()
       })
 
+      // Filtrar reservas que incluyen este día
+      const reservasDelDia = eventos.filter(reserva => fechaEnReserva(fecha, reserva))
+
       const montoTotal = ticketsDelDia.reduce((sum, t) => sum + t.monto_estimado, 0)
 
       dias.push({
@@ -267,12 +327,13 @@ export default function CalendarioPropiedadPage() {
         esHoy,
         esMesActual,
         tickets: ticketsDelDia,
+        reservas: reservasDelDia,
         montoTotal
       })
     }
 
     setDiasCalendario(dias)
-  }, [mesActual, tickets])
+  }, [mesActual, tickets, eventos, fechaEnReserva])
 
   const cambiarMes = useCallback((incremento: number) => {
     const nuevaFecha = new Date(mesActual)
@@ -306,6 +367,9 @@ export default function CalendarioPropiedadPage() {
                fechaTicket.getFullYear() === fecha.getFullYear()
       })
 
+      // Filtrar reservas que incluyen este día
+      const reservasDelDia = eventos.filter(reserva => fechaEnReserva(fecha, reserva))
+
       const montoTotal = ticketsDelDia.reduce((sum, t) => sum + t.monto_estimado, 0)
 
       dias.push({
@@ -314,12 +378,13 @@ export default function CalendarioPropiedadPage() {
         esHoy,
         esMesActual: true, // Todos los días de la semana se muestran igual
         tickets: ticketsDelDia,
+        reservas: reservasDelDia,
         montoTotal
       })
     }
 
     setDiasSemana(dias)
-  }, [semanaActual, tickets])
+  }, [semanaActual, tickets, eventos, fechaEnReserva])
 
   const cambiarSemana = useCallback((incremento: number) => {
     const nuevaFecha = new Date(semanaActual)
@@ -476,10 +541,13 @@ export default function CalendarioPropiedadPage() {
               <div className="grid grid-cols-7 gap-1.5">
                 {diasCalendario.map((dia, index) => {
                   const tieneTickets = dia.tickets.length > 0
+                  const tieneReservas = dia.reservas.length > 0
+                  const tieneContenido = tieneTickets || tieneReservas
                   const diaKey = dia.fecha.toISOString().split('T')[0]
                   const estaExpandido = diaExpandido === diaKey
-                  const ticketsMostrados = estaExpandido ? dia.tickets : dia.tickets.slice(0, 2)
-                  const ticketsOcultos = dia.tickets.length - 2
+                  const ticketsMostrados = estaExpandido ? dia.tickets : dia.tickets.slice(0, 1)
+                  const reservasMostradas = estaExpandido ? dia.reservas : dia.reservas.slice(0, 2)
+                  const itemsOcultos = (dia.tickets.length - 1) + (dia.reservas.length - 2)
 
                   return (
                     <div
@@ -493,8 +561,29 @@ export default function CalendarioPropiedadPage() {
                       }`}>
                         {dia.dia}
                       </div>
-                      {tieneTickets && dia.esMesActual && (
+
+                      {tieneContenido && dia.esMesActual && (
                         <div className="space-y-1">
+                          {/* RESERVAS con colores por plataforma */}
+                          {reservasMostradas.map(reserva => {
+                            const colores = COLORES_PLATAFORMA[reserva.origen] || COLORES_PLATAFORMA.manual
+                            return (
+                              <div
+                                key={reserva.id}
+                                onClick={() => setReservaSeleccionada(reserva)}
+                                className={`text-[10px] p-1 ${colores.bg} rounded border ${colores.border} hover:opacity-80 transition-all cursor-pointer`}
+                              >
+                                <div className={`flex items-center gap-1 ${colores.text}`}>
+                                  <span className="flex-shrink-0 text-[8px] font-bold uppercase">
+                                    {reserva.origen === 'airbnb' ? 'A' : reserva.origen === 'booking' ? 'B' : reserva.origen === 'expedia' ? 'E' : 'M'}
+                                  </span>
+                                  <span className="truncate flex-1 font-semibold">{reserva.titulo}</span>
+                                </div>
+                              </div>
+                            )
+                          })}
+
+                          {/* TICKETS de pago */}
                           {ticketsMostrados.map(ticket => (
                             <div
                               key={ticket.id}
@@ -510,7 +599,9 @@ export default function CalendarioPropiedadPage() {
                               </div>
                             </div>
                           ))}
-                          {dia.tickets.length > 2 && (
+
+                          {/* Botón expandir */}
+                          {(dia.tickets.length > 1 || dia.reservas.length > 2) && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -518,12 +609,16 @@ export default function CalendarioPropiedadPage() {
                               }}
                               className="w-full text-[9px] text-center text-white bg-ras-azul hover:bg-ras-turquesa font-bold py-1 px-2 rounded transition-all cursor-pointer"
                             >
-                              {estaExpandido ? '▲ Contraer' : `▼ Ver ${ticketsOcultos} más`}
+                              {estaExpandido ? '▲ Contraer' : `▼ Ver más`}
                             </button>
                           )}
-                          <div className="text-[10px] text-center font-bold text-ras-azul">
-                            ${(dia.montoTotal / 1000).toFixed(1)}K
-                          </div>
+
+                          {/* Monto total de tickets */}
+                          {dia.montoTotal > 0 && (
+                            <div className="text-[10px] text-center font-bold text-ras-azul">
+                              ${(dia.montoTotal / 1000).toFixed(1)}K
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -627,10 +722,12 @@ export default function CalendarioPropiedadPage() {
               <div className="grid grid-cols-7 gap-1.5">
                 {diasSemana.map((dia, index) => {
                   const tieneTickets = dia.tickets.length > 0
+                  const tieneReservas = dia.reservas.length > 0
+                  const tieneContenido = tieneTickets || tieneReservas
                   const diaKey = dia.fecha.toISOString().split('T')[0]
                   const estaExpandido = diaExpandido === diaKey
-                  const ticketsMostrados = estaExpandido ? dia.tickets : dia.tickets.slice(0, 3)
-                  const ticketsOcultos = dia.tickets.length - 3
+                  const ticketsMostrados = estaExpandido ? dia.tickets : dia.tickets.slice(0, 2)
+                  const reservasMostradas = estaExpandido ? dia.reservas : dia.reservas.slice(0, 2)
 
                   return (
                     <div
@@ -644,8 +741,28 @@ export default function CalendarioPropiedadPage() {
                       }`}>
                         {dia.dia}
                       </div>
-                      {tieneTickets && (
+                      {tieneContenido && (
                         <div className="space-y-1">
+                          {/* RESERVAS con colores por plataforma */}
+                          {reservasMostradas.map(reserva => {
+                            const colores = COLORES_PLATAFORMA[reserva.origen] || COLORES_PLATAFORMA.manual
+                            return (
+                              <div
+                                key={reserva.id}
+                                onClick={() => setReservaSeleccionada(reserva)}
+                                className={`text-[10px] p-1 ${colores.bg} rounded border ${colores.border} hover:opacity-80 transition-all cursor-pointer`}
+                              >
+                                <div className={`flex items-center gap-1 ${colores.text}`}>
+                                  <span className="flex-shrink-0 text-[8px] font-bold uppercase">
+                                    {reserva.origen === 'airbnb' ? 'A' : reserva.origen === 'booking' ? 'B' : reserva.origen === 'expedia' ? 'E' : 'M'}
+                                  </span>
+                                  <span className="truncate flex-1 font-semibold">{reserva.titulo}</span>
+                                </div>
+                              </div>
+                            )
+                          })}
+
+                          {/* TICKETS de pago */}
                           {ticketsMostrados.map(ticket => (
                             <div
                               key={ticket.id}
@@ -661,7 +778,8 @@ export default function CalendarioPropiedadPage() {
                               </div>
                             </div>
                           ))}
-                          {dia.tickets.length > 3 && (
+                          {/* Botón expandir */}
+                          {(dia.tickets.length > 2 || dia.reservas.length > 2) && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -669,12 +787,14 @@ export default function CalendarioPropiedadPage() {
                               }}
                               className="w-full text-[9px] text-center text-white bg-ras-azul hover:bg-ras-turquesa font-bold py-1 px-2 rounded transition-all cursor-pointer"
                             >
-                              {estaExpandido ? '▲ Contraer' : `▼ Ver ${ticketsOcultos} más`}
+                              {estaExpandido ? '▲ Contraer' : `▼ Ver más`}
                             </button>
                           )}
-                          <div className="text-[10px] text-center font-bold text-ras-azul">
-                            ${(dia.montoTotal / 1000).toFixed(1)}K
-                          </div>
+                          {dia.montoTotal > 0 && (
+                            <div className="text-[10px] text-center font-bold text-ras-azul">
+                              ${(dia.montoTotal / 1000).toFixed(1)}K
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -893,6 +1013,134 @@ export default function CalendarioPropiedadPage() {
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Detalle de Reserva */}
+        {reservaSeleccionada && (
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setReservaSeleccionada(null)}
+          >
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              {/* Header con color de plataforma */}
+              {(() => {
+                const colores = COLORES_PLATAFORMA[reservaSeleccionada.origen] || COLORES_PLATAFORMA.manual
+                return (
+                  <div className={`bg-gradient-to-r ${colores.gradient} p-6 text-white`}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center border border-white/30">
+                          <span className="text-xl font-bold">
+                            {reservaSeleccionada.origen === 'airbnb' ? 'A' :
+                             reservaSeleccionada.origen === 'booking' ? 'B' :
+                             reservaSeleccionada.origen === 'expedia' ? 'E' : 'M'}
+                          </span>
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold font-poppins">{reservaSeleccionada.titulo}</h3>
+                          <p className="text-sm text-white/90 font-roboto capitalize">{reservaSeleccionada.origen}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setReservaSeleccionada(null)}
+                        className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-1.5 transition-all"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )
+              })()}
+              <div className="p-6 space-y-4">
+                {/* Fechas */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                      <line x1="16" y1="2" x2="16" y2="6"/>
+                      <line x1="8" y1="2" x2="8" y2="6"/>
+                      <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    <span className="text-sm font-semibold">Check-in</span>
+                  </div>
+                  <span className="text-sm font-bold text-gray-800">
+                    {new Date(reservaSeleccionada.fecha_inicio).toLocaleDateString('es-MX', {
+                      weekday: 'short',
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric'
+                    })}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                      <line x1="16" y1="2" x2="16" y2="6"/>
+                      <line x1="8" y1="2" x2="8" y2="6"/>
+                      <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    <span className="text-sm font-semibold">Check-out</span>
+                  </div>
+                  <span className="text-sm font-bold text-gray-800">
+                    {new Date(reservaSeleccionada.fecha_fin).toLocaleDateString('es-MX', {
+                      weekday: 'short',
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric'
+                    })}
+                  </span>
+                </div>
+                {/* Estado */}
+                <div className="flex items-center justify-between p-4 bg-purple-50 rounded-xl border border-purple-200">
+                  <div className="flex items-center gap-2 text-purple-700">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-sm font-semibold">Estado</span>
+                  </div>
+                  <span className="text-sm font-bold text-purple-600 capitalize">
+                    {reservaSeleccionada.estado === 'reservado' ? '✅ Confirmada' :
+                     reservaSeleccionada.estado === 'bloqueado' ? '🚫 Bloqueado' : reservaSeleccionada.estado}
+                  </span>
+                </div>
+                {/* ID de reserva */}
+                {reservaSeleccionada.reserva_id && (
+                  <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl border border-blue-200">
+                    <div className="flex items-center gap-2 text-blue-700">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                      </svg>
+                      <span className="text-sm font-semibold">ID Reserva</span>
+                    </div>
+                    <span className="text-sm font-bold text-blue-600 font-mono">
+                      {reservaSeleccionada.reserva_id}
+                    </span>
+                  </div>
+                )}
+                {/* Notas */}
+                {reservaSeleccionada.notas && (
+                  <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                    <div className="flex items-center gap-2 text-gray-600 mb-2">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span className="text-sm font-semibold">Notas</span>
+                    </div>
+                    <p className="text-sm text-gray-700">{reservaSeleccionada.notas}</p>
+                  </div>
+                )}
+                <button
+                  onClick={() => setReservaSeleccionada(null)}
+                  className="w-full py-3.5 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-all font-poppins"
+                >
+                  Cerrar
                 </button>
               </div>
             </div>
