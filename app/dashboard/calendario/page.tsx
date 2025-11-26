@@ -37,36 +37,12 @@ interface Ticket {
   propietario_nombre: string
 }
 
-interface Reserva {
-  id: string
-  titulo: string
-  fecha_inicio: string
-  fecha_fin: string
-  origen: 'airbnb' | 'booking' | 'expedia' | 'manual' | 'google_vr' | string
-  estado: string
-  propiedad_id: string
-  propiedad_nombre: string
-  propietario_id: string
-  propietario_nombre: string
-  notas?: string
-}
-
-const COLORES_PLATAFORMA: Record<string, { bg: string; border: string; text: string; gradient: string }> = {
-  airbnb: { bg: 'bg-red-100', border: 'border-red-400', text: 'text-red-700', gradient: 'from-red-500 to-red-600' },
-  booking: { bg: 'bg-blue-100', border: 'border-blue-400', text: 'text-blue-700', gradient: 'from-blue-500 to-blue-600' },
-  expedia: { bg: 'bg-yellow-100', border: 'border-yellow-400', text: 'text-yellow-700', gradient: 'from-yellow-500 to-yellow-600' },
-  manual: { bg: 'bg-gray-100', border: 'border-gray-400', text: 'text-gray-700', gradient: 'from-gray-500 to-gray-600' },
-  google_vr: { bg: 'bg-green-100', border: 'border-green-400', text: 'text-green-700', gradient: 'from-green-500 to-green-600' },
-  default: { bg: 'bg-purple-100', border: 'border-purple-400', text: 'text-purple-700', gradient: 'from-purple-500 to-purple-600' }
-}
-
 interface DiaCalendario {
   fecha: Date
   dia: number
   esHoy: boolean
   esMesActual: boolean
   tickets: Ticket[]
-  reservas: Reserva[]
   montoTotal: number
 }
 
@@ -91,14 +67,11 @@ export default function CalendarioGlobalPage() {
 
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [ticketsFiltrados, setTicketsFiltrados] = useState<Ticket[]>([])
-  const [reservas, setReservas] = useState<Reserva[]>([])
-  const [reservasFiltradas, setReservasFiltradas] = useState<Reserva[]>([])
   const [mesActual, setMesActual] = useState(new Date())
   const [semanaActual, setSemanaActual] = useState(new Date())
   const [diasCalendario, setDiasCalendario] = useState<DiaCalendario[]>([])
   const [diasSemana, setDiasSemana] = useState<DiaCalendario[]>([])
   const [ticketSeleccionado, setTicketSeleccionado] = useState<Ticket | null>(null)
-  const [reservaSeleccionada, setReservaSeleccionada] = useState<Reserva | null>(null)
 
   // Estados para vistas y filtros MULTI-SELECCIÓN
   const [vista, setVista] = useState<VistaCalendario>('calendario')
@@ -122,22 +95,22 @@ export default function CalendarioGlobalPage() {
   }, [user])
 
   useEffect(() => {
-    if (tickets.length > 0 || reservas.length > 0) {
+    if (tickets.length > 0) {
       aplicarFiltros()
     }
-  }, [tickets, reservas, propiedadFiltro, propietarioFiltro])
+  }, [tickets, propiedadFiltro, propietarioFiltro])
 
   useEffect(() => {
-    if (ticketsFiltrados.length >= 0 || reservasFiltradas.length >= 0) {
+    if (ticketsFiltrados.length >= 0) {
       generarCalendario()
     }
-  }, [mesActual, ticketsFiltrados, reservasFiltradas])
+  }, [mesActual, ticketsFiltrados])
 
   useEffect(() => {
-    if (ticketsFiltrados.length >= 0 || reservasFiltradas.length >= 0) {
+    if (ticketsFiltrados.length >= 0) {
       generarSemana()
     }
-  }, [semanaActual, ticketsFiltrados, reservasFiltradas])
+  }, [semanaActual, ticketsFiltrados])
 
   const cargarDatos = async (userId: string) => {
     try {
@@ -247,50 +220,6 @@ export default function CalendarioGlobalPage() {
 
       setTickets(ticketsTransformados)
 
-      // Cargar reservaciones de calendar_events
-      const { data: eventosData, error: eventosError } = await supabase
-        .from('calendar_events')
-        .select(`
-          id,
-          titulo,
-          fecha_inicio,
-          fecha_fin,
-          origen,
-          estado,
-          propiedad_id,
-          notas
-        `)
-        .in('propiedad_id', propIds)
-        .or(`fecha_inicio.gte.${fechaInicio.toISOString().split('T')[0]},fecha_fin.gte.${fechaInicio.toISOString().split('T')[0]}`)
-        .lte('fecha_inicio', fechaFin.toISOString().split('T')[0])
-        .order('fecha_inicio', { ascending: true })
-
-      if (eventosError) {
-        console.error('Error cargando reservaciones:', eventosError)
-      }
-
-      // Transformar reservaciones
-      const reservasTransformadas = (eventosData || []).map(evento => {
-        const propiedad = todasPropiedades.find(p => p.id === evento.propiedad_id)
-        const propietario = propietariosUnicos.find(p => p.id === propiedad?.owner_id)
-
-        return {
-          id: evento.id,
-          titulo: evento.titulo || 'Reservación',
-          fecha_inicio: evento.fecha_inicio,
-          fecha_fin: evento.fecha_fin,
-          origen: evento.origen || 'manual',
-          estado: evento.estado || 'confirmada',
-          propiedad_id: evento.propiedad_id,
-          propiedad_nombre: propiedad?.nombre_propiedad || 'Sin nombre',
-          propietario_id: propiedad?.owner_id || '',
-          propietario_nombre: propietario?.nombre || 'Desconocido',
-          notas: evento.notas
-        }
-      })
-
-      setReservas(reservasTransformadas)
-
     } catch (error) {
       console.error('Error cargando datos:', error)
       toast.error('Error al cargar calendario')
@@ -299,20 +228,16 @@ export default function CalendarioGlobalPage() {
 
   const aplicarFiltros = () => {
     let ticketsF = [...tickets]
-    let reservasF = [...reservas]
 
     if (propietarioFiltro.length > 0) {
       ticketsF = ticketsF.filter(t => propietarioFiltro.includes(t.propietario_id))
-      reservasF = reservasF.filter(r => propietarioFiltro.includes(r.propietario_id))
     }
 
     if (propiedadFiltro.length > 0) {
       ticketsF = ticketsF.filter(t => propiedadFiltro.includes(t.propiedad_id))
-      reservasF = reservasF.filter(r => propiedadFiltro.includes(r.propiedad_id))
     }
 
     setTicketsFiltrados(ticketsF)
-    setReservasFiltradas(reservasF)
   }
 
   const togglePropietario = (id: string) => {
@@ -363,17 +288,6 @@ export default function CalendarioGlobalPage() {
                fechaTicket.getFullYear() === fecha.getFullYear()
       })
 
-      // Filtrar reservaciones que incluyen este día
-      const reservasDelDia = reservasFiltradas.filter(reserva => {
-        const fechaInicio = new Date(reserva.fecha_inicio)
-        const fechaFin = new Date(reserva.fecha_fin)
-        fechaInicio.setHours(0, 0, 0, 0)
-        fechaFin.setHours(0, 0, 0, 0)
-        const fechaDia = new Date(fecha)
-        fechaDia.setHours(0, 0, 0, 0)
-        return fechaDia >= fechaInicio && fechaDia <= fechaFin
-      })
-
       const montoTotal = ticketsDelDia.reduce((sum, t) => sum + t.monto_estimado, 0)
 
       dias.push({
@@ -382,11 +296,10 @@ export default function CalendarioGlobalPage() {
         esHoy,
         esMesActual,
         tickets: ticketsDelDia,
-        reservas: reservasDelDia,
         montoTotal
       })
     }
-
+    
     setDiasCalendario(dias)
   }
 
@@ -422,17 +335,6 @@ export default function CalendarioGlobalPage() {
                fechaTicket.getFullYear() === fecha.getFullYear()
       })
 
-      // Filtrar reservaciones que incluyen este día
-      const reservasDelDia = reservasFiltradas.filter(reserva => {
-        const fechaInicio = new Date(reserva.fecha_inicio)
-        const fechaFin = new Date(reserva.fecha_fin)
-        fechaInicio.setHours(0, 0, 0, 0)
-        fechaFin.setHours(0, 0, 0, 0)
-        const fechaDia = new Date(fecha)
-        fechaDia.setHours(0, 0, 0, 0)
-        return fechaDia >= fechaInicio && fechaDia <= fechaFin
-      })
-
       const montoTotal = ticketsDelDia.reduce((sum, t) => sum + t.monto_estimado, 0)
 
       dias.push({
@@ -441,7 +343,6 @@ export default function CalendarioGlobalPage() {
         esHoy,
         esMesActual: true, // Todos los días de la semana se muestran igual
         tickets: ticketsDelDia,
-        reservas: reservasDelDia,
         montoTotal
       })
     }
@@ -727,13 +628,10 @@ export default function CalendarioGlobalPage() {
               <div className="grid grid-cols-7 gap-1.5">
                 {diasCalendario.map((dia, index) => {
                   const tieneTickets = dia.tickets.length > 0
-                  const tieneReservas = dia.reservas.length > 0
-                  const tieneContenido = tieneTickets || tieneReservas
                   const diaKey = dia.fecha.toISOString().split('T')[0]
                   const estaExpandido = diaExpandido === diaKey
-                  const ticketsMostrados = estaExpandido ? dia.tickets : dia.tickets.slice(0, 1)
-                  const reservasMostradas = estaExpandido ? dia.reservas : dia.reservas.slice(0, 1)
-                  const itemsOcultos = (dia.tickets.length - 1) + (dia.reservas.length - 1)
+                  const ticketsMostrados = estaExpandido ? dia.tickets : dia.tickets.slice(0, 2)
+                  const ticketsOcultos = dia.tickets.length - 2
 
                   return (
                     <div
@@ -747,28 +645,8 @@ export default function CalendarioGlobalPage() {
                       }`}>
                         {dia.dia}
                       </div>
-                      {tieneContenido && dia.esMesActual && (
+                      {tieneTickets && dia.esMesActual && (
                         <div className="space-y-1">
-                          {/* Reservaciones */}
-                          {reservasMostradas.map(reserva => {
-                            const colores = COLORES_PLATAFORMA[reserva.origen] || COLORES_PLATAFORMA.default
-                            return (
-                              <div
-                                key={reserva.id}
-                                onClick={() => setReservaSeleccionada(reserva)}
-                                className={`text-[10px] p-1 ${colores.bg} rounded border ${colores.border} hover:opacity-80 transition-all cursor-pointer`}
-                              >
-                                <div className={`flex items-center gap-1 ${colores.text}`}>
-                                  <span className="flex-shrink-0">🏠</span>
-                                  <span className="truncate flex-1 font-semibold">{reserva.titulo}</span>
-                                </div>
-                                <div className="text-[9px] text-gray-600 mt-0.5 truncate">
-                                  {reserva.propiedad_nombre}
-                                </div>
-                              </div>
-                            )
-                          })}
-                          {/* Tickets */}
                           {ticketsMostrados.map(ticket => (
                             <div
                               key={ticket.id}
@@ -784,7 +662,7 @@ export default function CalendarioGlobalPage() {
                               </div>
                             </div>
                           ))}
-                          {itemsOcultos > 0 && (
+                          {dia.tickets.length > 2 && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -792,14 +670,12 @@ export default function CalendarioGlobalPage() {
                               }}
                               className="w-full text-[9px] text-center text-white bg-ras-azul hover:bg-ras-turquesa font-bold py-1 px-2 rounded transition-all cursor-pointer"
                             >
-                              {estaExpandido ? '▲ Contraer' : `▼ Ver ${itemsOcultos} más`}
+                              {estaExpandido ? '▲ Contraer' : `▼ Ver ${ticketsOcultos} más`}
                             </button>
                           )}
-                          {tieneTickets && (
-                            <div className="text-[10px] text-center font-bold text-ras-azul">
-                              ${(dia.montoTotal / 1000).toFixed(1)}K
-                            </div>
-                          )}
+                          <div className="text-[10px] text-center font-bold text-ras-azul">
+                            ${(dia.montoTotal / 1000).toFixed(1)}K
+                          </div>
                         </div>
                       )}
                     </div>
@@ -903,13 +779,10 @@ export default function CalendarioGlobalPage() {
               <div className="grid grid-cols-7 gap-1.5">
                 {diasSemana.map((dia, index) => {
                   const tieneTickets = dia.tickets.length > 0
-                  const tieneReservas = dia.reservas.length > 0
-                  const tieneContenido = tieneTickets || tieneReservas
                   const diaKey = dia.fecha.toISOString().split('T')[0]
                   const estaExpandido = diaExpandido === diaKey
-                  const ticketsMostrados = estaExpandido ? dia.tickets : dia.tickets.slice(0, 2)
-                  const reservasMostradas = estaExpandido ? dia.reservas : dia.reservas.slice(0, 2)
-                  const itemsOcultos = Math.max(0, (dia.tickets.length - 2)) + Math.max(0, (dia.reservas.length - 2))
+                  const ticketsMostrados = estaExpandido ? dia.tickets : dia.tickets.slice(0, 3)
+                  const ticketsOcultos = dia.tickets.length - 3
 
                   return (
                     <div
@@ -923,28 +796,8 @@ export default function CalendarioGlobalPage() {
                       }`}>
                         {dia.dia}
                       </div>
-                      {tieneContenido && (
+                      {tieneTickets && (
                         <div className="space-y-1">
-                          {/* Reservaciones */}
-                          {reservasMostradas.map(reserva => {
-                            const colores = COLORES_PLATAFORMA[reserva.origen] || COLORES_PLATAFORMA.default
-                            return (
-                              <div
-                                key={reserva.id}
-                                onClick={() => setReservaSeleccionada(reserva)}
-                                className={`text-[10px] p-1 ${colores.bg} rounded border ${colores.border} hover:opacity-80 transition-all cursor-pointer`}
-                              >
-                                <div className={`flex items-center gap-1 ${colores.text}`}>
-                                  <span className="flex-shrink-0">🏠</span>
-                                  <span className="truncate flex-1 font-semibold">{reserva.titulo}</span>
-                                </div>
-                                <div className="text-[9px] text-gray-600 mt-0.5 truncate">
-                                  {reserva.propiedad_nombre}
-                                </div>
-                              </div>
-                            )
-                          })}
-                          {/* Tickets */}
                           {ticketsMostrados.map(ticket => (
                             <div
                               key={ticket.id}
@@ -960,7 +813,7 @@ export default function CalendarioGlobalPage() {
                               </div>
                             </div>
                           ))}
-                          {itemsOcultos > 0 && (
+                          {dia.tickets.length > 3 && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -968,14 +821,12 @@ export default function CalendarioGlobalPage() {
                               }}
                               className="w-full text-[9px] text-center text-white bg-ras-azul hover:bg-ras-turquesa font-bold py-1 px-2 rounded transition-all cursor-pointer"
                             >
-                              {estaExpandido ? '▲ Contraer' : `▼ Ver ${itemsOcultos} más`}
+                              {estaExpandido ? '▲ Contraer' : `▼ Ver ${ticketsOcultos} más`}
                             </button>
                           )}
-                          {tieneTickets && (
-                            <div className="text-[10px] text-center font-bold text-ras-azul">
-                              ${(dia.montoTotal / 1000).toFixed(1)}K
-                            </div>
-                          )}
+                          <div className="text-[10px] text-center font-bold text-ras-azul">
+                            ${(dia.montoTotal / 1000).toFixed(1)}K
+                          </div>
                         </div>
                       )}
                     </div>
@@ -991,7 +842,7 @@ export default function CalendarioGlobalPage() {
           <>
             <div className="bg-white rounded-xl shadow-md p-4 mb-6 border border-gray-200">
               <div className="flex items-center justify-between gap-4">
-                <h2 className="text-xl font-bold text-ras-azul font-poppins">Tickets y Reservaciones</h2>
+                <h2 className="text-xl font-bold text-ras-azul font-poppins">Todos los Tickets</h2>
 
                 {/* Selector de Vista */}
                 <div className="flex gap-2">
@@ -1046,94 +897,17 @@ export default function CalendarioGlobalPage() {
               </div>
             </div>
 
-            {/* Sección de Reservaciones */}
-            {reservasFiltradas.length > 0 && (
-              <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6">
-                <div className="bg-gradient-to-r from-red-500 to-blue-500 px-6 py-3">
-                  <h3 className="text-white font-bold">Reservaciones ({reservasFiltradas.length})</h3>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Origen</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Check-in</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Check-out</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Huésped</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Propiedad</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {reservasFiltradas
-                        .sort((a, b) => new Date(a.fecha_inicio).getTime() - new Date(b.fecha_inicio).getTime())
-                        .map(reserva => {
-                          const colores = COLORES_PLATAFORMA[reserva.origen] || COLORES_PLATAFORMA.default
-                          return (
-                            <tr
-                              key={reserva.id}
-                              onClick={() => setReservaSeleccionada(reserva)}
-                              className="hover:bg-gray-50 cursor-pointer transition-colors"
-                            >
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${colores.bg} ${colores.text} ${colores.border} border`}>
-                                  {reserva.origen.charAt(0).toUpperCase() + reserva.origen.slice(1)}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm font-medium text-gray-900">
-                                  {new Date(reserva.fecha_inicio).toLocaleDateString('es-MX', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                    year: 'numeric'
-                                  })}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm font-medium text-gray-900">
-                                  {new Date(reserva.fecha_fin).toLocaleDateString('es-MX', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                    year: 'numeric'
-                                  })}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4">
-                                <div className="text-sm font-medium text-gray-900">{reserva.titulo}</div>
-                              </td>
-                              <td className="px-6 py-4">
-                                <div className="text-sm font-medium text-gray-900">{reserva.propiedad_nombre}</div>
-                                <div className="text-xs text-gray-500">{reserva.propietario_nombre}</div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-                                  {reserva.estado}
-                                </span>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* Sección de Tickets */}
             <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-ras-azul to-ras-turquesa px-6 py-3">
-                <h3 className="text-white font-bold">Tickets ({ticketsFiltrados.length})</h3>
-              </div>
               <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-gradient-to-r from-ras-azul to-ras-turquesa text-white">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Estado</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fecha</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ticket</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Propiedad</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Propietario</th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Monto</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Estado</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Fecha</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Ticket</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Propiedad</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Propietario</th>
+                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase">Monto</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -1280,123 +1054,6 @@ export default function CalendarioGlobalPage() {
                   </svg>
                 </button>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal de detalle de reservación */}
-        {reservaSeleccionada && (
-          <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => setReservaSeleccionada(null)}
-          >
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
-              {(() => {
-                const colores = COLORES_PLATAFORMA[reservaSeleccionada.origen] || COLORES_PLATAFORMA.default
-                return (
-                  <>
-                    <div className={`bg-gradient-to-r ${colores.gradient} p-6 text-white`}>
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center border border-white/30">
-                            <span className="text-2xl">🏠</span>
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-bold font-poppins">{reservaSeleccionada.titulo}</h3>
-                            <p className="text-sm text-white/90 font-roboto">{reservaSeleccionada.propiedad_nombre}</p>
-                            <p className="text-xs text-white/80 font-roboto capitalize">{reservaSeleccionada.origen}</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => setReservaSeleccionada(null)}
-                          className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-1.5 transition-all"
-                        >
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                    <div className="p-6 space-y-4">
-                      <div className="flex items-center justify-between p-4 bg-green-50 rounded-xl border border-green-200">
-                        <div className="flex items-center gap-2 text-green-700">
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <span className="text-sm font-semibold">Check-in</span>
-                        </div>
-                        <span className="text-sm font-bold text-green-600">
-                          {new Date(reservaSeleccionada.fecha_inicio).toLocaleDateString('es-MX', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric'
-                          })}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between p-4 bg-red-50 rounded-xl border border-red-200">
-                        <div className="flex items-center gap-2 text-red-700">
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <span className="text-sm font-semibold">Check-out</span>
-                        </div>
-                        <span className="text-sm font-bold text-red-600">
-                          {new Date(reservaSeleccionada.fecha_fin).toLocaleDateString('es-MX', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric'
-                          })}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl border border-blue-200">
-                        <div className="flex items-center gap-2 text-blue-700">
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span className="text-sm font-semibold">Noches</span>
-                        </div>
-                        <span className="text-sm font-bold text-blue-600">
-                          {Math.ceil((new Date(reservaSeleccionada.fecha_fin).getTime() - new Date(reservaSeleccionada.fecha_inicio).getTime()) / (1000 * 60 * 60 * 24))} noches
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between p-4 bg-purple-50 rounded-xl border border-purple-200">
-                        <div className="flex items-center gap-2 text-purple-700">
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span className="text-sm font-semibold">Estado</span>
-                        </div>
-                        <span className="text-sm font-bold text-purple-600 capitalize">
-                          {reservaSeleccionada.estado}
-                        </span>
-                      </div>
-                      {reservaSeleccionada.notas && (
-                        <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-                          <div className="flex items-center gap-2 text-gray-700 mb-2">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            <span className="text-sm font-semibold">Notas</span>
-                          </div>
-                          <p className="text-sm text-gray-600">{reservaSeleccionada.notas}</p>
-                        </div>
-                      )}
-                      <button
-                        onClick={() => {
-                          router.push(`/dashboard/catalogo/propiedad/${reservaSeleccionada.propiedad_id}/calendario`)
-                          setReservaSeleccionada(null)
-                        }}
-                        className={`w-full py-3.5 bg-gradient-to-r ${colores.gradient} text-white rounded-xl font-semibold hover:shadow-lg hover:scale-[1.02] transition-all font-poppins flex items-center justify-center gap-2`}
-                      >
-                        <span>Ver calendario de la propiedad</span>
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                    </div>
-                  </>
-                )
-              })()}
             </div>
           </div>
         )}

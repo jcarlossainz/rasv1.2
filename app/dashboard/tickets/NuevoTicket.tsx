@@ -55,6 +55,7 @@ export default function NuevoTicket({
     { value: 'reparacion', label: 'Reparación', icon: '🛠️' },
     { value: 'limpieza', label: 'Limpieza', icon: '🧹' },
     { value: 'inspeccion', label: 'Inspección', icon: '🔍' },
+    { value: 'reservacion', label: 'Reservación', icon: '🏠' },
     { value: 'otro', label: 'Otro', icon: '📋' }
   ];
 

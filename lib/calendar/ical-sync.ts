@@ -174,6 +174,7 @@ async function parsearFeedICal(url: string, propiedadId: string, origen: 'airbnb
 
 /**
  * Sincroniza eventos de un origen específico con la base de datos
+ * También crea/actualiza tickets correspondientes
  */
 async function sincronizarEventos(eventos: CalendarEvent[], propiedadId: string, origen: string): Promise<{ inserted: number, updated: number, deleted: number }> {
   let inserted = 0
@@ -219,6 +220,8 @@ async function sincronizarEventos(eventos: CalendarEvent[], propiedadId: string,
             console.error(`❌ Error al actualizar evento:`, updateError)
           } else {
             updated++
+            // Actualizar ticket correspondiente
+            await actualizarTicketReservacion(evento, propiedadId, origen)
           }
         }
 
@@ -235,6 +238,8 @@ async function sincronizarEventos(eventos: CalendarEvent[], propiedadId: string,
           console.error(`❌ Error al insertar evento:`, insertError)
         } else {
           inserted++
+          // Crear ticket correspondiente
+          await crearTicketReservacion(evento, propiedadId, origen)
         }
       }
     }
@@ -243,6 +248,9 @@ async function sincronizarEventos(eventos: CalendarEvent[], propiedadId: string,
     const eventosAEliminar = Array.from(eventosExistentesMap.values())
     if (eventosAEliminar.length > 0) {
       const idsAEliminar = eventosAEliminar.map(e => e.id)
+      const reservaIdsAEliminar = eventosAEliminar.map(e => e.reserva_id).filter(Boolean)
+
+      // Eliminar eventos
       const { error: deleteError } = await supabase
         .from('calendar_events')
         .delete()
@@ -252,6 +260,8 @@ async function sincronizarEventos(eventos: CalendarEvent[], propiedadId: string,
         console.error(`❌ Error al eliminar eventos:`, deleteError)
       } else {
         deleted = idsAEliminar.length
+        // Eliminar tickets correspondientes
+        await eliminarTicketsReservacion(reservaIdsAEliminar, propiedadId)
       }
     }
 
@@ -260,6 +270,112 @@ async function sincronizarEventos(eventos: CalendarEvent[], propiedadId: string,
   } catch (error: any) {
     console.error(`❌ Error al sincronizar eventos de ${origen}:`, error)
     throw error
+  }
+}
+
+/**
+ * Crea un ticket para una reservación
+ */
+async function crearTicketReservacion(evento: CalendarEvent, propiedadId: string, origen: string): Promise<void> {
+  try {
+    // Solo crear tickets para reservaciones (no bloqueos)
+    if (evento.estado === 'bloqueado') {
+      console.log(`⏭️ Saltando bloqueo, no se crea ticket: ${evento.titulo}`)
+      return
+    }
+
+    const checkIn = new Date(evento.fecha_inicio)
+    const checkOut = new Date(evento.fecha_fin)
+    const noches = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24))
+
+    const origenCapitalizado = origen.charAt(0).toUpperCase() + origen.slice(1)
+    const descripcion = `Check-out: ${evento.fecha_fin}\nNoches: ${noches}\nOrigen: ${origenCapitalizado}\n${evento.notas || ''}`
+
+    const ticketData = {
+      propiedad_id: propiedadId,
+      tipo_ticket: 'reservacion',
+      titulo: evento.titulo || `Reservación ${origenCapitalizado}`,
+      descripcion: descripcion.trim(),
+      fecha_programada: evento.fecha_inicio, // Check-in
+      monto_estimado: null,
+      prioridad: 'media',
+      estado: 'pendiente',
+      responsable: null,
+      proveedor: origen, // airbnb, booking, expedia
+      servicio_id: null,
+      pagado: false,
+      reserva_id: evento.reserva_id // Para poder identificar y actualizar/eliminar
+    }
+
+    const { error } = await supabase
+      .from('tickets')
+      .insert(ticketData)
+
+    if (error) {
+      console.error(`❌ Error al crear ticket de reservación:`, error)
+    } else {
+      console.log(`🎫 Ticket creado para reservación: ${evento.titulo}`)
+    }
+  } catch (error) {
+    console.error(`❌ Error creando ticket de reservación:`, error)
+  }
+}
+
+/**
+ * Actualiza un ticket de reservación existente
+ */
+async function actualizarTicketReservacion(evento: CalendarEvent, propiedadId: string, origen: string): Promise<void> {
+  try {
+    if (!evento.reserva_id) return
+
+    const checkIn = new Date(evento.fecha_inicio)
+    const checkOut = new Date(evento.fecha_fin)
+    const noches = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24))
+
+    const origenCapitalizado = origen.charAt(0).toUpperCase() + origen.slice(1)
+    const descripcion = `Check-out: ${evento.fecha_fin}\nNoches: ${noches}\nOrigen: ${origenCapitalizado}\n${evento.notas || ''}`
+
+    const { error } = await supabase
+      .from('tickets')
+      .update({
+        titulo: evento.titulo || `Reservación ${origenCapitalizado}`,
+        descripcion: descripcion.trim(),
+        fecha_programada: evento.fecha_inicio,
+        estado: evento.estado === 'bloqueado' ? 'cancelado' : 'pendiente'
+      })
+      .eq('reserva_id', evento.reserva_id)
+      .eq('propiedad_id', propiedadId)
+
+    if (error) {
+      console.error(`❌ Error al actualizar ticket de reservación:`, error)
+    } else {
+      console.log(`🔄 Ticket actualizado para reservación: ${evento.titulo}`)
+    }
+  } catch (error) {
+    console.error(`❌ Error actualizando ticket de reservación:`, error)
+  }
+}
+
+/**
+ * Elimina tickets de reservaciones canceladas
+ */
+async function eliminarTicketsReservacion(reservaIds: string[], propiedadId: string): Promise<void> {
+  try {
+    if (reservaIds.length === 0) return
+
+    const { error } = await supabase
+      .from('tickets')
+      .delete()
+      .in('reserva_id', reservaIds)
+      .eq('propiedad_id', propiedadId)
+
+    if (error) {
+      console.error(`❌ Error al eliminar tickets de reservaciones:`, error)
+    } else {
+      console.log(`🗑️ ${reservaIds.length} tickets de reservaciones eliminados`)
+    }
+  } catch (error) {
+    console.error(`❌ Error eliminando tickets de reservaciones:`, error)
   }
 }
 
