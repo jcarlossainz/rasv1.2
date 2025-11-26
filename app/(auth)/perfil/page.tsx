@@ -15,9 +15,73 @@ import Modal from '@/components/ui/modal'
 import { WidgetSelectorModal } from '@/components/dashboard'
 import type { WidgetId } from '@/types/dashboard'
 
+// Configuración de avatares predefinidos
+// Imagen: ~773x516px, cuadrícula 3x2, sin texto
+// Coordenadas X,Y de la esquina superior izquierda del recorte cuadrado
+const AVATARES = [
+  { id: 'avatar1', x: 42, y: 15 },    // Fila 1, Col 1 - monstruo verde cuernos
+  { id: 'avatar2', x: 298, y: 25 },   // Fila 1, Col 2 - momia
+  { id: 'avatar3', x: 555, y: 20 },   // Fila 1, Col 3 - oso café
+  { id: 'avatar4', x: 42, y: 280 },   // Fila 2, Col 1 - robot
+  { id: 'avatar5', x: 298, y: 290 },  // Fila 2, Col 2 - pacman
+  { id: 'avatar6', x: 555, y: 280 },  // Fila 2, Col 3 - fantasma
+]
+
+// Tamaño del área del avatar en la imagen original
+const CIRCLE_SIZE_ORIGINAL = 175
+
+// Componente para mostrar un avatar individual desde el sprite sheet
+function AvatarSprite({
+  avatarId,
+  size = 96,
+  className = '',
+  onClick
+}: {
+  avatarId: string | null
+  size?: number
+  className?: string
+  onClick?: () => void
+}) {
+  const avatar = AVATARES.find(a => a.id === avatarId)
+
+  if (!avatar) {
+    // Avatar por defecto (placeholder)
+    return (
+      <div
+        className={`rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center ${className}`}
+        style={{ width: size, height: size }}
+        onClick={onClick}
+      >
+        <svg className="w-1/2 h-1/2 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+      </div>
+    )
+  }
+
+  // Escala para ajustar el avatar al tamaño deseado
+  const scale = size / CIRCLE_SIZE_ORIGINAL
+
+  return (
+    <div
+      className={`rounded-full overflow-hidden ${className}`}
+      style={{
+        width: size,
+        height: size,
+        backgroundImage: 'url(/avatars.png)',
+        backgroundSize: `${750 * scale}px ${750 * scale}px`,
+        backgroundPosition: `-${avatar.x * scale}px -${avatar.y * scale}px`,
+        backgroundRepeat: 'no-repeat'
+      }}
+      onClick={onClick}
+    />
+  )
+}
+
 export default function PerfilPage() {
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, refreshUser } = useAuth()
   const logout = useLogout()
   const toast = useToast()
   const { config, loading: configLoading, updateConfig } = useDashboardConfig()
@@ -27,6 +91,7 @@ export default function PerfilPage() {
   const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
   const [telefono, setTelefono] = useState('')
+  const [avatarId, setAvatarId] = useState<string | null>(null)
 
   // Estados para modal de cambio de contraseña
   const [showModalPassword, setShowModalPassword] = useState(false)
@@ -38,11 +103,16 @@ export default function PerfilPage() {
   // Estado para modal de selección de widgets
   const [showWidgetSelector, setShowWidgetSelector] = useState(false)
 
+  // Estado para modal de selección de avatar
+  const [showAvatarSelector, setShowAvatarSelector] = useState(false)
+  const [guardandoAvatar, setGuardandoAvatar] = useState(false)
+
   useEffect(() => {
     if (user) {
       setNombre(user.nombre || user.full_name || '')
       setEmail(user.email || '')
       setTelefono(user.telefono || '')
+      setAvatarId(user.avatar_url || null)
     }
   }, [user])
 
@@ -53,7 +123,7 @@ export default function PerfilPage() {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ 
+        .update({
           full_name: nombre,
           telefono: telefono
         })
@@ -61,11 +131,34 @@ export default function PerfilPage() {
 
       if (error) throw error
 
-      alert('✅ Información actualizada correctamente')
+      toast.success('Información actualizada correctamente')
+      if (refreshUser) await refreshUser()
     } catch (err) {
-      alert('Error: ' + (err as Error).message)
+      toast.error('Error: ' + (err as Error).message)
     } finally {
       setGuardando(false)
+    }
+  }
+
+  const handleSeleccionarAvatar = async (nuevoAvatarId: string) => {
+    setGuardandoAvatar(true)
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ avatar_url: nuevoAvatarId })
+        .eq('id', user.id)
+
+      if (error) throw error
+
+      setAvatarId(nuevoAvatarId)
+      toast.success('Avatar actualizado correctamente')
+      setShowAvatarSelector(false)
+      if (refreshUser) await refreshUser()
+    } catch (err) {
+      toast.error('Error al actualizar avatar: ' + (err as Error).message)
+    } finally {
+      setGuardandoAvatar(false)
     }
   }
 
@@ -74,12 +167,12 @@ export default function PerfilPage() {
 
     // Validaciones
     if (passwordNueva !== passwordConfirmar) {
-      alert('❌ Las contraseñas no coinciden')
+      toast.error('Las contraseñas no coinciden')
       return
     }
 
     if (passwordNueva.length < 6) {
-      alert('❌ La contraseña debe tener al menos 6 caracteres')
+      toast.error('La contraseña debe tener al menos 6 caracteres')
       return
     }
 
@@ -92,13 +185,13 @@ export default function PerfilPage() {
 
       if (error) throw error
 
-      alert('✅ Contraseña actualizada correctamente')
+      toast.success('Contraseña actualizada correctamente')
       setPasswordActual('')
       setPasswordNueva('')
       setPasswordConfirmar('')
       setShowModalPassword(false)
     } catch (err) {
-      alert('Error: ' + (err as Error).message)
+      toast.error('Error: ' + (err as Error).message)
     } finally {
       setCambiandoPassword(false)
     }
@@ -150,23 +243,22 @@ export default function PerfilPage() {
             {/* Foto de perfil */}
             <div className="flex justify-center mb-6">
               <div className="relative">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 border-4 border-white shadow-lg flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
-                  {/* Por ahora solo el placeholder, después se agregará la funcionalidad de subir foto */}
-                  <svg className="w-12 h-12 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
-                  </svg>
-                </div>
-                {/* Botón de cámara para subir foto (funcionalidad pendiente) */}
+                <AvatarSprite
+                  avatarId={avatarId}
+                  size={96}
+                  className="border-4 border-white shadow-lg cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => setShowAvatarSelector(true)}
+                />
+                {/* Botón para cambiar avatar */}
                 <button
                   type="button"
                   className="absolute bottom-0 right-0 w-8 h-8 bg-ras-turquesa rounded-full border-2 border-white shadow-lg flex items-center justify-center hover:bg-ras-azul transition-colors"
-                  title="Cambiar foto (próximamente)"
-                  onClick={() => alert('Funcionalidad de foto disponible próximamente')}
+                  title="Cambiar avatar"
+                  onClick={() => setShowAvatarSelector(true)}
                 >
                   <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                    <circle cx="12" cy="13" r="4"/>
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                   </svg>
                 </button>
               </div>
@@ -332,6 +424,58 @@ export default function PerfilPage() {
           onSelectWidgets={handleSelectWidgets}
         />
       )}
+
+      {/* Modal de Selección de Avatar */}
+      <Modal
+        isOpen={showAvatarSelector}
+        onClose={() => setShowAvatarSelector(false)}
+        maxWidth="md"
+      >
+        <h2 className="text-2xl font-bold font-poppins text-gray-800 mb-6 text-center">Elige tu Avatar</h2>
+
+        <div className="grid grid-cols-3 gap-6 mb-6 justify-items-center">
+          {AVATARES.map((avatar) => (
+            <button
+              key={avatar.id}
+              type="button"
+              onClick={() => handleSeleccionarAvatar(avatar.id)}
+              disabled={guardandoAvatar}
+              className={`rounded-full transition-all hover:scale-110 ${
+                guardandoAvatar ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+              }`}
+            >
+              <AvatarSprite
+                avatarId={avatar.id}
+                size={80}
+                className={`${
+                  avatarId === avatar.id
+                    ? 'ring-4 ring-ras-turquesa ring-offset-2 shadow-lg'
+                    : 'hover:ring-2 hover:ring-gray-300 hover:ring-offset-1'
+                }`}
+              />
+            </button>
+          ))}
+        </div>
+
+        {guardandoAvatar && (
+          <div className="flex items-center justify-center gap-2 text-ras-turquesa mb-4">
+            <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+            <span className="text-sm font-medium">Guardando...</span>
+          </div>
+        )}
+
+        <div className="flex justify-center">
+          <Button
+            onClick={() => setShowAvatarSelector(false)}
+            variant="secondary"
+            disabled={guardandoAvatar}
+          >
+            Cerrar
+          </Button>
+        </div>
+      </Modal>
     </div>
   )
 }

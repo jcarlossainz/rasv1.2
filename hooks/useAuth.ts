@@ -23,10 +23,6 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    checkUser();
-  }, []);
-
   const checkUser = async () => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -56,5 +52,29 @@ export function useAuth() {
     }
   };
 
-  return { user, loading };
+  // Función para refrescar datos del usuario (útil después de actualizaciones)
+  const refreshUser = async () => {
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
+
+      if (profile) {
+        setUser({ ...profile, id: authUser.id });
+      }
+    } catch (error) {
+      console.error('Error refrescando usuario:', error);
+    }
+  };
+
+  useEffect(() => {
+    checkUser();
+  }, []);
+
+  return { user, loading, refreshUser };
 }
