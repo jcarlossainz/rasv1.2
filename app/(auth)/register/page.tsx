@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useForm } from 'react-hook-form'
@@ -11,11 +11,62 @@ import { registerSchema, type RegisterInput } from '@/lib/validation/schemas'
 
 export default function RegisterPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const isNewOAuthUser = searchParams.get('new_user') === 'true'
+
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [apiError, setApiError] = useState('')
+
+  // Estado para usuario OAuth que necesita completar perfil
+  const [oauthUser, setOauthUser] = useState<{ id: string; email: string; name?: string } | null>(null)
+  const [completingProfile, setCompletingProfile] = useState(false)
+
+  // Verificar si hay un usuario OAuth que necesita completar su perfil
+  useEffect(() => {
+    const checkOAuthUser = async () => {
+      if (!isNewOAuthUser) return
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setOauthUser({
+          id: user.id,
+          email: user.email || '',
+          name: user.user_metadata?.full_name || user.user_metadata?.name || ''
+        })
+      }
+    }
+    checkOAuthUser()
+  }, [isNewOAuthUser])
+
+  // Completar perfil para usuario OAuth
+  const handleCompleteProfile = async (nombre: string) => {
+    if (!oauthUser) return
+
+    setCompletingProfile(true)
+    setApiError('')
+
+    try {
+      // Crear el registro en profiles
+      const { error } = await supabase
+        .from('profiles')
+        .insert({
+          id: oauthUser.id,
+          email: oauthUser.email,
+          full_name: nombre,
+        })
+
+      if (error) throw error
+
+      router.push('/dashboard')
+    } catch (err: any) {
+      console.error('Error completando perfil:', err)
+      setApiError(err.message || 'Error al completar el perfil')
+      setCompletingProfile(false)
+    }
+  }
 
   const handleGoogleSignUp = async () => {
     setApiError('')
@@ -83,6 +134,105 @@ export default function RegisterPage() {
       }
       setLoading(false)
     }
+  }
+
+  // Estado local para el nombre en el formulario OAuth
+  const [oauthNombre, setOauthNombre] = useState('')
+
+  // Si es usuario OAuth nuevo, mostrar formulario simplificado
+  if (oauthUser) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-ras-azul via-ras-turquesa to-ras-azul flex items-center justify-center p-4">
+        <div className="rounded-2xl w-full max-w-md overflow-hidden">
+          <div className="pt-4 pb-2 px-8 text-center">
+            <h1 className="text-6xl font-bold text-white mb-4">OHANA</h1>
+            <div className="inline-flex items-center justify-center mb-3">
+              <Image
+                src="/logo-ras-wizard.png"
+                alt="Ohana Logo"
+                width={180}
+                height={180}
+                className="object-contain"
+              />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-2">Completa tu perfil</h2>
+            <p className="text-white/80 text-sm mb-4">Solo un paso más para comenzar</p>
+          </div>
+
+          <div className="px-8 pb-8">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                handleCompleteProfile(oauthNombre || oauthUser.name || '')
+              }}
+              className="space-y-4"
+            >
+              {/* Email (solo lectura) */}
+              <div>
+                <label className="text-white/80 text-sm mb-1 block">Correo electrónico</label>
+                <input
+                  type="email"
+                  value={oauthUser.email}
+                  disabled
+                  className="w-full px-4 py-3 border rounded-xl bg-white/10 text-white border-white/30 cursor-not-allowed"
+                />
+              </div>
+
+              {/* Nombre */}
+              <div>
+                <label className="text-white/80 text-sm mb-1 block">Nombre completo</label>
+                <input
+                  type="text"
+                  value={oauthNombre || oauthUser.name || ''}
+                  onChange={(e) => setOauthNombre(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-ras-azul focus:border-transparent transition-all outline-none border-gray-300"
+                  placeholder="Tu nombre completo"
+                  required
+                />
+              </div>
+
+              {/* Error message */}
+              {apiError && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+                  <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <p className="text-sm text-red-700 font-medium">{apiError}</p>
+                </div>
+              )}
+
+              {/* Botón de submit */}
+              <button
+                type="submit"
+                disabled={completingProfile}
+                className="w-full bg-gradient-to-r from-ras-azul to-ras-turquesa text-white py-3.5 rounded-xl font-semibold hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                {completingProfile ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                    </svg>
+                    Completando...
+                  </span>
+                ) : (
+                  'Comenzar a usar Ohana'
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="absolute bottom-4 left-0 right-0 text-center">
+          <p className="text-white/70 text-xs">
+            © 2025 OHANA. Sistema profesional de administración inmobiliaria.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
