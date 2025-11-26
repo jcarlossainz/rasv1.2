@@ -106,29 +106,22 @@ export async function getAddressFromCoordinates(
     }
 
     const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}&language=es`;
-    
-    console.log('🔍 Llamando a Geocoding API con coordenadas:', { lat, lng });
-    
+
     const response = await fetch(url);
 
     const data = await response.json();
-    
-    console.log('📡 Respuesta de Google Maps:', data);
 
     if (data.status === 'REQUEST_DENIED') {
-      console.error('❌ REQUEST_DENIED:', data.error_message);
       alert(`Error de Google Maps API: ${data.error_message || 'Verifica que Geocoding API esté habilitada y la API Key sea correcta'}`);
       return null;
     }
 
     if (data.status === 'INVALID_REQUEST') {
-      console.error('❌ INVALID_REQUEST:', data.error_message);
       alert('Las coordenadas extraídas no son válidas');
       return null;
     }
 
     if (data.status !== 'OK' || !data.results || data.results.length === 0) {
-      console.error('❌ Error en API:', data.status, data.error_message);
       alert(`No se pudo obtener la dirección. Status: ${data.status}`);
       return null;
     }
@@ -136,8 +129,6 @@ export async function getAddressFromCoordinates(
     // Extraer componentes de dirección
     const result = data.results[0];
     const components = result.address_components;
-
-    console.log('✅ Dirección encontrada:', result.formatted_address);
 
     const addressData: AddressComponents = {
       calle: '',
@@ -177,7 +168,7 @@ export async function getAddressFromCoordinates(
 
     return addressData;
   } catch (error) {
-    console.error('💥 Error obteniendo dirección:', error);
+    console.error('Error obteniendo dirección:', error);
     alert('Error de red al conectar con Google Maps. Verifica tu conexión.');
     return null;
   }
@@ -187,30 +178,22 @@ export async function getAddressFromCoordinates(
  * Función principal: extrae dirección completa desde un link de Google Maps
  */
 export async function getAddressFromGoogleMapsLink(link: string): Promise<AddressComponents | null> {
-  console.log('🔗 Link original:', link);
-  
   // 1. Extraer coordenadas del link (AWAIT es crucial aquí)
   const coords = await extractCoordinatesFromLink(link);
-  
-  console.log('📍 Coordenadas extraídas:', coords);
-  
+
   if (!coords) {
-    console.error('❌ No se pudieron extraer coordenadas del link');
     alert('No se pudieron extraer coordenadas del link. Verifica que sea un link válido de Google Maps.');
     return null;
   }
 
   // Validar que las coordenadas sean números válidos
   if (isNaN(coords.lat) || isNaN(coords.lng)) {
-    console.error('❌ Coordenadas inválidas:', coords);
     alert('Las coordenadas extraídas no son válidas');
     return null;
   }
 
-  console.log('✅ Coordenadas válidas, obteniendo dirección...');
-
   // 2. Obtener dirección desde las coordenadas
   const address = await getAddressFromCoordinates(coords.lat, coords.lng);
-  
+
   return address;
 }

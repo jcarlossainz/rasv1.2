@@ -69,7 +69,6 @@ async function crearRegistrosServicios(
       .delete()
       .eq('propiedad_id', propertyId);
 
-    console.log(`🗑️ Servicios existentes eliminados para propiedad ${propertyId}`);
 
     // Crear registros en servicios_inmueble
     const serviciosParaInsertar = services.map(service => {
@@ -112,7 +111,6 @@ async function crearRegistrosServicios(
         }
       });
 
-      console.log(`✅ ${serviciosInsertados?.length || 0} servicios creados en servicios_inmueble`);
     }
   } catch (error) {
     console.error('❌ Error en crearRegistrosServicios:', error);
@@ -133,24 +131,17 @@ export async function generateServiceTickets({
   error?: string;
 }> {
   try {
-    console.log('🎫 ========================================');
-    console.log('🎫 GENERANDO TICKETS AUTOMÁTICOS');
-    console.log(`🎫 Propiedad: ${propertyId}`);
-    console.log(`🎫 Servicios: ${services.length}`);
-    console.log('🎫 ========================================');
 
     // Filtrar servicios válidos (que tengan fecha de último pago)
     const serviciosValidos = services.filter(s => s.lastPaymentDate && s.lastPaymentDate.trim() !== '');
 
     if (serviciosValidos.length === 0) {
-      console.log('ℹ️ No hay servicios con fecha de último pago. No se generarán tickets.');
       return {
         success: true,
         ticketsCreated: 0
       };
     }
 
-    console.log(`📋 Servicios válidos: ${serviciosValidos.length}`);
 
     // 1. Crear registros en servicios_inmueble y obtener sus IDs
     const serviceIdMap = await crearRegistrosServicios(propertyId, serviciosValidos);
@@ -164,8 +155,6 @@ export async function generateServiceTickets({
 
     if (deleteError) {
       console.error('Error eliminando tickets automáticos existentes:', deleteError);
-    } else {
-      console.log('🗑️ Tickets automáticos existentes eliminados');
     }
 
     // 3. Generar tickets para el próximo 1 año
@@ -178,7 +167,6 @@ export async function generateServiceTickets({
     for (const service of serviciosValidos) {
       const servicioId = serviceIdMap.get(service.id);
       if (!servicioId) {
-        console.warn(`⚠️ No se encontró ID de servicio para ${service.name}`);
         continue;
       }
 
@@ -226,7 +214,6 @@ export async function generateServiceTickets({
       }
     }
 
-    console.log(`📝 Tickets a insertar: ${ticketsParaInsertar.length}`);
 
     // 4. Insertar todos los tickets en la tabla unificada 'tickets'
     if (ticketsParaInsertar.length > 0) {
@@ -240,16 +227,11 @@ export async function generateServiceTickets({
         throw insertError;
       }
 
-      console.log('✅ ========================================');
-      console.log(`✅ ${ticketsInsertados?.length || 0} TICKETS AUTOMÁTICOS CREADOS`);
-      console.log('✅ ========================================');
-
       return {
         success: true,
         ticketsCreated: ticketsInsertados?.length || 0
       };
     } else {
-      console.log('ℹ️ No se generaron tickets (todas las fechas están fuera del rango de 1 año)');
       return {
         success: true,
         ticketsCreated: 0
@@ -277,11 +259,6 @@ export async function autoRegenerateTickets(userId: string): Promise<{
   error?: string;
 }> {
   try {
-    console.log('🔄 ========================================');
-    console.log('🔄 AUTO-REGENERANDO TICKETS');
-    console.log(`🔄 Usuario: ${userId}`);
-    console.log('🔄 ========================================');
-
     // 1. Obtener todas las propiedades del usuario (propias y compartidas)
     const { data: propsPropias } = await supabase
       .from('propiedades')
@@ -309,8 +286,6 @@ export async function autoRegenerateTickets(userId: string): Promise<{
 
     const todasPropiedades = [...propiedadesPropias, ...propiedadesCompartidas];
 
-    console.log(`📋 Propiedades encontradas: ${todasPropiedades.length}`);
-
     if (todasPropiedades.length === 0) {
       return {
         success: true,
@@ -327,8 +302,6 @@ export async function autoRegenerateTickets(userId: string): Promise<{
       const servicios = propiedad.servicios as Service[] || [];
 
       if (servicios.length > 0) {
-        console.log(`🔄 Regenerando tickets para propiedad ${propiedad.id}...`);
-
         const result = await generateServiceTickets({
           propertyId: propiedad.id,
           services: servicios
@@ -337,18 +310,9 @@ export async function autoRegenerateTickets(userId: string): Promise<{
         if (result.success) {
           propertiesProcessed++;
           totalTicketsCreated += result.ticketsCreated;
-          console.log(`✅ ${result.ticketsCreated} tickets creados para propiedad ${propiedad.id}`);
-        } else {
-          console.error(`❌ Error en propiedad ${propiedad.id}: ${result.error}`);
         }
       }
     }
-
-    console.log('✅ ========================================');
-    console.log(`✅ REGENERACIÓN COMPLETADA`);
-    console.log(`✅ Propiedades procesadas: ${propertiesProcessed}`);
-    console.log(`✅ Tickets totales creados: ${totalTicketsCreated}`);
-    console.log('✅ ========================================');
 
     return {
       success: true,

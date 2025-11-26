@@ -53,8 +53,8 @@ export default function FloatingCTA({
           text: whatsappMessage,
           url: window.location.href
         })
-      } catch (err) {
-        console.log('Error sharing:', err)
+      } catch {
+        // Share dialog was dismissed
       }
     } else {
       // Copiar URL al portapapeles

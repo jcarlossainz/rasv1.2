@@ -64,7 +64,6 @@ export default function RegistrarPagoModal({
   // Actualizar valores cuando cambie pagoExistente (cuando se abre el modal con nuevo ticket)
   useEffect(() => {
     if (pagoExistente) {
-      console.log('🔄 Actualizando modal con pagoExistente:', pagoExistente)
       setFechaPago(pagoExistente.fecha_pago || new Date().toISOString().split('T')[0])
       setPropiedadId(pagoExistente.propiedad_id || '')
       setMonto(pagoExistente.monto_estimado.toString() || '')
@@ -73,11 +72,9 @@ export default function RegistrarPagoModal({
 
   // Cargar cuentas cuando cambie la propiedad
   useEffect(() => {
-    console.log('🔍 RegistrarPagoModal - propiedadId:', propiedadId)
     if (propiedadId) {
       cargarCuentasPropiedad(propiedadId)
     } else {
-      console.log('⚠️ No hay propiedadId, limpiando cuentas')
       setCuentas([])
       setCuentaId('')
     }
@@ -98,13 +95,11 @@ export default function RegistrarPagoModal({
 
   const cargarCuentasPropiedad = async (propId: string) => {
     try {
-      console.log('📥 Cargando cuentas para propiedad:', propId)
       setCargandoCuentas(true)
       const cuentasPropiedad = await obtenerCuentasPropiedad(propId)
-      console.log('✅ Cuentas cargadas:', cuentasPropiedad.length, cuentasPropiedad)
       setCuentas(cuentasPropiedad)
     } catch (error) {
-      console.error('❌ Error cargando cuentas:', error)
+      console.error('Error cargando cuentas:', error)
       setCuentas([])
     } finally {
       setCargandoCuentas(false)
@@ -251,16 +246,13 @@ export default function RegistrarPagoModal({
           .eq('id', pagoExistente.id)
 
         if (error) throw error
-        console.log('✅ Ticket actualizado en tabla tickets (unificada)')
 
         // ACTUALIZAR SALDO DE LA CUENTA (si se seleccionó una)
         if (cuentaId) {
           try {
             await registrarMovimientoYActualizarSaldo(cuentaId, montoPagado, 'egreso')
-            console.log('✅ Saldo de cuenta actualizado (egreso)')
-          } catch (saldoError) {
-            console.error('⚠️ Error actualizando saldo de cuenta:', saldoError)
-            // No lanzamos error porque el pago ya se registró
+          } catch {
+            // El pago ya se registró, no propagamos error
           }
         }
 

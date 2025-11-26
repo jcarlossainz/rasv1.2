@@ -1,4 +1,3 @@
-// 📁 src/app/api/vision/analyze/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { analyzeImage } from '@/lib/google-vision';
@@ -20,8 +19,6 @@ export async function PUT(request: NextRequest) {
       }, { status: 400 });
     }
 
-    console.log(`🔍 Iniciando análisis de propiedad: ${propertyId}`);
-
     // 1. Obtener la propiedad con sus espacios
     const { data: propertyData, error: propertyError } = await supabase
       .from('propiedades')
@@ -30,7 +27,6 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (propertyError) {
-      console.error('❌ Error obteniendo propiedad:', propertyError);
       return NextResponse.json({ 
         success: false, 
         error: `Error obteniendo propiedad: ${propertyError.message}` 
@@ -46,7 +42,6 @@ export async function PUT(request: NextRequest) {
         const name = espacio.name || espacio.type || 'Sin nombre';
         spacesMap.set(id, name);
       });
-      console.log(`📍 Cargados ${spacesMap.size} espacios`);
     }
 
     // 3. Obtener todas las imágenes de la propiedad
@@ -56,7 +51,6 @@ export async function PUT(request: NextRequest) {
       .eq('property_id', propertyId);
 
     if (imagesError) {
-      console.error('❌ Error obteniendo imágenes:', imagesError);
       return NextResponse.json({ 
         success: false, 
         error: `Error obteniendo imágenes: ${imagesError.message}` 
@@ -70,25 +64,18 @@ export async function PUT(request: NextRequest) {
       }, { status: 404 });
     }
 
-    console.log(`📸 Encontradas ${images.length} imágenes para analizar`);
-
     // 4. Analizar cada imagen
     let totalObjectsDetected = 0;
     const inventoryItems = [];
 
     for (const image of images) {
       try {
-        console.log(`🔍 Analizando imagen: ${image.id}`);
-        
         // Analizar imagen con Google Vision
         const detectedObjects = await analyzeImage(image.url);
 
         if (detectedObjects.length === 0) {
-          console.log(`⚠️ No se detectaron objetos en imagen ${image.id}`);
           continue;
         }
-
-        console.log(`✅ Detectados ${detectedObjects.length} objetos en imagen ${image.id}`);
 
         // Extraer solo los nombres para labels
         const labels = detectedObjects.map(obj => obj.name);
@@ -118,13 +105,10 @@ export async function PUT(request: NextRequest) {
         // Delay de 500ms para no saturar la API de Google
         await new Promise(resolve => setTimeout(resolve, 500));
 
-      } catch (error: any) {
-        console.error(`❌ Error analizando imagen ${image.id}:`, error);
+      } catch {
         // Continuar con la siguiente imagen
       }
     }
-
-    console.log(`📦 Total de objetos detectados: ${totalObjectsDetected}`);
 
     // 5. Guardar todo en la base de datos
     if (inventoryItems.length > 0) {
@@ -133,14 +117,11 @@ export async function PUT(request: NextRequest) {
         .insert(inventoryItems);
 
       if (insertError) {
-        console.error('❌ Error insertando inventario:', insertError);
         return NextResponse.json({ 
           success: false, 
           error: `Error guardando inventario: ${insertError.message}` 
         }, { status: 500 });
       }
-
-      console.log(`✅ Guardados ${inventoryItems.length} items en el inventario`);
     } else {
       return NextResponse.json({ 
         success: false, 
@@ -156,7 +137,6 @@ export async function PUT(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error en análisis de Vision:', error);
     return NextResponse.json({ 
       success: false, 
       error: error.message || 'Error desconocido'

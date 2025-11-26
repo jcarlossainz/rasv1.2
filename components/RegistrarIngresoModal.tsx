@@ -188,10 +188,8 @@ export default function RegistrarIngresoModal({
       if (cuentaId) {
         try {
           await registrarMovimientoYActualizarSaldo(cuentaId, parseFloat(monto), 'ingreso')
-          console.log('✅ Saldo de cuenta actualizado (ingreso)')
-        } catch (saldoError) {
-          console.error('⚠️ Error actualizando saldo de cuenta:', saldoError)
-          // No lanzamos error porque el ingreso ya se registró
+        } catch {
+          // El ingreso ya se registró, no propagamos error
         }
       }
 

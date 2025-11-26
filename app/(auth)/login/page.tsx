@@ -45,37 +45,22 @@ export default function LoginPage() {
   })
 
   const onSubmit = async (data: LoginInput) => {
-    console.log('🔵 Form submitted')
-    console.log('🔵 Email:', data.email)
-    console.log('🔵 Password length:', data.password.length)
-
     setApiError('')
     setLoading(true)
 
     try {
-      console.log('🟡 Intentando login...')
-
       const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       })
 
-      console.log('🟢 Respuesta de Supabase:', { data: authData, error: signInError })
-
       if (signInError) {
-        console.error('🔴 Error de Supabase:', signInError)
         throw signInError
       }
 
-      console.log('✅ Login exitoso!')
-      console.log('✅ Usuario:', authData.user?.email)
-      console.log('✅ Sesión:', authData.session ? 'Existe' : 'No existe')
-
-      console.log('🚀 Redirigiendo a dashboard...')
       router.push('/dashboard')
 
-    } catch (err: any) {
-      console.error('❌ Error en el catch:', err)
+    } catch {
       setApiError('Email o contraseña incorrectos')
       setLoading(false)
     }

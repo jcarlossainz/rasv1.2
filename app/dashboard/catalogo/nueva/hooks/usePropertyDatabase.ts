@@ -40,8 +40,6 @@ export interface LoadPropertyResult {
 // ============================================================================
 
 function transformFormToDatabase(formData: PropertyFormData): any {
-  console.log('📦 Transformando FormData → Database');
-
   return {
     // STEP 1: Datos Generales
     nombre_propiedad: formData.nombre_propiedad || '',
@@ -118,8 +116,6 @@ function transformFormToDatabase(formData: PropertyFormData): any {
 // ============================================================================
 
 function transformDatabaseToForm(dbData: any): PropertyFormData {
-  console.log('📦 Transformando Database → FormData');
-
   return {
     // STEP 1: Datos Generales
     nombre_propiedad: dbData.nombre_propiedad || '',
@@ -208,8 +204,6 @@ async function syncColaboradores(
   supervisoresEmail: string[],
   inquilinosEmail: string[]
 ): Promise<void> {
-  console.log('🔄 Sincronizando colaboradores a propiedades_colaboradores...');
-
   try {
     // 1. Primero, obtener todos los colaboradores existentes para esta propiedad
     const { data: existentes, error: errorExistentes } = await supabase
@@ -289,11 +283,7 @@ async function syncColaboradores(
 
       if (errorInsert) {
         console.error('Error insertando colaboradores:', errorInsert);
-      } else {
-        console.log(`✅ Se insertaron ${colaboradoresParaInsertar.length} colaboradores nuevos`);
       }
-    } else {
-      console.log('ℹ️ No hay colaboradores nuevos para insertar');
     }
   } catch (error) {
     console.error('Error en syncColaboradores:', error);
@@ -319,38 +309,27 @@ export function usePropertyDatabase() {
     setIsSaving(true);
     
     try {
-      console.log('💾 ========================================');
-      console.log(propertyId ? '💾 ACTUALIZANDO PROPIEDAD' : '💾 CREANDO PROPIEDAD');
-      console.log('💾 ========================================');
-      
       // 1. Obtener usuario actual
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
+
       if (userError || !user) {
         throw new Error('Usuario no autenticado');
       }
-      
-      console.log(`👤 Usuario: ${user.id}`);
-      
+
       // 2. Obtener empresa_id del usuario
-      const { data: profile, error: profileError } = await supabase
+      const { data: profile } = await supabase
         .from('profiles')
         .select('empresa_id')
         .eq('id', user.id)
         .single();
-      
+
       const empresaId = profile?.empresa_id || null;
-      console.log(`🏢 Empresa ID: ${empresaId || 'Sin empresa'}`);
       
       // 3. Transformar datos
       const dbData = transformFormToDatabase(data);
       
       if (propertyId) {
-        // ==========================================
         // ACTUALIZAR PROPIEDAD EXISTENTE
-        // ==========================================
-        console.log(`🔄 Actualizando propiedad: ${propertyId}`);
-        
         const { error } = await supabase
           .from('propiedades')
           .update(dbData)
@@ -358,11 +337,8 @@ export function usePropertyDatabase() {
           .eq('owner_id', user.id);
         
         if (error) {
-          console.error('❌ Error actualizando:', error);
           throw error;
         }
-
-        console.log('✅ Propiedad actualizada exitosamente');
 
         // Sincronizar colaboradores a propiedades_colaboradores
         await syncColaboradores(
@@ -374,16 +350,10 @@ export function usePropertyDatabase() {
 
         // Generar tickets automáticos desde los servicios (tabla tickets unificada)
         if (data.servicios && data.servicios.length > 0) {
-          const ticketResult = await generateServiceTickets({
+          await generateServiceTickets({
             propertyId: propertyId,
             services: data.servicios
           });
-
-          if (ticketResult.success) {
-            console.log(`✅ ${ticketResult.ticketsCreated} tickets automáticos generados en tabla tickets`);
-          } else {
-            console.error(`❌ Error generando tickets: ${ticketResult.error}`);
-          }
         }
 
         return {
@@ -392,10 +362,7 @@ export function usePropertyDatabase() {
         };
 
       } else {
-        // ==========================================
         // CREAR NUEVA PROPIEDAD
-        // ==========================================
-        console.log('✨ Creando nueva propiedad');
         
         const dataToInsert = {
           ...dbData,
@@ -410,17 +377,8 @@ export function usePropertyDatabase() {
           .single();
         
         if (error) {
-          console.error('❌ ========================================');
-          console.error('❌ ERROR AL CREAR');
-          console.error('❌ Error:', error);
-          console.error('❌ ========================================');
           throw error;
         }
-        
-        console.log('✅ ========================================');
-        console.log('✅ PROPIEDAD CREADA EXITOSAMENTE');
-        console.log('✅ ID:', newProperty.id);
-        console.log('✅ ========================================');
 
         // Sincronizar colaboradores a propiedades_colaboradores
         await syncColaboradores(
@@ -432,16 +390,10 @@ export function usePropertyDatabase() {
 
         // Generar tickets automáticos desde los servicios (tabla tickets unificada)
         if (data.servicios && data.servicios.length > 0) {
-          const ticketResult = await generateServiceTickets({
+          await generateServiceTickets({
             propertyId: newProperty.id,
             services: data.servicios
           });
-
-          if (ticketResult.success) {
-            console.log(`✅ ${ticketResult.ticketsCreated} tickets automáticos generados en tabla tickets`);
-          } else {
-            console.error(`❌ Error generando tickets: ${ticketResult.error}`);
-          }
         }
 
         return {
@@ -471,11 +423,6 @@ export function usePropertyDatabase() {
     setIsLoading(true);
     
     try {
-      console.log('📖 ========================================');
-      console.log('📖 CARGANDO PROPIEDAD');
-      console.log(`📖 ID: ${propertyId}`);
-      console.log('📖 ========================================');
-      
       // 1. Obtener usuario actual
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
@@ -492,20 +439,16 @@ export function usePropertyDatabase() {
         .single();
       
       if (error) {
-        console.error('❌ Error cargando:', error);
         throw error;
       }
       
       if (!data) {
         throw new Error('Propiedad no encontrada');
       }
-      
-      console.log('✅ Propiedad cargada desde BD');
-      
+
       // 3. Transformar a formato del formulario
       const formData = transformDatabaseToForm(data);
-      console.log('✅ Datos transformados a FormData');
-      
+
       return {
         success: true,
         data: formData

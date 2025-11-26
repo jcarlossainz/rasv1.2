@@ -265,7 +265,6 @@ export function useDashboardConfig(): UseDashboardConfigReturn {
             filter: `user_id=eq.${data.user.id}`,
           },
           (payload) => {
-            console.log('📊 Configuración actualizada en tiempo real:', payload);
             setConfig(payload.new as DashboardConfig);
           }
         )

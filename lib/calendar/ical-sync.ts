@@ -133,7 +133,6 @@ async function verificarSuperposicion(
       // Dos rangos se superponen si uno empieza antes de que el otro termine
       // Y termina después de que el otro empiece
       if (nuevoInicio < existenteFin && nuevoFin > existenteInicio) {
-        console.log(`🚫 Superposición detectada con: ${evento.titulo} (${evento.fecha_inicio} - ${evento.fecha_fin})`)
         return true
       }
     }
@@ -150,7 +149,6 @@ async function verificarSuperposicion(
  */
 async function parsearFeedICal(url: string, propiedadId: string, origen: 'airbnb' | 'booking' | 'expedia' | 'manual'): Promise<CalendarEvent[]> {
   try {
-    console.log(`📥 Fetching iCal from ${origen}:`, url)
 
     // Fetch del feed iCal
     const data = await ical.async.fromURL(url)
@@ -164,8 +162,6 @@ async function parsearFeedICal(url: string, propiedadId: string, origen: 'airbnb
     unAnoAdelante.setFullYear(hoy.getFullYear() + 1)
     unAnoAdelante.setHours(23, 59, 59, 999)
 
-    console.log(`📅 Sincronizando eventos entre ${hoy.toISOString().split('T')[0]} y ${unAnoAdelante.toISOString().split('T')[0]}`)
-
     // Procesar cada evento
     for (const k in data) {
       const event = data[k]
@@ -175,7 +171,6 @@ async function parsearFeedICal(url: string, propiedadId: string, origen: 'airbnb
 
       // Validar fechas
       if (!event.start || !event.end) {
-        console.warn(`⚠️ Evento sin fechas, ignorando:`, event.summary)
         continue
       }
 
@@ -184,7 +179,6 @@ async function parsearFeedICal(url: string, propiedadId: string, origen: 'airbnb
 
       // Validar que las fechas sean válidas
       if (isNaN(fechaInicio.getTime()) || isNaN(fechaFin.getTime())) {
-        console.warn(`⚠️ Fechas inválidas, ignorando:`, event.summary)
         continue
       }
 
@@ -219,7 +213,6 @@ async function parsearFeedICal(url: string, propiedadId: string, origen: 'airbnb
       })
     }
 
-    console.log(`✅ Parseados ${eventos.length} eventos de ${origen}`)
     return eventos
 
   } catch (error: any) {
@@ -293,7 +286,6 @@ async function sincronizarEventos(eventos: CalendarEvent[], propiedadId: string,
         )
 
         if (haySuperposicion) {
-          console.log(`⚠️ Saltando evento por superposición: ${evento.titulo} (${evento.fecha_inicio} - ${evento.fecha_fin})`)
           continue // Saltar este evento, ya hay una reserva en esas fechas
         }
 
@@ -348,7 +340,6 @@ async function crearTicketReservacion(evento: CalendarEvent, propiedadId: string
   try {
     // Solo crear tickets para reservaciones (no bloqueos)
     if (evento.estado === 'bloqueado') {
-      console.log(`⏭️ Saltando bloqueo, no se crea ticket: ${evento.titulo}`)
       return
     }
 
@@ -381,9 +372,7 @@ async function crearTicketReservacion(evento: CalendarEvent, propiedadId: string
       .insert(ticketCheckIn)
 
     if (errorCheckIn) {
-      console.error(`❌ Error al crear ticket de check-in:`, errorCheckIn)
-    } else {
-      console.log(`🔑 Ticket check-in creado: ${evento.titulo}`)
+      console.error(`Error al crear ticket de check-in:`, errorCheckIn)
     }
 
     // 2. TICKET DE CHECK-OUT (con costo/ingreso)
@@ -408,13 +397,11 @@ async function crearTicketReservacion(evento: CalendarEvent, propiedadId: string
       .insert(ticketCheckOut)
 
     if (errorCheckOut) {
-      console.error(`❌ Error al crear ticket de check-out:`, errorCheckOut)
-    } else {
-      console.log(`🚪 Ticket check-out creado: ${evento.titulo}`)
+      console.error(`Error al crear ticket de check-out:`, errorCheckOut)
     }
 
   } catch (error) {
-    console.error(`❌ Error creando tickets de reservación:`, error)
+    console.error(`Error creando tickets de reservación:`, error)
   }
 }
 
@@ -445,10 +432,6 @@ async function actualizarTicketReservacion(evento: CalendarEvent, propiedadId: s
       .eq('reserva_id', `${evento.reserva_id}_checkin`)
       .eq('propiedad_id', propiedadId)
 
-    if (errorCheckIn) {
-      console.error(`❌ Error al actualizar ticket check-in:`, errorCheckIn)
-    }
-
     // Actualizar ticket de CHECK-OUT
     const { error: errorCheckOut } = await supabase
       .from('tickets')
@@ -461,15 +444,8 @@ async function actualizarTicketReservacion(evento: CalendarEvent, propiedadId: s
       .eq('reserva_id', `${evento.reserva_id}_checkout`)
       .eq('propiedad_id', propiedadId)
 
-    if (errorCheckOut) {
-      console.error(`❌ Error al actualizar ticket check-out:`, errorCheckOut)
-    }
-
-    if (!errorCheckIn && !errorCheckOut) {
-      console.log(`🔄 Tickets actualizados para reservación: ${evento.titulo}`)
-    }
   } catch (error) {
-    console.error(`❌ Error actualizando tickets de reservación:`, error)
+    console.error(`Error actualizando tickets de reservación:`, error)
   }
 }
 
@@ -493,13 +469,8 @@ async function eliminarTicketsReservacion(reservaIds: string[], propiedadId: str
       .in('reserva_id', ticketIds)
       .eq('propiedad_id', propiedadId)
 
-    if (error) {
-      console.error(`❌ Error al eliminar tickets de reservaciones:`, error)
-    } else {
-      console.log(`🗑️ ${reservaIds.length} reservaciones eliminadas (${ticketIds.length} tickets)`)
-    }
   } catch (error) {
-    console.error(`❌ Error eliminando tickets de reservaciones:`, error)
+    console.error(`Error eliminando tickets de reservaciones:`, error)
   }
 }
 
@@ -517,8 +488,6 @@ export async function sincronizarCalendariosPropiedad(propiedadId: string): Prom
   }
 
   try {
-    console.log(`🔄 Iniciando sincronización para propiedad: ${propiedadId}`)
-
     // Obtener URLs de iCal de la propiedad
     const { data: propiedad, error: propError } = await supabase
       .from('propiedades')
@@ -543,8 +512,6 @@ export async function sincronizarCalendariosPropiedad(propiedadId: string): Prom
     // Sincronizar cada origen
     for (const { url, origen } of urls) {
       try {
-        console.log(`📡 Sincronizando ${origen}...`)
-
         // Parsear feed
         const eventos = await parsearFeedICal(url, propiedadId, origen)
         result.eventsProcessed += eventos.length
@@ -555,11 +522,8 @@ export async function sincronizarCalendariosPropiedad(propiedadId: string): Prom
         result.eventsUpdated += syncStats.updated
         result.eventsDeleted += syncStats.deleted
 
-        console.log(`✅ ${origen} sincronizado: +${syncStats.inserted} ~${syncStats.updated} -${syncStats.deleted}`)
-
       } catch (error: any) {
         const errorMsg = `Error en ${origen}: ${error.message}`
-        console.error(`❌ ${errorMsg}`)
         result.errors.push(errorMsg)
       }
     }
@@ -571,12 +535,10 @@ export async function sincronizarCalendariosPropiedad(propiedadId: string): Prom
       .eq('id', propiedadId)
 
     result.success = result.errors.length === 0
-
-    console.log(`🎉 Sincronización completada:`, result)
     return result
 
   } catch (error: any) {
-    console.error(`❌ Error general en sincronización:`, error)
+    console.error(`Error general en sincronización:`, error)
     result.errors.push(error.message)
     return result
   }
@@ -587,8 +549,6 @@ export async function sincronizarCalendariosPropiedad(propiedadId: string): Prom
  */
 export async function sincronizarTodasLasPropiedades(): Promise<{ total: number, exitosas: number, fallidas: number }> {
   try {
-    console.log(`🌍 Iniciando sincronización global de calendarios...`)
-
     // Obtener todas las propiedades con al menos una URL configurada
     const { data: propiedades, error } = await supabase
       .from('propiedades')
@@ -597,11 +557,8 @@ export async function sincronizarTodasLasPropiedades(): Promise<{ total: number,
 
     if (error) throw error
     if (!propiedades || propiedades.length === 0) {
-      console.log('⚠️ No hay propiedades con calendarios configurados')
       return { total: 0, exitosas: 0, fallidas: 0 }
     }
-
-    console.log(`📊 Sincronizando ${propiedades.length} propiedades...`)
 
     let exitosas = 0
     let fallidas = 0
@@ -612,18 +569,13 @@ export async function sincronizarTodasLasPropiedades(): Promise<{ total: number,
         const result = await sincronizarCalendariosPropiedad(prop.id)
         if (result.success) {
           exitosas++
-          console.log(`✅ ${prop.nombre_propiedad}: OK`)
         } else {
           fallidas++
-          console.log(`⚠️ ${prop.nombre_propiedad}: Errores parciales`)
         }
-      } catch (error: any) {
+      } catch {
         fallidas++
-        console.error(`❌ ${prop.nombre_propiedad}: ${error.message}`)
       }
     }
-
-    console.log(`🎉 Sincronización global completada: ${exitosas}/${propiedades.length} exitosas`)
 
     return {
       total: propiedades.length,
@@ -632,7 +584,7 @@ export async function sincronizarTodasLasPropiedades(): Promise<{ total: number,
     }
 
   } catch (error: any) {
-    console.error(`❌ Error en sincronización global:`, error)
+    console.error(`Error en sincronización global:`, error)
     throw error
   }
 }

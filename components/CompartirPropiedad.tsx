@@ -84,7 +84,6 @@ export default function CompartirPropiedad({
         }
       })
 
-      console.log(`✅ Colaboradores cargados: ${colaboradoresConDatos.length} (activos + pendientes)`)
       setColaboradores(colaboradoresConDatos)
     } catch (error) {
       console.error('Error al cargar colaboradores:', error)

@@ -1,4 +1,3 @@
-// 📁 src/lib/google-vision.ts
 // Helper para Google Cloud Vision API - Detección de objetos en imágenes
 
 export interface DetectedObject {
@@ -44,8 +43,6 @@ export async function analyzeImage(imageUrl: string): Promise<DetectedObject[]> 
         }
       ]
     };
-
-    console.log('🔍 Analizando imagen:', imageUrl);
 
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -96,11 +93,10 @@ export async function analyzeImage(imageUrl: string): Promise<DetectedObject[]> 
       });
     }
 
-    console.log(`✅ ${detectedObjects.length} objetos detectados`);
     return detectedObjects;
 
   } catch (error) {
-    console.error('❌ Error en analyzeImage:', error);
+    console.error('Error en analyzeImage:', error);
     throw error;
   }
 }

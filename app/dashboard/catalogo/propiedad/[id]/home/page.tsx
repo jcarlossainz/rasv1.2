@@ -108,12 +108,10 @@ function GaleriaPropiedad({ propiedadId, amenidades }: { propiedadId: string, am
     const cargarFotos = async () => {
       try {
         setLoading(true)
-        console.log('📸 Cargando fotos para propiedad:', propiedadId)
         const photosData = await getPropertyImages(propiedadId)
-        console.log('📸 Fotos cargadas:', photosData.length)
         setPhotos(photosData)
       } catch (error) {
-        console.error('❌ Error al cargar fotos:', error)
+        console.error('Error al cargar fotos:', error)
       } finally {
         setLoading(false)
       }
@@ -319,8 +317,6 @@ export default function HomePropiedad() {
 
   const cargarPropiedad = async () => {
     try {
-      console.log('🔍 Cargando propiedad con ID:', propiedadId)
-
       // Traer todos los datos de la propiedad
       const { data: propData, error } = await supabase
         .from('propiedades')
@@ -328,44 +324,16 @@ export default function HomePropiedad() {
         .eq('id', propiedadId)
         .single()
 
-      console.log('📦 Respuesta de Supabase:', { data: propData, error })
-
       if (error) {
-        console.error('❌ Error al cargar propiedad:', error)
-        console.error('   Código:', error.code)
-        console.error('   Mensaje:', error.message)
-        console.error('   Detalles:', error.details)
         throw error
       }
 
       if (!propData) {
-        console.error('❌ No se encontraron datos para la propiedad')
         throw new Error('Propiedad no encontrada')
       }
 
-      console.log('✅ Propiedad cargada exitosamente:', propData.nombre_propiedad)
-
       const { data: { user: authUser } } = await supabase.auth.getUser()
       const esPropio = propData.owner_id === authUser?.id
-      
-      logger.log('=== DATOS DE PROPIEDAD ===')
-      logger.log('Propiedad completa:', propData)
-      logger.log('Espacios:', propData.espacios)
-      logger.log('Precios:', propData.precios)
-      logger.log('Ubicación:', propData.ubicacion)
-      logger.log('Servicios:', propData.servicios)
-
-      // Debug de servicios
-      if (propData.servicios && propData.servicios.length > 0) {
-        console.log('📋 Servicios encontrados:', propData.servicios.length)
-        propData.servicios.forEach((s: any, idx: number) => {
-          console.log(`  Servicio ${idx + 1}:`, s)
-          console.log(`    - Estructura completa:`, JSON.stringify(s, null, 2))
-          console.log(`    - Keys disponibles:`, Object.keys(s))
-        })
-      } else {
-        console.log('⚠️ No hay servicios o servicios es null/vacío')
-      }
       
       let esColaborador = false
       if (!esPropio) {

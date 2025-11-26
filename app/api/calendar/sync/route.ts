@@ -19,13 +19,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`📅 [API] Sincronizando calendarios para propiedad: ${propiedadId}`)
-
     const result = await sincronizarCalendariosPropiedad(propiedadId)
-
-    if (!result.success && result.errors.length > 0) {
-      console.warn(`⚠️ [API] Sincronización con errores:`, result.errors)
-    }
 
     return NextResponse.json({
       success: result.success,
@@ -40,7 +34,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('❌ [API] Error en sincronización:', error)
+    console.error('Error en sincronización:', error)
     return NextResponse.json(
       {
         error: 'Error en la sincronización',
@@ -56,10 +50,8 @@ export async function POST(request: NextRequest) {
  * Sincroniza calendarios de TODAS las propiedades con URLs configuradas
  * (Útil para cron jobs o sincronización manual global)
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    console.log('🌍 [API] Iniciando sincronización global de calendarios...')
-
     const result = await sincronizarTodasLasPropiedades()
 
     return NextResponse.json({
@@ -71,7 +63,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('❌ [API] Error en sincronización global:', error)
+    console.error('Error en sincronización global:', error)
     return NextResponse.json(
       {
         error: 'Error en la sincronización global',
