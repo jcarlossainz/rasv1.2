@@ -178,13 +178,13 @@ export default function CalendarioPropiedadPage() {
 
       setPropiedad(propData)
 
-      // Cargar TODOS los tickets de los próximos 3 meses (de AMBAS tablas)
+      // Cargar TODOS los tickets de los próximos 3 meses (tabla unificada 'tickets')
       const hoy = new Date()
       const fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)
       const fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 3, 0)
 
-      // 1. Cargar tickets manuales de la tabla 'tickets'
-      const { data: ticketsManuales, error: ticketsError } = await supabase
+      // Cargar todos los tickets de la tabla unificada
+      const { data: ticketsData, error: ticketsError } = await supabase
         .from('tickets')
         .select(`
           id,
@@ -204,76 +204,23 @@ export default function CalendarioPropiedadPage() {
         .order('fecha_programada', { ascending: true })
 
       if (ticketsError) {
-        console.error('Error cargando tickets manuales:', ticketsError)
+        console.error('Error cargando tickets:', ticketsError)
       }
 
-      // 2. Cargar pagos de servicios de la tabla 'fechas_pago_servicios'
-      const { data: pagosPendientes, error: pagosError } = await supabase
-        .from('fechas_pago_servicios')
-        .select(`
-          id,
-          fecha_pago,
-          monto_estimado,
-          pagado,
-          propiedad_id,
-          servicio_id,
-          servicios_inmueble (
-            nombre,
-            tipo_servicio
-          )
-        `)
-        .eq('propiedad_id', propiedadId)
-        .gte('fecha_pago', fechaInicio.toISOString().split('T')[0])
-        .lte('fecha_pago', fechaFin.toISOString().split('T')[0])
-        .order('fecha_pago', { ascending: true })
-
-      if (pagosError) {
-        console.error('Error cargando pagos de servicios:', pagosError)
-      }
-
-      // Transformar tickets manuales
-      const ticketsManualesTransformados = (ticketsManuales || []).map(ticket => {
-        return {
-          id: ticket.id,
-          titulo: ticket.titulo || 'Ticket sin título',
-          fecha_programada: ticket.fecha_programada,
-          monto_estimado: ticket.monto_estimado || 0,
-          pagado: ticket.pagado || false,
-          servicio_id: ticket.servicio_id,
-          tipo_ticket: ticket.tipo_ticket || 'Manual',
-          estado: ticket.estado || 'pendiente',
-          prioridad: ticket.prioridad || 'media',
-          propiedad_id: ticket.propiedad_id,
-          propiedad_nombre: propData.nombre_propiedad
-        }
-      })
-
-      // Transformar pagos de servicios
-      const ticketsServiciosTransformados = (pagosPendientes || []).map(pago => {
-        const servicio = pago.servicios_inmueble as { nombre?: string; tipo_servicio?: string } | null
-
-        return {
-          id: pago.id,
-          titulo: `Pago: ${servicio?.nombre || 'Servicio'}`,
-          fecha_programada: pago.fecha_pago,
-          monto_estimado: pago.monto_estimado || 0,
-          pagado: pago.pagado || false,
-          servicio_id: pago.servicio_id,
-          tipo_ticket: servicio?.tipo_servicio || 'Servicio',
-          estado: 'pendiente',
-          prioridad: 'media',
-          propiedad_id: pago.propiedad_id,
-          propiedad_nombre: propData.nombre_propiedad
-        }
-      })
-
-      // Combinar y ordenar todos los tickets
-      const todosLosTickets = [
-        ...ticketsManualesTransformados,
-        ...ticketsServiciosTransformados
-      ].sort((a, b) => {
-        return new Date(a.fecha_programada).getTime() - new Date(b.fecha_programada).getTime()
-      })
+      // Transformar tickets
+      const todosLosTickets = (ticketsData || []).map(ticket => ({
+        id: ticket.id,
+        titulo: ticket.titulo || 'Ticket sin título',
+        fecha_programada: ticket.fecha_programada,
+        monto_estimado: ticket.monto_estimado || 0,
+        pagado: ticket.pagado || false,
+        servicio_id: ticket.servicio_id,
+        tipo_ticket: ticket.tipo_ticket || (ticket.servicio_id ? 'Servicio' : 'Manual'),
+        estado: ticket.estado || 'pendiente',
+        prioridad: ticket.prioridad || 'media',
+        propiedad_id: ticket.propiedad_id,
+        propiedad_nombre: propData.nombre_propiedad
+      }))
 
       setTickets(todosLosTickets)
 

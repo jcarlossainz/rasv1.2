@@ -23,7 +23,7 @@ interface RegistrarPagoModalProps {
     monto_estimado: number
     propiedad_id: string
     servicio_nombre: string
-    servicio_id?: string | null // Si tiene servicio_id, es de fechas_pago_servicios
+    servicio_id?: string | null // Si tiene servicio_id, es un ticket generado desde un servicio
   } | null
 }
 
@@ -235,52 +235,23 @@ export default function RegistrarPagoModal({
         // Determinar automáticamente si es pago completo o anticipo
         const esPagoCompleto = montoPagado >= pagoExistente.monto_estimado
 
-        // Determinar si es un ticket manual o un pago de servicio
-        const esTicketManual = !pagoExistente.servicio_id
-
-        if (esTicketManual) {
-          // ACTUALIZAR TABLA tickets (tickets manuales)
-          const updateDataTicket: any = {
-            pagado: esPagoCompleto,
-            fecha_pago_real: fechaPago,
-            monto_real: montoPagado,
-            cuenta_id: cuentaId || null,
-            estado: esPagoCompleto ? 'completado' : 'en_progreso',
-            updated_at: new Date().toISOString()
-          }
-
-          const { error } = await supabase
-            .from('tickets')
-            .update(updateDataTicket)
-            .eq('id', pagoExistente.id)
-
-          if (error) throw error
-          console.log('✅ Ticket manual actualizado en tabla tickets')
-        } else {
-          // ACTUALIZAR TABLA fechas_pago_servicios (pagos de servicios)
-          const updateData: any = {
-            pagado: esPagoCompleto,
-            fecha_pago_real: fechaPago,
-            monto_real: montoPagado,
-            cuenta_id: cuentaId || null,
-            metodo_pago: null,
-            referencia_pago: referenciaPago || null,
-            responsable: responsablePago || null,
-            tiene_factura: tieneFactura,
-            numero_factura: tieneFactura ? numeroFactura : null,
-            comprobante_url: urlComprobante,
-            notas: notas || null,
-            updated_at: new Date().toISOString()
-          }
-
-          const { error } = await supabase
-            .from('fechas_pago_servicios')
-            .update(updateData)
-            .eq('id', pagoExistente.id)
-
-          if (error) throw error
-          console.log('✅ Pago de servicio actualizado en tabla fechas_pago_servicios')
+        // ACTUALIZAR TABLA tickets (unificada - incluye manuales y de servicios)
+        const updateData: any = {
+          pagado: esPagoCompleto,
+          fecha_pago_real: fechaPago,
+          monto_real: montoPagado,
+          cuenta_id: cuentaId || null,
+          estado: esPagoCompleto ? 'completado' : 'en_progreso',
+          updated_at: new Date().toISOString()
         }
+
+        const { error } = await supabase
+          .from('tickets')
+          .update(updateData)
+          .eq('id', pagoExistente.id)
+
+        if (error) throw error
+        console.log('✅ Ticket actualizado en tabla tickets (unificada)')
 
         // ACTUALIZAR SALDO DE LA CUENTA (si se seleccionó una)
         if (cuentaId) {

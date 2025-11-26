@@ -168,8 +168,8 @@ export default function CalendarioGlobalPage() {
 
       const propIds = todasPropiedades.map(p => p.id)
 
-      // 1. Cargar tickets manuales de la tabla 'tickets'
-      const { data: ticketsManuales, error: ticketsError } = await supabase
+      // Cargar TODOS los tickets desde tabla unificada
+      const { data: todosTickets, error: ticketsError } = await supabase
         .from('tickets')
         .select(`
           id,
@@ -179,6 +179,7 @@ export default function CalendarioGlobalPage() {
           pagado,
           servicio_id,
           tipo,
+          tipo_ticket,
           estado,
           prioridad,
           propiedad_id
@@ -192,34 +193,13 @@ export default function CalendarioGlobalPage() {
         console.error('Error cargando tickets:', ticketsError)
       }
 
-      // 2. Cargar pagos de servicios de la tabla 'fechas_pago_servicios'
-      const { data: pagosPendientes, error: pagosError } = await supabase
-        .from('fechas_pago_servicios')
-        .select(`
-          id,
-          fecha_pago,
-          monto_estimado,
-          pagado,
-          propiedad_id,
-          servicio_id,
-          servicios_inmueble (
-            nombre,
-            tipo_servicio
-          )
-        `)
-        .in('propiedad_id', propIds)
-        .gte('fecha_pago', fechaInicio.toISOString().split('T')[0])
-        .lte('fecha_pago', fechaFin.toISOString().split('T')[0])
-        .order('fecha_pago', { ascending: true })
-
-      if (pagosError) {
-        console.error('Error cargando pagos de servicios:', pagosError)
-      }
-
-      // Transformar tickets manuales
-      const ticketsManualesTransformados = (ticketsManuales || []).map(ticket => {
+      // Transformar tickets
+      const ticketsTransformados = (todosTickets || []).map(ticket => {
         const propiedad = todasPropiedades.find(p => p.id === ticket.propiedad_id)
         const propietario = propietariosUnicos.find(p => p.id === propiedad?.owner_id)
+
+        // Determinar tipo de ticket
+        const tipoTicket = ticket.tipo_ticket || ticket.tipo || (ticket.servicio_id ? 'Servicio' : 'Manual')
 
         return {
           id: ticket.id,
@@ -228,7 +208,7 @@ export default function CalendarioGlobalPage() {
           monto_estimado: ticket.monto_estimado || 0,
           pagado: ticket.pagado || false,
           servicio_id: ticket.servicio_id,
-          tipo_ticket: ticket.tipo || 'Manual',
+          tipo_ticket: tipoTicket,
           estado: ticket.estado || 'pendiente',
           prioridad: ticket.prioridad || 'Media',
           propiedad_id: ticket.propiedad_id,
@@ -238,38 +218,7 @@ export default function CalendarioGlobalPage() {
         }
       })
 
-      // Transformar pagos de servicios
-      const ticketsServiciosTransformados = (pagosPendientes || []).map(pago => {
-        const propiedad = todasPropiedades.find(p => p.id === pago.propiedad_id)
-        const propietario = propietariosUnicos.find(p => p.id === propiedad?.owner_id)
-        const servicio = pago.servicios_inmueble as { nombre?: string; tipo_servicio?: string } | null
-
-        return {
-          id: pago.id,
-          titulo: `Pago: ${servicio?.nombre || 'Servicio'}`,
-          fecha_programada: pago.fecha_pago,
-          monto_estimado: pago.monto_estimado || 0,
-          pagado: pago.pagado || false,
-          servicio_id: pago.servicio_id,
-          tipo_ticket: servicio?.tipo_servicio || 'Servicio',
-          estado: 'pendiente',
-          prioridad: 'Media',
-          propiedad_id: pago.propiedad_id,
-          propiedad_nombre: propiedad?.nombre_propiedad || 'Sin nombre',
-          propietario_id: propiedad?.owner_id || '',
-          propietario_nombre: propietario?.nombre || 'Desconocido'
-        }
-      })
-
-      // Combinar y ordenar todos los tickets
-      const todosLosTickets = [
-        ...ticketsManualesTransformados,
-        ...ticketsServiciosTransformados
-      ].sort((a, b) => {
-        return new Date(a.fecha_programada).getTime() - new Date(b.fecha_programada).getTime()
-      })
-
-      setTickets(todosLosTickets)
+      setTickets(ticketsTransformados)
 
     } catch (error) {
       console.error('Error cargando datos:', error)

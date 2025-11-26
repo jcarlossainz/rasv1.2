@@ -12,6 +12,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { PropertyFormData } from '@/types/property';
+import { generateServiceTickets } from '@/lib/supabase/generate-service-tickets';
 
 // ============================================================================
 // TIPOS
@@ -30,80 +31,9 @@ export interface LoadPropertyResult {
 }
 
 // ============================================================================
-// HELPER: Generar tickets automáticos usando función RPC
+// NOTA: La generación de tickets ahora usa generateServiceTickets importada
+// de @/lib/supabase/generate-service-tickets que crea directamente en tabla 'tickets'
 // ============================================================================
-
-async function generarTicketsAutomaticos(
-  propertyId: string,
-  services: any[]
-): Promise<{ success: boolean; ticketsCreated: number; error?: string }> {
-  try {
-    let totalTickets = 0;
-
-    // Primero, guardar servicios en servicios_inmueble
-    for (const service of services) {
-      // Mapear unidades del frontend al backend
-      let unidad = service.frecuenciaUnidad || 'mes';
-      if (unidad === 'dia') unidad = 'dias';
-      if (unidad === 'mes') unidad = 'meses';
-      if (unidad === 'año') unidad = 'anos';
-
-      const servicioData = {
-        propiedad_id: propertyId,
-        nombre: service.name,
-        tipo_servicio: service.type,
-        proveedor: service.provider || null,
-        numero_contrato: service.accountNumber || null,
-        monto: service.cost || 0,
-        es_fijo: service.montoTipo === 'fijo' || !service.montoTipo,
-        frecuencia_valor: service.frecuenciaCantidad || 1,
-        frecuencia_unidad: unidad,
-        ultima_fecha_pago: service.lastPaymentDate || null,
-        activo: true
-      };
-
-      // Insertar servicio
-      const { data: servicioInsertado, error: errorServicio } = await supabase
-        .from('servicios_inmueble')
-        .insert(servicioData)
-        .select('id')
-        .single();
-
-      if (errorServicio) {
-        console.error(`❌ Error insertando servicio ${service.name}:`, errorServicio);
-        continue;
-      }
-
-      // Llamar función RPC para generar fechas de pago
-      if (servicioInsertado && service.lastPaymentDate) {
-        const { data: ticketsGenerados, error: errorRPC } = await supabase
-          .rpc('generar_fechas_pago_servicio', {
-            p_servicio_id: servicioInsertado.id,
-            p_cantidad_meses: 12
-          });
-
-        if (errorRPC) {
-          console.error(`❌ Error generando fechas para ${service.name}:`, errorRPC);
-        } else {
-          totalTickets += ticketsGenerados || 0;
-          console.log(`✅ ${ticketsGenerados} fechas generadas para ${service.name}`);
-        }
-      }
-    }
-
-    return {
-      success: true,
-      ticketsCreated: totalTickets
-    };
-  } catch (error: any) {
-    console.error('❌ Error en generarTicketsAutomaticos:', error);
-    return {
-      success: false,
-      ticketsCreated: 0,
-      error: error.message
-    };
-  }
-}
 
 // ============================================================================
 // TRANSFORMADOR: FormData → Database
@@ -442,15 +372,15 @@ export function usePropertyDatabase() {
           data.inquilinos_email || []
         );
 
-        // Generar tickets automáticos desde los servicios usando RPC
+        // Generar tickets automáticos desde los servicios (tabla tickets unificada)
         if (data.servicios && data.servicios.length > 0) {
-          const ticketResult = await generarTicketsAutomaticos(
-            propertyId,
-            data.servicios
-          );
+          const ticketResult = await generateServiceTickets({
+            propertyId: propertyId,
+            services: data.servicios
+          });
 
           if (ticketResult.success) {
-            console.log(`✅ ${ticketResult.ticketsCreated} tickets automáticos generados`);
+            console.log(`✅ ${ticketResult.ticketsCreated} tickets automáticos generados en tabla tickets`);
           } else {
             console.error(`❌ Error generando tickets: ${ticketResult.error}`);
           }
@@ -460,7 +390,7 @@ export function usePropertyDatabase() {
           success: true,
           propertyId: propertyId
         };
-        
+
       } else {
         // ==========================================
         // CREAR NUEVA PROPIEDAD
@@ -500,15 +430,15 @@ export function usePropertyDatabase() {
           data.inquilinos_email || []
         );
 
-        // Generar tickets automáticos desde los servicios usando RPC
+        // Generar tickets automáticos desde los servicios (tabla tickets unificada)
         if (data.servicios && data.servicios.length > 0) {
-          const ticketResult = await generarTicketsAutomaticos(
-            newProperty.id,
-            data.servicios
-          );
+          const ticketResult = await generateServiceTickets({
+            propertyId: newProperty.id,
+            services: data.servicios
+          });
 
           if (ticketResult.success) {
-            console.log(`✅ ${ticketResult.ticketsCreated} tickets automáticos generados`);
+            console.log(`✅ ${ticketResult.ticketsCreated} tickets automáticos generados en tabla tickets`);
           } else {
             console.error(`❌ Error generando tickets: ${ticketResult.error}`);
           }

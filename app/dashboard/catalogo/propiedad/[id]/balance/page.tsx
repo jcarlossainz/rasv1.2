@@ -104,26 +104,19 @@ export default function BalancePropiedadPage() {
 
       setPropiedad(propData)
 
-      // Cargar EGRESOS (pagos CONCRETADOS/PAGADOS para estado de cuenta)
+      // Cargar EGRESOS desde tabla tickets unificada (pagos CONCRETADOS)
       const { data: pagos } = await supabase
-        .from('fechas_pago_servicios')
+        .from('tickets')
         .select(`
           id,
-          fecha_pago,
+          titulo,
+          fecha_programada,
+          fecha_pago_real,
           monto_real,
           monto_estimado,
           propiedad_id,
-          metodo_pago,
-          referencia_pago,
           responsable,
-          tiene_factura,
-          numero_factura,
-          comprobante_url,
           cuenta_id,
-          servicios_inmueble!inner(
-            nombre,
-            tipo_servicio
-          ),
           cuentas(
             nombre_cuenta
           )
@@ -137,17 +130,17 @@ export default function BalancePropiedadPage() {
         id: pago.id,
         propiedad_nombre: propData.nombre_propiedad,
         tipo: 'egreso' as const,
-        titulo: pago.servicios_inmueble.nombre,
+        titulo: pago.titulo,
         monto: pago.monto_real || pago.monto_estimado,
         responsable: pago.responsable || null,
-        fecha: pago.fecha_pago,
+        fecha: pago.fecha_pago_real || pago.fecha_programada,
         propiedad_id: pago.propiedad_id,
-        metodo_pago: pago.metodo_pago,
-        referencia_pago: pago.referencia_pago,
-        comprobante_url: pago.comprobante_url,
+        metodo_pago: null,
+        referencia_pago: null,
+        comprobante_url: null,
         cuenta_nombre: pago.cuentas?.nombre_cuenta || null,
-        tiene_factura: pago.tiene_factura,
-        numero_factura: pago.numero_factura
+        tiene_factura: false,
+        numero_factura: null
       }))
 
       // Cargar INGRESOS

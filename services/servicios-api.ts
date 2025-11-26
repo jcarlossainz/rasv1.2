@@ -105,25 +105,25 @@ export async function eliminarServicioDefinitivo(servicioId: string) {
 }
 
 // ============================================
-// FECHAS DE PAGO
+// TICKETS DE SERVICIOS (tabla unificada 'tickets')
 // ============================================
 
 /**
- * Obtener fechas de pago de un servicio
+ * Obtener tickets de pago de un servicio
  */
 export async function obtenerFechasPagoServicio(servicioId: string) {
   const { data, error } = await supabase
-    .from('fechas_pago_servicios')
+    .from('tickets')
     .select('*')
     .eq('servicio_id', servicioId)
-    .order('fecha_pago', { ascending: true });
+    .order('fecha_programada', { ascending: true });
 
   if (error) {
-    console.error('Error obteniendo fechas de pago:', error);
+    console.error('Error obteniendo tickets de servicio:', error);
     throw error;
   }
 
-  return data as FechaPagoServicio[];
+  return data;
 }
 
 /**
@@ -188,31 +188,29 @@ export async function obtenerPagosVencidos(propiedadId?: string) {
 }
 
 /**
- * Marcar un pago como realizado
+ * Marcar un ticket como pagado
  */
 export async function marcarPagoRealizado(
-  pagoId: string,
+  ticketId: string,
   montoReal: number,
   metodoPago?: string,
   referencia?: string,
   notas?: string
 ) {
   const { data, error } = await supabase
-    .from('fechas_pago_servicios')
+    .from('tickets')
     .update({
       pagado: true,
       fecha_pago_real: new Date().toISOString().split('T')[0],
       monto_real: montoReal,
-      metodo_pago: metodoPago,
-      referencia_pago: referencia,
-      notas: notas
+      estado: 'completado'
     })
-    .eq('id', pagoId)
+    .eq('id', ticketId)
     .select()
     .single();
 
   if (error) {
-    console.error('Error marcando pago como realizado:', error);
+    console.error('Error marcando ticket como pagado:', error);
     throw error;
   }
 
@@ -220,24 +218,23 @@ export async function marcarPagoRealizado(
 }
 
 /**
- * Desmarcar un pago (volver a pendiente)
+ * Desmarcar un ticket (volver a pendiente)
  */
-export async function desmarcarPago(pagoId: string) {
+export async function desmarcarPago(ticketId: string) {
   const { data, error } = await supabase
-    .from('fechas_pago_servicios')
+    .from('tickets')
     .update({
       pagado: false,
       fecha_pago_real: null,
       monto_real: null,
-      metodo_pago: null,
-      referencia_pago: null
+      estado: 'pendiente'
     })
-    .eq('id', pagoId)
+    .eq('id', ticketId)
     .select()
     .single();
 
   if (error) {
-    console.error('Error desmarcando pago:', error);
+    console.error('Error desmarcando ticket:', error);
     throw error;
   }
 
@@ -245,20 +242,14 @@ export async function desmarcarPago(pagoId: string) {
 }
 
 /**
- * Regenerar fechas de pago manualmente
+ * Regenerar tickets de pago para un servicio
+ * Nota: Ahora usa generateServiceTickets que crea directamente en tabla 'tickets'
  */
-export async function regenerarFechasPago(servicioId: string, cantidadFechas: number = 6) {
-  const { data, error } = await supabase.rpc('generar_fechas_pago_servicio', {
-    p_servicio_id: servicioId,
-    p_cantidad_fechas: cantidadFechas
-  });
-
-  if (error) {
-    console.error('Error regenerando fechas de pago:', error);
-    throw error;
-  }
-
-  return data;
+export async function regenerarFechasPago(servicioId: string, cantidadFechas: number = 12) {
+  // Esta función ahora es un placeholder - la regeneración real se hace
+  // a través de generateServiceTickets() en generate-service-tickets.ts
+  console.warn('regenerarFechasPago: Use generateServiceTickets() directamente para regenerar tickets');
+  return 0;
 }
 
 // ============================================
@@ -266,12 +257,12 @@ export async function regenerarFechasPago(servicioId: string, cantidadFechas: nu
 // ============================================
 
 /**
- * Obtener resumen de pagos por propiedad
+ * Obtener resumen de pagos por propiedad (desde tabla tickets unificada)
  */
 export async function obtenerResumenPagosPropiedad(propiedadId: string) {
   const { data, error } = await supabase
-    .from('fechas_pago_servicios')
-    .select('pagado, monto_estimado, fecha_pago')
+    .from('tickets')
+    .select('pagado, monto_estimado, fecha_programada')
     .eq('propiedad_id', propiedadId);
 
   if (error) {
@@ -293,7 +284,7 @@ export async function obtenerResumenPagosPropiedad(propiedadId: string) {
   };
 
   data.forEach(pago => {
-    const fechaPago = new Date(pago.fecha_pago);
+    const fechaPago = new Date(pago.fecha_programada);
     
     if (!pago.pagado) {
       resumen.total_pendientes++;

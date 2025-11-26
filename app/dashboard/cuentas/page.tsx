@@ -143,22 +143,24 @@ export default function CuentasGlobalPage() {
       }
 
       // Cargar EGRESOS (pagos CONCRETADOS/PAGADOS para estado de cuenta)
+      // Ahora usamos la tabla unificada 'tickets'
       const propIds = todasPropiedades.map(p => p.id)
       const { data: pagos } = await supabase
-        .from('fechas_pago_servicios')
+        .from('tickets')
         .select(`
           id,
-          fecha_pago,
+          titulo,
+          fecha_programada,
+          fecha_pago_real,
           monto_estimado,
+          monto_real,
           propiedad_id,
-          servicios_inmueble!inner(
-            nombre,
-            tipo_servicio
-          )
+          tipo_ticket,
+          servicio_id
         `)
         .in('propiedad_id', propIds)
-        .eq('pagado', true) // CAMBIO CRÍTICO: Solo pagos concretados
-        .limit(500) // Aumentado para tener más histórico
+        .eq('pagado', true) // Solo pagos concretados
+        .limit(500)
 
       // Transformar pagos a movimientos (egresos)
       const movimientosEgresos: Movimiento[] = (pagos || []).map(pago => {
@@ -167,10 +169,10 @@ export default function CuentasGlobalPage() {
           id: pago.id,
           propiedad_nombre: propiedad?.nombre || 'Sin nombre',
           tipo: 'egreso' as const,
-          titulo: pago.servicios_inmueble.nombre,
-          monto: pago.monto_estimado,
+          titulo: pago.titulo || 'Ticket sin título',
+          monto: pago.monto_real || pago.monto_estimado || 0,
           responsable: 'Sistema',
-          fecha: pago.fecha_pago,
+          fecha: pago.fecha_pago_real || pago.fecha_programada,
           propiedad_id: pago.propiedad_id
         }
       })

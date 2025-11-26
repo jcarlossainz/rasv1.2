@@ -80,7 +80,7 @@ export function useDashboardWidgets(): UseDashboardWidgetsReturn {
             };
           }
 
-          // Contar tickets pendientes
+          // Contar tickets pendientes (tabla unificada)
           const { count: ticketsCount, error: ticketsError } = await supabase
             .from('tickets')
             .select('id', { count: 'exact', head: true })
@@ -89,18 +89,9 @@ export function useDashboardWidgets(): UseDashboardWidgetsReturn {
 
           if (ticketsError) throw ticketsError;
 
-          // Contar fechas de pago pendientes
-          const { count: fechasCount, error: fechasError } = await supabase
-            .from('fechas_pago_servicios')
-            .select('id', { count: 'exact', head: true })
-            .in('propiedad_id', propiedadIds)
-            .eq('pagado', false);
-
-          if (fechasError) throw fechasError;
-
           return {
             id: 'pending_tickets',
-            value: (ticketsCount || 0) + (fechasCount || 0),
+            value: ticketsCount || 0,
             loading: false,
           };
         }
@@ -229,25 +220,18 @@ export function useDashboardWidgets(): UseDashboardWidgetsReturn {
             };
           }
 
-          // Sumar montos de tickets pendientes
+          // Sumar montos de tickets pendientes (tabla unificada)
           const { data: tickets } = await supabase
             .from('tickets')
-            .select('monto')
+            .select('monto_estimado')
             .in('propiedad_id', propiedadIds)
             .eq('pagado', false);
 
-          const { data: fechasPago } = await supabase
-            .from('fechas_pago_servicios')
-            .select('monto')
-            .in('propiedad_id', propiedadIds)
-            .eq('pagado', false);
-
-          const totalTickets = tickets?.reduce((sum, t) => sum + (t.monto || 0), 0) || 0;
-          const totalFechas = fechasPago?.reduce((sum, f) => sum + (f.monto || 0), 0) || 0;
+          const totalTickets = tickets?.reduce((sum, t) => sum + (t.monto_estimado || 0), 0) || 0;
 
           return {
             id: 'pending_payments',
-            value: totalTickets + totalFechas,
+            value: totalTickets,
             loading: false,
           };
         }

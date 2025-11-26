@@ -2,11 +2,14 @@
  * Generador de Tickets Automáticos desde Servicios
  * =================================================
  *
- * Esta función genera tickets recurrentes en la tabla fechas_pago_servicios
+ * Esta función genera tickets recurrentes en la tabla unificada 'tickets'
  * basándose en los servicios configurados en una propiedad.
  *
  * Genera tickets para el próximo 1 año a partir de la fecha actual.
  * Se regenera automáticamente para mantener siempre 1 año de tickets disponibles.
+ *
+ * NOTA: Los tickets generados desde servicios tienen servicio_id != null
+ * para distinguirlos de los tickets manuales (servicio_id = null).
  */
 
 import { supabase } from './client';
