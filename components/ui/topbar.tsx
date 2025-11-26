@@ -14,6 +14,7 @@ interface TopBarProps {
   onBackClick?: () => void
   onNuevoTicket?: () => void // Nueva prop para abrir modal de tickets
   onRegistrarPago?: () => void // Nueva prop para abrir modal de registro de pago
+  onNuevaReservacion?: () => void // Nueva prop para abrir modal de reservaciones
 }
 
 export default function TopBar({
@@ -26,7 +27,8 @@ export default function TopBar({
   onLogout,
   onBackClick,
   onNuevoTicket,
-  onRegistrarPago
+  onRegistrarPago,
+  onNuevaReservacion
 }: TopBarProps) {
   const router = useRouter()
   const [showDropdown, setShowDropdown] = useState(false)
@@ -131,6 +133,28 @@ export default function TopBar({
                     </div>
                     <span className="font-semibold text-gray-800">Nuevo ticket</span>
                   </button>
+
+                  {/* Nueva Reservación */}
+                  {onNuevaReservacion && (
+                    <button
+                      onClick={() => {
+                        setShowDropdown(false)
+                        onNuevaReservacion()
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-pink-50 transition-colors text-left group"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-pink-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <svg className="w-5 h-5 text-pink-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                          <line x1="16" y1="2" x2="16" y2="6"/>
+                          <line x1="8" y1="2" x2="8" y2="6"/>
+                          <line x1="3" y1="10" x2="21" y2="10"/>
+                          <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>
+                        </svg>
+                      </div>
+                      <span className="font-semibold text-gray-800">Nueva reservación</span>
+                    </button>
+                  )}
 
                   {/* Registrar Pago */}
                   {onRegistrarPago && (

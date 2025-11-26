@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
 import NuevoTicket from '@/app/dashboard/tickets/NuevoTicket'
+import NuevaReservacionModal from '@/components/NuevaReservacionModal'
 
 interface Ticket {
   id: string
@@ -116,6 +117,9 @@ export default function CalendarioPropiedadPage() {
 
   // Modal de Nuevo Ticket
   const [showNuevoTicketModal, setShowNuevoTicketModal] = useState(false)
+
+  // Modal de Nueva Reservación
+  const [showNuevaReservacionModal, setShowNuevaReservacionModal] = useState(false)
 
   // Estado para expansión inline de días en calendario
   const [diaExpandido, setDiaExpandido] = useState<string | null>(null)
@@ -441,6 +445,7 @@ export default function CalendarioPropiedadPage() {
         showAddButton
         onBackClick={volverCatalogo}
         onNuevoTicket={() => setShowNuevoTicketModal(true)}
+        onNuevaReservacion={() => setShowNuevaReservacionModal(true)}
         showUserInfo={true}
         userEmail={user?.email}
         onLogout={handleLogout}
@@ -1162,6 +1167,20 @@ export default function CalendarioPropiedadPage() {
               user_id: user?.id || ''
             }]}
             propiedadInicial={propiedad.id}
+          />
+        )}
+
+        {/* Modal de Nueva Reservación */}
+        {showNuevaReservacionModal && propiedad && (
+          <NuevaReservacionModal
+            isOpen={showNuevaReservacionModal}
+            onClose={() => setShowNuevaReservacionModal(false)}
+            onSuccess={() => {
+              setShowNuevaReservacionModal(false)
+              cargarEventos()
+            }}
+            propiedadId={propiedad.id}
+            propiedadNombre={propiedad.nombre_propiedad}
           />
         )}
       </main>
