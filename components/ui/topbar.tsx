@@ -2,6 +2,16 @@
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
+
+// Configuración de avatares (mismo que en perfil)
+const AVATARES = [
+  { id: 'ballena', src: '/avatars_logo/Ballena.png', label: 'Ballena' },
+  { id: 'estrella', src: '/avatars_logo/Estrella.png', label: 'Estrella' },
+  { id: 'foca', src: '/avatars_logo/Foca.png', label: 'Foca' },
+  { id: 'pez', src: '/avatars_logo/Pez.png', label: 'Pez' },
+  { id: 'pulpo', src: '/avatars_logo/Pulpo.png', label: 'Pulpo' },
+]
 
 interface TopBarProps {
   title: string
@@ -12,9 +22,9 @@ interface TopBarProps {
   userEmail?: string
   onLogout?: () => void
   onBackClick?: () => void
-  onNuevoTicket?: () => void // Nueva prop para abrir modal de tickets
-  onRegistrarPago?: () => void // Nueva prop para abrir modal de registro de pago
-  onNuevaReservacion?: () => void // Nueva prop para abrir modal de reservaciones
+  onNuevoTicket?: () => void
+  onRegistrarPago?: () => void
+  onNuevaReservacion?: () => void
 }
 
 export default function TopBar({
@@ -31,8 +41,13 @@ export default function TopBar({
   onNuevaReservacion
 }: TopBarProps) {
   const router = useRouter()
+  const { user } = useAuth()
   const [showDropdown, setShowDropdown] = useState(false)
-  
+
+  // Obtener avatar del usuario
+  const avatarId = user?.avatar_url || null
+  const avatar = AVATARES.find(a => a.id === avatarId)
+
   const hoy = new Date().toLocaleDateString('es-MX', { 
     year: 'numeric', 
     month: '2-digit', 
@@ -232,10 +247,30 @@ export default function TopBar({
           
           <div className="flex-1"></div>
           
-          {/* Botones circulares primero */}
+          {/* Avatar del usuario (para futuro agente IA) */}
+          {showUserInfo && (
+            <div
+              className="w-11 h-11 rounded-full border-2 border-white/30 bg-white/10 flex items-center justify-center overflow-hidden cursor-pointer hover:scale-110 transition-all"
+              aria-label="Agente IA"
+            >
+              {avatar ? (
+                <img
+                  src={avatar.src}
+                  alt={avatar.label}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <svg className="w-6 h-6 text-white/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+              )}
+            </div>
+          )}
+
           {/* Botón Configuración */}
           {showUserInfo && (
-            <button 
+            <button
               onClick={() => router.push('/perfil')}
               className="w-11 h-11 rounded-full border-2 border-white/30 bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all hover:scale-110"
               aria-label="Configuración"
