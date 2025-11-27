@@ -82,21 +82,18 @@ export default function EditItemModal({ item, spaces, onClose, onSave }: EditIte
             />
           </div>
 
-          {/* Campo: Etiquetas */}
+          {/* Campo: Descripción */}
           <div className="mb-6">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Etiquetas (separadas por comas)
+              Descripción
             </label>
-            <input
-              type="text"
+            <textarea
               value={labels}
               onChange={(e) => setLabels(e.target.value)}
-              placeholder="Ej: madera, vintage, decorativo"
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-ras-turquesa focus:outline-none transition-colors"
+              placeholder="Descripción breve del objeto..."
+              rows={3}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-ras-turquesa focus:outline-none transition-colors resize-none"
             />
-            <p className="text-xs text-gray-500 mt-2">
-              Puedes agregar varias etiquetas separándolas con comas
-            </p>
           </div>
 
           {/* Campo: Espacio */}

@@ -324,7 +324,7 @@ export default function InventarioPage() {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Buscar por objeto o etiquetas..."
+                  placeholder="Buscar por objeto o descripción..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 rounded-lg focus:border-ras-turquesa focus:outline-none transition-colors"
@@ -366,7 +366,7 @@ export default function InventarioPage() {
               <div className="grid grid-cols-12 gap-4 items-center text-sm font-semibold text-gray-600">
                 <div className="col-span-1"></div>
                 <div className="col-span-3">Objeto</div>
-                <div className="col-span-3">Etiquetas</div>
+                <div className="col-span-3">Descripción</div>
                 <div className="col-span-3">Espacio</div>
                 <div className="col-span-2 text-center"></div>
               </div>
@@ -393,26 +393,14 @@ export default function InventarioPage() {
                       </div>
                     </div>
 
-                    {/* Etiquetas */}
+                    {/* Descripción */}
                     <div className="col-span-3">
                       {item.labels ? (
-                        <div className="flex flex-wrap gap-1">
-                          {item.labels.split(',').slice(0, 3).map((label, idx) => (
-                            <span
-                              key={idx}
-                              className="px-2 py-1 text-xs rounded-lg bg-purple-100 text-purple-700 font-medium"
-                            >
-                              {label.trim()}
-                            </span>
-                          ))}
-                          {item.labels.split(',').length > 3 && (
-                            <span className="px-2 py-1 text-xs rounded-lg bg-gray-100 text-gray-600">
-                              +{item.labels.split(',').length - 3}
-                            </span>
-                          )}
-                        </div>
+                        <p className="text-sm text-gray-600 line-clamp-2">
+                          {item.labels}
+                        </p>
                       ) : (
-                        <span className="text-sm text-gray-400">Sin etiquetas</span>
+                        <span className="text-sm text-gray-400">Sin descripción</span>
                       )}
                     </div>
 
