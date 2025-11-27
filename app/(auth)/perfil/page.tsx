@@ -226,9 +226,9 @@ export default function PerfilPage() {
       <main className="max-w-3xl mx-auto px-4 py-8">
         
         {/* Sección: Información Personal */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 mb-6">
+        <div className="rounded-2xl p-8 mb-6">
           <h2 className="text-2xl font-bold font-poppins text-gray-800 mb-6">Información Personal</h2>
-          
+
           <form onSubmit={handleGuardarInfo} className="space-y-5">
             {/* Foto de perfil */}
             <div className="flex justify-center mb-6">
@@ -260,7 +260,7 @@ export default function PerfilPage() {
               type="text"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
-              placeholder="Tu nombre"
+              placeholder="Nombre completo"
               required
             />
 
@@ -270,7 +270,7 @@ export default function PerfilPage() {
               type="email"
               value={email}
               disabled
-              helperText="El email no se puede modificar"
+              placeholder="Email"
             />
 
             {/* Teléfono */}
@@ -279,8 +279,7 @@ export default function PerfilPage() {
               type="tel"
               value={telefono}
               onChange={(e) => setTelefono(e.target.value)}
-              placeholder="10 dígitos"
-              helperText="Formato: 5512345678"
+              placeholder="Teléfono"
             />
 
             <Button
@@ -294,33 +293,27 @@ export default function PerfilPage() {
         </div>
 
         {/* Sección: Seguridad */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 mb-6">
-          <h2 className="text-2xl font-bold font-poppins text-gray-800 mb-2">Seguridad</h2>
-          <p className="text-sm text-gray-500 mb-6 font-roboto">
-            Mantén tu cuenta segura actualizando tu contraseña regularmente.
-          </p>
+        <div className="rounded-2xl p-8 mb-6">
+          <h2 className="text-2xl font-bold font-poppins text-gray-800 mb-6">Seguridad</h2>
 
           <Button
             onClick={() => setShowModalPassword(true)}
-            variant="outline"
+            variant="primary"
           >
-            🔒 Cambiar Contraseña
+            Cambiar Contraseña
           </Button>
         </div>
 
         {/* Sección: Personalizar Dashboard */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
-          <h2 className="text-2xl font-bold font-poppins text-gray-800 mb-2">Personalizar Dashboard</h2>
-          <p className="text-sm text-gray-500 mb-6 font-roboto">
-            Elige hasta 4 widgets para mostrar en tu dashboard principal.
-          </p>
+        <div className="rounded-2xl p-8">
+          <h2 className="text-2xl font-bold font-poppins text-gray-800 mb-6">Personalizar Dashboard</h2>
 
           <Button
             onClick={() => setShowWidgetSelector(true)}
-            variant="outline"
+            variant="primary"
             disabled={configLoading}
           >
-            🎨 Seleccionar Widgets
+            Seleccionar Widgets
           </Button>
         </div>
 
