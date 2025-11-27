@@ -76,7 +76,7 @@ export default function LoginPage() {
           <h2 className="text-2xl font-bold text-white mb-4">Bienvenido</h2>
           <div className="inline-flex items-center justify-center mb-3">
             <Image
-              src="/logo-ras-wizard.png"
+              src="/logo.png"
               alt="Ohana Logo"
               width={180}
               height={180}
