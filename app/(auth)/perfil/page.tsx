@@ -321,45 +321,42 @@ export default function PerfilPage() {
         maxWidth="lg"
       >
         <h2 className="text-2xl font-bold font-poppins text-gray-800 mb-6">Cambiar Contraseña</h2>
-        
-        <form onSubmit={handleCambiarPassword} className="space-y-5">
-          {/* Contraseña Actual */}
-          <Input
-            label="Contraseña actual"
+
+        <form onSubmit={handleCambiarPassword} className="space-y-4">
+          <input
             type="password"
             value={passwordActual}
             onChange={(e) => setPasswordActual(e.target.value)}
-            placeholder="Tu contraseña actual"
+            placeholder="Contraseña actual"
             required
-            helperText="Por seguridad, ingresa tu contraseña actual"
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ras-turquesa focus:border-transparent transition-all outline-none"
           />
 
-          {/* Contraseña Nueva */}
-          <Input
-            label="Nueva contraseña"
+          <input
             type="password"
             value={passwordNueva}
             onChange={(e) => setPasswordNueva(e.target.value)}
-            placeholder="Mínimo 6 caracteres"
+            placeholder="Nueva contraseña (mínimo 6 caracteres)"
             required
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ras-turquesa focus:border-transparent transition-all outline-none"
           />
 
-          {/* Confirmar Contraseña */}
-          <Input
-            label="Confirmar nueva contraseña"
+          <input
             type="password"
             value={passwordConfirmar}
             onChange={(e) => setPasswordConfirmar(e.target.value)}
-            placeholder="Repite la nueva contraseña"
+            placeholder="Confirmar nueva contraseña"
             required
-            error={passwordNueva && passwordConfirmar && passwordNueva !== passwordConfirmar ? 'Las contraseñas no coinciden' : undefined}
+            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-ras-turquesa focus:border-transparent transition-all outline-none ${
+              passwordNueva && passwordConfirmar && passwordNueva !== passwordConfirmar
+                ? 'border-red-500'
+                : 'border-gray-300'
+            }`}
           />
 
-          {/* Mensaje de validación positivo */}
-          {passwordNueva && passwordConfirmar && passwordNueva === passwordConfirmar && (
-            <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
-              <p className="text-sm text-green-600 font-medium">✅ Las contraseñas coinciden</p>
-            </div>
+          {/* Mensaje de error */}
+          {passwordNueva && passwordConfirmar && passwordNueva !== passwordConfirmar && (
+            <p className="text-sm text-red-500">Las contraseñas no coinciden</p>
           )}
 
           <div className="flex gap-3 pt-4">
