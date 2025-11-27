@@ -72,8 +72,8 @@ export default function LoginPage() {
       <div className="rounded-2xl w-full max-w-md overflow-hidden">
 
         {/* Header con logo */}
-        <div className="pt-4 pb-2 px-8 text-center">
-          <h2 className="text-2xl font-bold text-white mb-4">Bienvenido</h2>
+        <div className="pt-3 pb-2 px-8 text-center">
+          <h2 className="text-4xl font-bold text-white mb-4">Bienvenido</h2>
           <div className="inline-flex items-center justify-center mb-3">
             <Image
               src="/logo.png"
@@ -83,7 +83,7 @@ export default function LoginPage() {
               className="object-contain"
             />
           </div>
-          <h1 className="text-6xl font-bold text-white mb-4">OHANA</h1>
+          <h1 className="text-4xl font-semibold text-white mb-4 font-poppins tracking-wide">OHANA.mx</h1>
         </div>
 
         {/* Formulario */}

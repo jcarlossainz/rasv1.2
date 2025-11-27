@@ -3,6 +3,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
+import ProveedorModal from '@/app/dashboard/directorio/components/ContactoModal';
+
+interface Proveedor {
+  id: string;
+  full_name: string;
+  categoria_proveedor?: string;
+}
 
 interface NuevoTicketProps {
   isOpen: boolean;
@@ -17,6 +25,7 @@ interface NuevoTicketProps {
     titulo: string;
     descripcion: string | null;
     fecha_programada: string;
+    hora_programada?: string | null;
     monto_estimado: number | null;
     prioridad: string;
     estado: string;
@@ -34,14 +43,18 @@ export default function NuevoTicket({
   ticketExistente
 }: NuevoTicketProps) {
   const toast = useToast();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [archivos, setArchivos] = useState<File[]>([]);
+  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
+  const [showProveedorModal, setShowProveedorModal] = useState(false);
   const [formData, setFormData] = useState({
     propiedad_id: propiedadId || '',
     tipo_ticket: 'compra',
     titulo: '',
     descripcion: '',
     fecha_pago: '',
+    hora_programada: '',
     monto_estimado: '',
     prioridad: 'media',
     estado: 'pendiente',
@@ -50,13 +63,12 @@ export default function NuevoTicket({
   });
 
   const tiposTicket = [
-    { value: 'compra', label: 'Compra', icon: '💵' },
-    { value: 'mantenimiento', label: 'Mantenimiento', icon: '🔧' },
-    { value: 'reparacion', label: 'Reparación', icon: '🛠️' },
-    { value: 'limpieza', label: 'Limpieza', icon: '🧹' },
-    { value: 'inspeccion', label: 'Inspección', icon: '🔍' },
-    { value: 'reservacion', label: 'Reservación', icon: '🏠' },
-    { value: 'otro', label: 'Otro', icon: '📋' }
+    { value: 'compra', label: 'Compra' },
+    { value: 'mantenimiento', label: 'Mantenimiento' },
+    { value: 'reparacion', label: 'Reparación' },
+    { value: 'limpieza', label: 'Limpieza' },
+    { value: 'reservacion', label: 'Reservación' },
+    { value: 'otro', label: 'Otro' }
   ];
 
   const responsables = [
@@ -64,6 +76,29 @@ export default function NuevoTicket({
     { value: 'inquilino', label: 'Inquilino' },
     { value: 'supervisor', label: 'Supervisor' }
   ];
+
+  // Cargar proveedores del usuario
+  const cargarProveedores = async () => {
+    if (!user?.id) return;
+
+    const { data, error } = await supabase
+      .from('contactos')
+      .select('id, full_name, categoria_proveedor')
+      .eq('user_id', user.id)
+      .eq('tipo', 'proveedor')
+      .eq('activo', true)
+      .order('full_name', { ascending: true });
+
+    if (!error && data) {
+      setProveedores(data);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && user?.id) {
+      cargarProveedores();
+    }
+  }, [isOpen, user?.id]);
 
   const prioridades = [
     { value: 'baja', label: 'Baja', color: 'bg-gray-100 text-gray-700 border-gray-300' },
@@ -81,6 +116,7 @@ export default function NuevoTicket({
         titulo: ticketExistente.titulo,
         descripcion: ticketExistente.descripcion || '',
         fecha_pago: ticketExistente.fecha_programada,
+        hora_programada: ticketExistente.hora_programada || '',
         monto_estimado: ticketExistente.monto_estimado?.toString() || '',
         prioridad: ticketExistente.prioridad,
         estado: ticketExistente.estado,
@@ -95,6 +131,7 @@ export default function NuevoTicket({
         titulo: '',
         descripcion: '',
         fecha_pago: '',
+        hora_programada: '',
         monto_estimado: '',
         prioridad: 'media',
         estado: 'pendiente',
@@ -103,6 +140,41 @@ export default function NuevoTicket({
       });
     }
   }, [ticketExistente, propiedadId]);
+
+  // Handler para guardar nuevo proveedor
+  const handleGuardarProveedor = async (data: {
+    nombre: string;
+    telefono: string;
+    correo: string;
+    categoria: string;
+  }) => {
+    if (!user?.id) {
+      toast.error('Usuario no autenticado');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('contactos')
+      .insert({
+        user_id: user.id,
+        full_name: data.nombre,
+        email: data.correo,
+        telefono: data.telefono,
+        tipo: 'proveedor',
+        categoria_proveedor: data.categoria,
+        activo: true
+      });
+
+    if (error) {
+      toast.error('Error al crear proveedor');
+      console.error(error);
+      return;
+    }
+
+    toast.success('Proveedor creado correctamente');
+    setShowProveedorModal(false);
+    cargarProveedores();
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -126,6 +198,7 @@ export default function NuevoTicket({
         titulo: formData.titulo,
         descripcion: formData.descripcion || null,
         fecha_programada: formData.fecha_pago,
+        hora_programada: formData.hora_programada || null,
         monto_estimado: formData.monto_estimado ? parseFloat(formData.monto_estimado) : null,
         prioridad: formData.prioridad,
         estado: formData.estado,
@@ -166,6 +239,7 @@ export default function NuevoTicket({
         titulo: '',
         descripcion: '',
         fecha_pago: '',
+        hora_programada: '',
         monto_estimado: '',
         prioridad: 'media',
         estado: 'pendiente',
@@ -236,30 +310,21 @@ export default function NuevoTicket({
 
           {/* Tipo de Ticket */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3 font-poppins">
+            <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
               Tipo de Ticket *
             </label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <select
+              value={formData.tipo_ticket}
+              onChange={(e) => setFormData({ ...formData, tipo_ticket: e.target.value })}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ras-turquesa focus:border-transparent font-medium text-gray-900 bg-white"
+              required
+            >
               {tiposTicket.map((tipo) => (
-                <button
-                  key={tipo.value}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, tipo_ticket: tipo.value })}
-                  className={`
-                    px-4 py-3 rounded-xl border-2 transition-all font-medium
-                    ${formData.tipo_ticket === tipo.value
-                      ? 'border-ras-turquesa bg-ras-turquesa text-white shadow-lg scale-105'
-                      : 'border-gray-300 hover:border-ras-turquesa hover:bg-gray-50'
-                    }
-                  `}
-                >
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-2xl">{tipo.icon}</span>
-                    <span className="text-sm">{tipo.label}</span>
-                  </div>
-                </button>
+                <option key={tipo.value} value={tipo.value} className="text-gray-900">
+                  {tipo.label}
+                </option>
               ))}
-            </div>
+            </select>
           </div>
 
           {/* Título */}
@@ -292,8 +357,8 @@ export default function NuevoTicket({
             />
           </div>
 
-          {/* Fecha y Monto */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Fecha, Hora y Monto */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Fecha */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
@@ -305,6 +370,19 @@ export default function NuevoTicket({
                 onChange={(e) => setFormData({ ...formData, fecha_pago: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ras-turquesa focus:border-transparent"
                 required
+              />
+            </div>
+
+            {/* Hora */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
+                Hora
+              </label>
+              <input
+                type="time"
+                value={formData.hora_programada}
+                onChange={(e) => setFormData({ ...formData, hora_programada: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ras-turquesa focus:border-transparent"
               />
             </div>
 
@@ -340,7 +418,7 @@ export default function NuevoTicket({
                 onChange={(e) => setFormData({ ...formData, responsable: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ras-turquesa focus:border-transparent font-medium text-gray-900 bg-white"
               >
-                <option value="" className="text-gray-500">Seleccionar responsable</option>
+                <option value="" className="text-gray-500">Responsable</option>
                 {responsables.map((resp) => (
                   <option key={resp.value} value={resp.value} className="text-gray-900">
                     {resp.label}
@@ -354,13 +432,30 @@ export default function NuevoTicket({
               <label className="block text-sm font-semibold text-gray-700 mb-2 font-poppins">
                 Proveedor
               </label>
-              <input
-                type="text"
-                value={formData.proveedor}
-                onChange={(e) => setFormData({ ...formData, proveedor: e.target.value })}
-                placeholder="Nombre del proveedor"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ras-turquesa focus:border-transparent"
-              />
+              <div className="flex gap-2">
+                <select
+                  value={formData.proveedor}
+                  onChange={(e) => setFormData({ ...formData, proveedor: e.target.value })}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ras-turquesa focus:border-transparent font-medium text-gray-900 bg-white"
+                >
+                  <option value="" className="text-gray-500">Asignar proveedor</option>
+                  {proveedores.map((prov) => (
+                    <option key={prov.id} value={prov.full_name} className="text-gray-900">
+                      {prov.full_name}{prov.categoria_proveedor ? ` (${prov.categoria_proveedor})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setShowProveedorModal(true)}
+                  className="px-3 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors flex items-center justify-center"
+                  title="Agregar nuevo proveedor"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 5v14M5 12h14" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -465,6 +560,13 @@ export default function NuevoTicket({
           </div>
         </form>
       </div>
+
+      {/* Modal Nuevo Proveedor */}
+      <ProveedorModal
+        isOpen={showProveedorModal}
+        onClose={() => setShowProveedorModal(false)}
+        onSave={handleGuardarProveedor}
+      />
     </div>
   );
 }
