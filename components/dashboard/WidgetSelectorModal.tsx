@@ -29,13 +29,15 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { WidgetId } from '@/types/dashboard';
+import type { WidgetId, ChartMode } from '@/types/dashboard';
 
 interface WidgetSelectorModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentWidgets: WidgetId[];
+  currentChartMode?: ChartMode;
   onSelectWidgets: (widgets: WidgetId[]) => void;
+  onSelectChartMode?: (mode: ChartMode) => void;
 }
 
 // Widgets disponibles simplificados
@@ -137,11 +139,19 @@ function DropZone({
   );
 }
 
+// Opciones de gráfica
+const CHART_MODES: { id: ChartMode; title: string }[] = [
+  { id: 'income_expense', title: 'Ingresos y Egresos' },
+  { id: 'tickets_per_day', title: 'Tickets por día' },
+];
+
 export function WidgetSelectorModal({
   isOpen,
   onClose,
   currentWidgets,
+  currentChartMode = 'income_expense',
   onSelectWidgets,
+  onSelectChartMode,
 }: WidgetSelectorModalProps) {
   // Filtrar widgets válidos (que existen en WIDGETS_DISPONIBLES)
   const filterValidWidgets = (widgets: WidgetId[]) =>
@@ -150,6 +160,7 @@ export function WidgetSelectorModal({
   const [selectedWidgets, setSelectedWidgets] = useState<WidgetId[]>(
     filterValidWidgets(currentWidgets)
   );
+  const [selectedChartMode, setSelectedChartMode] = useState<ChartMode>(currentChartMode);
   const [activeId, setActiveId] = useState<WidgetId | null>(null);
 
   const sensors = useSensors(
@@ -165,7 +176,8 @@ export function WidgetSelectorModal({
 
   useEffect(() => {
     setSelectedWidgets(filterValidWidgets(currentWidgets));
-  }, [currentWidgets]);
+    setSelectedChartMode(currentChartMode);
+  }, [currentWidgets, currentChartMode]);
 
   const availableWidgets = WIDGETS_DISPONIBLES.filter(
     w => !selectedWidgets.includes(w.id)
@@ -228,6 +240,9 @@ export function WidgetSelectorModal({
   const handleSave = () => {
     if (selectedWidgets.length >= 1) {
       onSelectWidgets(selectedWidgets);
+      if (onSelectChartMode) {
+        onSelectChartMode(selectedChartMode);
+      }
       onClose();
     }
   };
@@ -322,6 +337,30 @@ export function WidgetSelectorModal({
                 ) : null}
               </DragOverlay>
             </DndContext>
+
+            {/* Selector de tipo de gráfica */}
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                Tipo de gráfica
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {CHART_MODES.map(mode => (
+                  <button
+                    key={mode.id}
+                    onClick={() => setSelectedChartMode(mode.id)}
+                    className={`
+                      px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all
+                      ${selectedChartMode === mode.id
+                        ? 'bg-ras-turquesa/10 border-ras-turquesa text-gray-800'
+                        : 'bg-white border-gray-200 hover:border-gray-300 text-gray-700'
+                      }
+                    `}
+                  >
+                    {mode.title}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Footer */}

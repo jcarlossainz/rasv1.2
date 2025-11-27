@@ -13,7 +13,7 @@ import Button from '@/components/ui/button'
 import Loading from '@/components/ui/loading'
 import Modal from '@/components/ui/modal'
 import { WidgetSelectorModal } from '@/components/dashboard'
-import type { WidgetId } from '@/types/dashboard'
+import type { WidgetId, ChartMode } from '@/types/dashboard'
 
 // Configuración de avatares predefinidos con imágenes individuales
 const AVATARES = [
@@ -206,6 +206,14 @@ export default function PerfilPage() {
     }
   }
 
+  const handleSelectChartMode = async (mode: ChartMode) => {
+    try {
+      await updateConfig({ chart_mode: mode })
+    } catch (error) {
+      console.error('Error actualizando modo de gráfica:', error)
+    }
+  }
+
   if (authLoading) {
     return <Loading message="Cargando perfil..." />
   }
@@ -391,7 +399,9 @@ export default function PerfilPage() {
           isOpen={showWidgetSelector}
           onClose={() => setShowWidgetSelector(false)}
           currentWidgets={config.visible_widgets}
+          currentChartMode={config.chart_mode || 'income_expense'}
           onSelectWidgets={handleSelectWidgets}
+          onSelectChartMode={handleSelectChartMode}
         />
       )}
 

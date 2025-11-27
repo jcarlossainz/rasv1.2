@@ -59,9 +59,14 @@ export interface WidgetData {
 // ================================================================
 
 /**
- * Tipo de gráfica
+ * Tipo de gráfica (visual)
  */
 export type ChartType = 'line' | 'bar' | 'area';
+
+/**
+ * Modo de gráfica (qué datos mostrar)
+ */
+export type ChartMode = 'income_expense' | 'tickets_per_day';
 
 /**
  * Configuración del dashboard almacenada en BD
@@ -72,6 +77,7 @@ export interface DashboardConfig {
   visible_widgets: WidgetId[];
   widget_order: WidgetId[];
   chart_type: ChartType;
+  chart_mode: ChartMode;
   chart_days: 7 | 15 | 30 | 60 | 90;
   show_comparison: boolean;
   created_at: string;
@@ -85,6 +91,7 @@ const DEFAULT_DASHBOARD_CONFIG: Omit<DashboardConfig, 'id' | 'user_id' | 'create
   visible_widgets: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income'],
   widget_order: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income'],
   chart_type: 'line',
+  chart_mode: 'income_expense',
   chart_days: 7,
   show_comparison: true,
 };
