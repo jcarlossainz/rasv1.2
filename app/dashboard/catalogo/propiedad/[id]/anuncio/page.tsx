@@ -161,23 +161,33 @@ export default function AnuncioEditPage() {
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Título y Descripción */}
-        <div className="space-y-4 mb-8">
-          <input
-            type="text"
-            value={titulo}
-            onChange={(e) => setTitulo(e.target.value.slice(0, 60))}
-            placeholder="Título del anuncio"
-            maxLength={60}
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-ras-turquesa focus:border-transparent bg-transparent"
-          />
+        <div className="space-y-5 mb-8">
+          <div>
+            <label className="block text-sm font-bold text-gray-800 mb-2">
+              Título
+            </label>
+            <input
+              type="text"
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value.slice(0, 60))}
+              placeholder="Título del anuncio"
+              maxLength={60}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-ras-turquesa focus:border-transparent bg-transparent"
+            />
+          </div>
 
-          <textarea
-            value={descripcion}
-            onChange={(e) => setDescripcion(e.target.value)}
-            rows={6}
-            placeholder="Descripción del anuncio..."
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-ras-turquesa focus:border-transparent resize-none bg-transparent"
-          />
+          <div>
+            <label className="block text-sm font-bold text-gray-800 mb-2">
+              Descripción
+            </label>
+            <textarea
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              rows={6}
+              placeholder="Descripción del anuncio..."
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-ras-turquesa focus:border-transparent resize-none bg-transparent"
+            />
+          </div>
         </div>
 
         {/* Controles de estado - Publicado / Pausado */}
@@ -229,9 +239,6 @@ export default function AnuncioEditPage() {
             variant="secondary"
             size="lg"
           >
-            <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
             Vista Previa
           </Button>
         </div>
