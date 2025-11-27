@@ -247,7 +247,7 @@ export default function TopBar({
           
           <div className="flex-1"></div>
           
-          {/* Avatar del usuario (para futuro agente IA) */}
+          {/* Avatar del usuario (para futuro agente IA) - DESACTIVADO hasta integrar IA
           {showUserInfo && (
             <div
               className="w-11 h-11 rounded-full border-2 border-white/30 bg-white/10 flex items-center justify-center overflow-hidden cursor-pointer hover:scale-110 transition-all"
@@ -267,6 +267,7 @@ export default function TopBar({
               )}
             </div>
           )}
+          */}
 
           {/* Botón Configuración */}
           {showUserInfo && (
