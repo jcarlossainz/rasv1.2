@@ -314,8 +314,8 @@ export default function AnuncioPublicoApple() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F5F5F7] via-white to-[#F5F5F7]">
 
-      {/* Banner de modo preview */}
-      {isPreviewMode && (
+      {/* Banner de modo preview - solo si NO está publicado */}
+      {isPreviewMode && propiedad.estado_anuncio !== 'publicado' && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500 text-amber-900 py-2 px-4 text-center text-sm font-medium shadow-md">
           <span className="mr-2">Vista previa</span>
           <span className="opacity-75">- Este anuncio aún no está publicado</span>
@@ -326,7 +326,7 @@ export default function AnuncioPublicoApple() {
       {/* HERO SECTION - FULLSCREEN CON GALERÍA */}
       {/* ============================================================================ */}
 
-      <div className={`relative h-screen w-full overflow-hidden ${isPreviewMode ? 'pt-10' : ''}`}>
+      <div className={`relative h-screen w-full overflow-hidden ${isPreviewMode && propiedad.estado_anuncio !== 'publicado' ? 'pt-10' : ''}`}>
         {/* Galería de fondo */}
         <AnimatePresence mode="wait">
           {imagenes.length > 0 ? (
@@ -363,16 +363,28 @@ export default function AnuncioPublicoApple() {
             transition={{ delay: 0.3, duration: 0.8 }}
             className="text-center max-w-4xl"
           >
-            {/* Badge de disponibilidad */}
+            {/* Badges de estados del inmueble */}
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.5 }}
-              className="inline-block mb-6"
+              className="flex flex-wrap justify-center gap-2 mb-6"
             >
-              <div className="px-6 py-2 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white font-medium text-sm">
-                ✨ Disponible ahora
-              </div>
+              {propiedad.estados?.includes('venta') && (
+                <div className="px-4 py-1.5 rounded-full bg-orange-500/80 backdrop-blur-md text-white font-medium text-sm">
+                  Venta
+                </div>
+              )}
+              {propiedad.estados?.includes('renta') && (
+                <div className="px-4 py-1.5 rounded-full bg-emerald-500/80 backdrop-blur-md text-white font-medium text-sm">
+                  Renta
+                </div>
+              )}
+              {propiedad.estados?.includes('vacacional') && (
+                <div className="px-4 py-1.5 rounded-full bg-cyan-500/80 backdrop-blur-md text-white font-medium text-sm">
+                  Vacacional
+                </div>
+              )}
             </motion.div>
 
             {/* Título principal */}
@@ -389,20 +401,40 @@ export default function AnuncioPublicoApple() {
 
             {/* Características rápidas */}
             <div className="flex flex-wrap justify-center gap-4 mb-12">
+              {/* Tipo de propiedad */}
               <div className="px-5 py-3 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 text-white">
                 <div className="text-2xl font-bold">{propiedad.tipo_propiedad}</div>
-                <div className="text-xs opacity-80">Tipo</div>
               </div>
-              {capacidadPersonas && (
-                <div className="px-5 py-3 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 text-white">
-                  <div className="text-2xl font-bold">{capacidadPersonas}</div>
-                  <div className="text-xs opacity-80">Personas</div>
-                </div>
-              )}
+              {/* M2 */}
               {propiedad.dimensiones?.construccion && (
                 <div className="px-5 py-3 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 text-white">
-                  <div className="text-2xl font-bold">{propiedad.dimensiones.construccion.valor}</div>
-                  <div className="text-xs opacity-80">{propiedad.dimensiones.construccion.unidad || 'm²'}</div>
+                  <div className="text-2xl font-bold">{propiedad.dimensiones.construccion.valor} {propiedad.dimensiones.construccion.unidad || 'm²'}</div>
+                </div>
+              )}
+              {/* Habitaciones */}
+              {propiedad.espacios && (() => {
+                const recamaras = propiedad.espacios.filter(e => e.categoria === 'Recámara' || e.nombre.toLowerCase().includes('recámara') || e.nombre.toLowerCase().includes('habitación'))
+                const totalRecamaras = recamaras.reduce((sum, e) => sum + (e.cantidad || 1), 0)
+                return totalRecamaras > 0 ? (
+                  <div className="px-5 py-3 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 text-white">
+                    <div className="text-2xl font-bold">{totalRecamaras} Hab</div>
+                  </div>
+                ) : null
+              })()}
+              {/* Baños */}
+              {propiedad.espacios && (() => {
+                const banos = propiedad.espacios.filter(e => e.categoria === 'Baño' || e.nombre.toLowerCase().includes('baño'))
+                const totalBanos = banos.reduce((sum, e) => sum + (e.cantidad || 1), 0)
+                return totalBanos > 0 ? (
+                  <div className="px-5 py-3 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 text-white">
+                    <div className="text-2xl font-bold">{totalBanos} Baños</div>
+                  </div>
+                ) : null
+              })()}
+              {/* Capacidad */}
+              {capacidadPersonas && (
+                <div className="px-5 py-3 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 text-white">
+                  <div className="text-2xl font-bold">{capacidadPersonas} Pers</div>
                 </div>
               )}
             </div>
@@ -495,38 +527,36 @@ export default function AnuncioPublicoApple() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
-                className="bg-white/70 backdrop-blur-xl rounded-3xl border border-gray-200/50 shadow-xl p-8"
+                className="bg-[#F5F0E8]/80 backdrop-blur-xl rounded-3xl border border-[#E5DDD0] p-8"
               >
-                <h2 className="text-3xl font-bold text-gray-900 mb-6">Precios</h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {propiedad.precios.venta > 0 && (
-                    <div className="p-6 bg-gradient-to-br from-orange-50 to-orange-100/50 rounded-2xl border border-orange-200/50">
-                      <div className="text-sm text-orange-600 font-medium mb-2">VENTA</div>
-                      <div className="text-4xl font-bold text-gray-900">
+                    <div className="text-center">
+                      <div className="text-sm text-gray-500 font-medium mb-1">VENTA</div>
+                      <div className="text-3xl font-bold text-gray-900">
                         ${propiedad.precios.venta.toLocaleString('es-MX')}
                       </div>
-                      <div className="text-sm text-gray-600 mt-1">MXN</div>
+                      <div className="text-xs text-gray-500">MXN</div>
                     </div>
                   )}
 
                   {propiedad.precios.mensual > 0 && (
-                    <div className="p-6 bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-2xl border border-emerald-200/50">
-                      <div className="text-sm text-emerald-600 font-medium mb-2">RENTA MENSUAL</div>
-                      <div className="text-4xl font-bold text-gray-900">
+                    <div className="text-center">
+                      <div className="text-sm text-gray-500 font-medium mb-1">RENTA</div>
+                      <div className="text-3xl font-bold text-gray-900">
                         ${propiedad.precios.mensual.toLocaleString('es-MX')}
                       </div>
-                      <div className="text-sm text-gray-600 mt-1">MXN / mes</div>
+                      <div className="text-xs text-gray-500">MXN / mes</div>
                     </div>
                   )}
 
                   {propiedad.precios.noche > 0 && (
-                    <div className="p-6 bg-gradient-to-br from-cyan-50 to-cyan-100/50 rounded-2xl border border-cyan-200/50">
-                      <div className="text-sm text-cyan-600 font-medium mb-2">VACACIONAL</div>
-                      <div className="text-4xl font-bold text-gray-900">
+                    <div className="text-center">
+                      <div className="text-sm text-gray-500 font-medium mb-1">VACACIONAL</div>
+                      <div className="text-3xl font-bold text-gray-900">
                         ${propiedad.precios.noche.toLocaleString('es-MX')}
                       </div>
-                      <div className="text-sm text-gray-600 mt-1">USD / noche</div>
+                      <div className="text-xs text-gray-500">USD / noche</div>
                     </div>
                   )}
                 </div>
@@ -540,9 +570,8 @@ export default function AnuncioPublicoApple() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.1 }}
-                className="bg-white/70 backdrop-blur-xl rounded-3xl border border-gray-200/50 shadow-xl p-8"
+                className="bg-[#F5F0E8]/80 backdrop-blur-xl rounded-3xl border border-[#E5DDD0] p-8"
               >
-                <h2 className="text-3xl font-bold text-gray-900 mb-6">Descripción</h2>
                 <p className="text-gray-700 leading-relaxed text-lg whitespace-pre-line">
                   {propiedad.descripcion_anuncio}
                 </p>
@@ -556,46 +585,43 @@ export default function AnuncioPublicoApple() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.2 }}
-                className="bg-white/70 backdrop-blur-xl rounded-3xl border border-gray-200/50 shadow-xl p-8"
+                className="bg-[#F5F0E8]/80 backdrop-blur-xl rounded-3xl border border-[#E5DDD0] p-8"
               >
-                <h2 className="text-3xl font-bold text-gray-900 mb-6">Características</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Características</h2>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div className="p-5 bg-gradient-to-br from-blue-50 to-blue-100/30 rounded-2xl border border-blue-200/50">
-                    <div className="text-3xl mb-2">🏠</div>
-                    <div className="text-sm text-gray-600 mb-1">Tipo</div>
-                    <div className="font-bold text-gray-900">{propiedad.tipo_propiedad}</div>
+                  <div className="py-3">
+                    <div className="text-sm text-gray-500 mb-1">Tipo</div>
+                    <div className="font-semibold text-gray-900">{propiedad.tipo_propiedad}</div>
                   </div>
 
-                  <div className="p-5 bg-gradient-to-br from-purple-50 to-purple-100/30 rounded-2xl border border-purple-200/50">
-                    <div className="text-3xl mb-2">🛋️</div>
-                    <div className="text-sm text-gray-600 mb-1">Mobiliario</div>
-                    <div className="font-bold text-gray-900">{propiedad.mobiliario}</div>
-                  </div>
+                  {propiedad.mobiliario && (
+                    <div className="py-3">
+                      <div className="text-sm text-gray-500 mb-1">Mobiliario</div>
+                      <div className="font-semibold text-gray-900">{propiedad.mobiliario}</div>
+                    </div>
+                  )}
 
                   {capacidadPersonas && (
-                    <div className="p-5 bg-gradient-to-br from-green-50 to-green-100/30 rounded-2xl border border-green-200/50">
-                      <div className="text-3xl mb-2">👥</div>
-                      <div className="text-sm text-gray-600 mb-1">Capacidad</div>
-                      <div className="font-bold text-gray-900">{capacidadPersonas} personas</div>
+                    <div className="py-3">
+                      <div className="text-sm text-gray-500 mb-1">Capacidad</div>
+                      <div className="font-semibold text-gray-900">{capacidadPersonas} personas</div>
                     </div>
                   )}
 
                   {propiedad.dimensiones?.construccion && (
-                    <div className="p-5 bg-gradient-to-br from-amber-50 to-amber-100/30 rounded-2xl border border-amber-200/50">
-                      <div className="text-3xl mb-2">📐</div>
-                      <div className="text-sm text-gray-600 mb-1">Construcción</div>
-                      <div className="font-bold text-gray-900">
+                    <div className="py-3">
+                      <div className="text-sm text-gray-500 mb-1">Construcción</div>
+                      <div className="font-semibold text-gray-900">
                         {propiedad.dimensiones.construccion.valor} {propiedad.dimensiones.construccion.unidad}
                       </div>
                     </div>
                   )}
 
                   {propiedad.dimensiones?.terreno && (
-                    <div className="p-5 bg-gradient-to-br from-teal-50 to-teal-100/30 rounded-2xl border border-teal-200/50">
-                      <div className="text-3xl mb-2">🌳</div>
-                      <div className="text-sm text-gray-600 mb-1">Terreno</div>
-                      <div className="font-bold text-gray-900">
+                    <div className="py-3">
+                      <div className="text-sm text-gray-500 mb-1">Terreno</div>
+                      <div className="font-semibold text-gray-900">
                         {propiedad.dimensiones.terreno.valor} {propiedad.dimensiones.terreno.unidad}
                       </div>
                     </div>
@@ -611,23 +637,18 @@ export default function AnuncioPublicoApple() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.3 }}
-                className="bg-white/70 backdrop-blur-xl rounded-3xl border border-gray-200/50 shadow-xl p-8"
+                className="bg-[#F5F0E8]/80 backdrop-blur-xl rounded-3xl border border-[#E5DDD0] p-8"
               >
-                <h2 className="text-3xl font-bold text-gray-900 mb-6">Espacios</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Espacios</h2>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {propiedad.espacios.map((espacio, idx) => (
-                    <div key={idx} className="p-4 bg-gradient-to-br from-purple-50/50 to-pink-50/50 rounded-xl border border-purple-200/30 hover:border-purple-300/50 transition-all">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0">
-                          <span className="text-purple-700 font-bold text-lg">
-                            {espacio.cantidad || 1}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900">{espacio.nombre}</p>
-                          <p className="text-xs text-gray-600">{espacio.categoria}</p>
-                        </div>
+                    <div key={idx} className="py-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-900 font-semibold">
+                          {espacio.cantidad || 1}
+                        </span>
+                        <span className="text-gray-700">{espacio.nombre}</span>
                       </div>
                     </div>
                   ))}
@@ -642,15 +663,15 @@ export default function AnuncioPublicoApple() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.4 }}
-                className="bg-white/70 backdrop-blur-xl rounded-3xl border border-gray-200/50 shadow-xl p-8"
+                className="bg-[#F5F0E8]/80 backdrop-blur-xl rounded-3xl border border-[#E5DDD0] p-8"
               >
-                <h2 className="text-3xl font-bold text-gray-900 mb-6">Amenidades</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Amenidades</h2>
 
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-2">
                   {propiedad.amenidades_vacacional.map((amenidad, idx) => (
                     <span
                       key={idx}
-                      className="px-5 py-3 bg-gradient-to-r from-cyan-50 to-blue-50 text-cyan-800 rounded-full font-medium border border-cyan-200/50 hover:border-cyan-300/50 transition-all"
+                      className="px-4 py-2 bg-white/50 text-gray-700 rounded-full text-sm border border-[#E5DDD0]"
                     >
                       {amenidad}
                     </span>
@@ -666,28 +687,16 @@ export default function AnuncioPublicoApple() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.5 }}
-                className="bg-white/70 backdrop-blur-xl rounded-3xl border border-gray-200/50 shadow-xl p-8"
+                className="bg-[#F5F0E8]/80 backdrop-blur-xl rounded-3xl border border-[#E5DDD0] p-8"
               >
-                <h2 className="text-3xl font-bold text-gray-900 mb-6">Ubicación</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Ubicación</h2>
 
-                <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                      <circle cx="12" cy="10" r="3"/>
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xl text-gray-700 leading-relaxed">
-                      {propiedad.ubicacion.colonia && `${propiedad.ubicacion.colonia}, `}
-                      {propiedad.ubicacion.ciudad && `${propiedad.ubicacion.ciudad}, `}
-                      {propiedad.ubicacion.estado}
-                    </p>
-                    {propiedad.ubicacion.codigo_postal && (
-                      <p className="text-gray-600 mt-2">CP: {propiedad.ubicacion.codigo_postal}</p>
-                    )}
-                  </div>
-                </div>
+                <p className="text-lg text-gray-700 leading-relaxed">
+                  {propiedad.ubicacion.colonia && `${propiedad.ubicacion.colonia}, `}
+                  {propiedad.ubicacion.ciudad && `${propiedad.ubicacion.ciudad}, `}
+                  {propiedad.ubicacion.estado}
+                  {propiedad.ubicacion.codigo_postal && ` - CP: ${propiedad.ubicacion.codigo_postal}`}
+                </p>
               </motion.div>
             )}
 
@@ -701,63 +710,59 @@ export default function AnuncioPublicoApple() {
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
               id="contacto"
-              className="sticky top-8 bg-white/70 backdrop-blur-xl rounded-3xl border border-gray-200/50 shadow-xl p-8"
+              className="sticky top-8 bg-[#F5F0E8]/80 backdrop-blur-xl rounded-3xl border border-[#E5DDD0] p-6"
             >
-              <div className="text-center mb-8">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center mx-auto mb-6 shadow-lg">
-                  <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                  </svg>
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">¿Te interesa?</h3>
-                <p className="text-gray-600">Contáctanos ahora</p>
+              <div className="text-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-1">¿Te interesa?</h3>
+                <p className="text-gray-500 text-sm">Contáctanos</p>
               </div>
 
-              <div className="space-y-3">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={contactarWhatsApp}
-                  className="w-full px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-2xl font-bold text-lg flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transition-all"
-                >
-                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                  </svg>
-                  WhatsApp
-                </motion.button>
+              {/* Botón principal WhatsApp */}
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={contactarWhatsApp}
+                className="w-full px-5 py-3 bg-green-500 text-white rounded-xl font-semibold flex items-center justify-center gap-2 mb-4 hover:bg-green-600 transition-all"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                </svg>
+                WhatsApp
+              </motion.button>
 
+              {/* Botones secundarios en fila */}
+              <div className="grid grid-cols-3 gap-2">
                 <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={llamar}
-                  className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl font-medium flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all"
+                  className="p-3 bg-blue-500 text-white rounded-xl flex items-center justify-center hover:bg-blue-600 transition-all"
+                  title="Llamar"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
                   </svg>
-                  Llamar
                 </motion.button>
 
                 <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={enviarCorreo}
-                  className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-2xl font-medium flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all"
+                  className="p-3 bg-amber-600 text-white rounded-xl flex items-center justify-center hover:bg-amber-700 transition-all"
+                  title="Email"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                     <polyline points="22,6 12,13 2,6"/>
                   </svg>
-                  Email
                 </motion.button>
-              </div>
 
-              <div className="mt-8 pt-6 border-t border-gray-200">
                 <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={compartir}
-                  className="w-full px-4 py-3 bg-white/50 text-gray-700 rounded-xl font-medium flex items-center justify-center gap-2 border border-gray-200 hover:bg-white/80 transition-all"
+                  className="p-3 bg-gray-400 text-white rounded-xl flex items-center justify-center hover:bg-gray-500 transition-all"
+                  title="Compartir"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                     <circle cx="18" cy="5" r="3"/>
@@ -766,7 +771,6 @@ export default function AnuncioPublicoApple() {
                     <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
                     <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
                   </svg>
-                  Compartir
                 </motion.button>
               </div>
             </motion.div>
