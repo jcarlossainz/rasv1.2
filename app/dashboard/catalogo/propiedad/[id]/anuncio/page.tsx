@@ -1,8 +1,9 @@
 'use client'
 
 /**
- * ANUNCIO - Vista de Edición Simplificada
+ * ANUNCIO - Vista de Edición con Preview en Tiempo Real
  * Permite al propietario configurar título, descripción y estado del anuncio
+ * con una vista previa en vivo del hero del anuncio
  */
 
 import { useEffect, useState, useCallback } from 'react'
@@ -13,6 +14,15 @@ import { useAuth } from '@/hooks/useAuth'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
 import Button from '@/components/ui/button'
+import Image from 'next/image'
+
+interface PropertyImage {
+  id: string
+  url: string
+  url_thumbnail: string | null
+  is_cover: boolean
+  order_index: number
+}
 
 interface Propiedad {
   id: string
@@ -39,6 +49,10 @@ export default function AnuncioEditPage() {
   const [titulo, setTitulo] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [estadoAnuncio, setEstadoAnuncio] = useState<'borrador' | 'publicado' | 'pausado'>('borrador')
+
+  // Estado para imágenes del preview
+  const [imagenes, setImagenes] = useState<PropertyImage[]>([])
+  const [imagenActual, setImagenActual] = useState(0)
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -70,6 +84,17 @@ export default function AnuncioEditPage() {
       setTitulo(propData.anuncio_titulo || '')
       setDescripcion(propData.descripcion_anuncio || '')
       setEstadoAnuncio(propData.estado_anuncio || 'borrador')
+
+      // Cargar imágenes para el preview
+      const { data: imagenesData } = await supabase
+        .from('property_images')
+        .select('id, url, url_thumbnail, is_cover, order_index')
+        .eq('property_id', propiedadId)
+        .order('order_index', { ascending: true })
+
+      if (imagenesData && imagenesData.length > 0) {
+        setImagenes(imagenesData)
+      }
 
     } catch (error) {
       console.error('Error cargando datos:', error)
@@ -115,12 +140,19 @@ export default function AnuncioEditPage() {
   }, [])
 
   const verPreview = useCallback(() => {
-    if (estadoAnuncio !== 'publicado') {
-      toast.warning('Publica el anuncio primero para ver la vista previa')
-      return
+    // Permitir vista previa en cualquier estado usando parámetro especial
+    window.open(`/anuncio/${propiedadId}?preview=true`, '_blank')
+  }, [propiedadId])
+
+  // Auto-avance del carrusel en el preview
+  useEffect(() => {
+    if (imagenes.length > 1) {
+      const interval = setInterval(() => {
+        setImagenActual((prev) => (prev + 1) % imagenes.length)
+      }, 4000)
+      return () => clearInterval(interval)
     }
-    window.open(`/anuncio/${propiedadId}`, '_blank')
-  }, [estadoAnuncio, propiedadId, toast])
+  }, [imagenes.length])
 
   const volverCatalogo = useCallback(() => {
     router.push('/dashboard/catalogo')
@@ -160,6 +192,72 @@ export default function AnuncioEditPage() {
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
+        {/* Vista Previa en Tiempo Real */}
+        <div className="mb-8 rounded-2xl overflow-hidden shadow-xl border border-gray-200">
+          <div className="relative h-64 sm:h-80 w-full">
+            {/* Imagen de fondo */}
+            {imagenes.length > 0 ? (
+              <Image
+                src={imagenes[imagenActual].url}
+                alt="Vista previa"
+                fill
+                className="object-cover transition-opacity duration-500"
+              />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900" />
+            )}
+
+            {/* Overlay oscuro */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/70" />
+
+            {/* Contenido del preview */}
+            <div className="relative h-full flex flex-col items-center justify-center px-6 text-center">
+              {/* Badge de estado */}
+              <div className={`inline-block mb-3 px-4 py-1.5 rounded-full text-xs font-medium backdrop-blur-md border ${
+                estadoAnuncio === 'publicado'
+                  ? 'bg-green-500/20 border-green-400/30 text-green-100'
+                  : estadoAnuncio === 'pausado'
+                  ? 'bg-orange-500/20 border-orange-400/30 text-orange-100'
+                  : 'bg-white/20 border-white/30 text-white'
+              }`}>
+                {estadoAnuncio === 'publicado' ? 'Publicado' : estadoAnuncio === 'pausado' ? 'Pausado' : 'Borrador'}
+              </div>
+
+              {/* Título en tiempo real */}
+              <h1 className="text-2xl sm:text-4xl font-bold text-white mb-2 leading-tight max-w-2xl">
+                {titulo || propiedad.nombre_propiedad || 'Título del anuncio'}
+              </h1>
+
+              {/* Tipo de propiedad */}
+              <div className="flex items-center gap-2 text-white/80 text-sm">
+                <span className="px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm">
+                  {propiedad.tipo_propiedad}
+                </span>
+              </div>
+            </div>
+
+            {/* Indicadores de imagen */}
+            {imagenes.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-1.5">
+                {imagenes.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setImagenActual(idx)}
+                    className={`w-1.5 h-1.5 rounded-full transition-all ${
+                      idx === imagenActual ? 'bg-white w-4' : 'bg-white/50'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Etiqueta de preview */}
+            <div className="absolute top-3 right-3 px-2 py-1 bg-black/40 backdrop-blur-sm rounded text-xs text-white/70">
+              Vista previa
+            </div>
+          </div>
+        </div>
+
         {/* Título y Descripción */}
         <div className="space-y-5 mb-8">
           <div>
@@ -174,6 +272,7 @@ export default function AnuncioEditPage() {
               maxLength={60}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-ras-turquesa focus:border-transparent bg-transparent"
             />
+            <p className="text-xs text-gray-500 mt-1 text-right">{titulo.length}/60 caracteres</p>
           </div>
 
           <div>

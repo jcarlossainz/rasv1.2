@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useState, useMemo } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import Image from 'next/image'
 import Loading from '@/components/ui/loading'
@@ -97,7 +97,9 @@ interface PropertyImage {
 
 export default function AnuncioPublicoApple() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const propiedadId = params?.id as string
+  const isPreviewMode = searchParams?.get('preview') === 'true'
 
   const [loading, setLoading] = useState(true)
   const [propiedad, setPropiedad] = useState<PropiedadData | null>(null)
@@ -117,12 +119,12 @@ export default function AnuncioPublicoApple() {
       cargarDatos()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [propiedadId])
+  }, [propiedadId, isPreviewMode])
 
   const cargarDatos = async () => {
     try {
-      // Cargar propiedad - solo anuncios publicados para público
-      const { data: propData, error: propError } = await supabase
+      // Cargar propiedad - en modo preview se permite cualquier estado
+      let query = supabase
         .from('propiedades')
         .select(`
           id,
@@ -142,8 +144,13 @@ export default function AnuncioPublicoApple() {
           mobiliario
         `)
         .eq('id', propiedadId)
-        .eq('estado_anuncio', 'publicado')
-        .single()
+
+      // Solo filtrar por publicado si NO está en modo preview
+      if (!isPreviewMode) {
+        query = query.eq('estado_anuncio', 'publicado')
+      }
+
+      const { data: propData, error: propError } = await query.single()
 
       if (propError) {
         console.error('Error cargando propiedad:', propError)
@@ -307,11 +314,19 @@ export default function AnuncioPublicoApple() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F5F5F7] via-white to-[#F5F5F7]">
 
+      {/* Banner de modo preview */}
+      {isPreviewMode && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500 text-amber-900 py-2 px-4 text-center text-sm font-medium shadow-md">
+          <span className="mr-2">Vista previa</span>
+          <span className="opacity-75">- Este anuncio aún no está publicado</span>
+        </div>
+      )}
+
       {/* ============================================================================ */}
       {/* HERO SECTION - FULLSCREEN CON GALERÍA */}
       {/* ============================================================================ */}
 
-      <div className="relative h-screen w-full overflow-hidden">
+      <div className={`relative h-screen w-full overflow-hidden ${isPreviewMode ? 'pt-10' : ''}`}>
         {/* Galería de fondo */}
         <AnimatePresence mode="wait">
           {imagenes.length > 0 ? (
