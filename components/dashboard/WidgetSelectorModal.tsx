@@ -40,11 +40,17 @@ interface WidgetSelectorModalProps {
 
 // Widgets disponibles simplificados
 const WIDGETS_DISPONIBLES: { id: WidgetId; title: string }[] = [
-  { id: 'pending_tickets', title: 'Tickets para hoy' },
-  { id: 'monthly_income', title: 'Tickets próximos 7 días' },
-  { id: 'monthly_expenses', title: 'Tickets pendientes' },
+  { id: 'tickets_today', title: 'Tickets para hoy' },
+  { id: 'tickets_next_7_days', title: 'Tickets próximos 7 días' },
+  { id: 'pending_tickets', title: 'Tickets pendientes' },
   { id: 'total_properties', title: 'Total de propiedades' },
+  { id: 'yearly_income', title: 'Total ingresos del año' },
+  { id: 'yearly_expenses', title: 'Total egresos del año' },
+  { id: 'tickets_completed', title: 'Tickets completados' },
 ];
+
+// IDs válidos para filtrar widgets antiguos
+const VALID_WIDGET_IDS = WIDGETS_DISPONIBLES.map(w => w.id);
 
 // Componente de tarjeta arrastrable
 function DraggableWidget({
@@ -137,7 +143,13 @@ export function WidgetSelectorModal({
   currentWidgets,
   onSelectWidgets,
 }: WidgetSelectorModalProps) {
-  const [selectedWidgets, setSelectedWidgets] = useState<WidgetId[]>(currentWidgets);
+  // Filtrar widgets válidos (que existen en WIDGETS_DISPONIBLES)
+  const filterValidWidgets = (widgets: WidgetId[]) =>
+    widgets.filter(id => VALID_WIDGET_IDS.includes(id));
+
+  const [selectedWidgets, setSelectedWidgets] = useState<WidgetId[]>(
+    filterValidWidgets(currentWidgets)
+  );
   const [activeId, setActiveId] = useState<WidgetId | null>(null);
 
   const sensors = useSensors(
@@ -152,7 +164,7 @@ export function WidgetSelectorModal({
   );
 
   useEffect(() => {
-    setSelectedWidgets(currentWidgets);
+    setSelectedWidgets(filterValidWidgets(currentWidgets));
   }, [currentWidgets]);
 
   const availableWidgets = WIDGETS_DISPONIBLES.filter(

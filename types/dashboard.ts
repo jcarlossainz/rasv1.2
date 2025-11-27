@@ -24,7 +24,12 @@ export type WidgetId =
   | 'pending_payments'
   | 'properties_published'
   | 'active_services'
-  | 'recent_activity';
+  | 'recent_activity'
+  | 'tickets_today'
+  | 'tickets_next_7_days'
+  | 'tickets_completed'
+  | 'yearly_income'
+  | 'yearly_expenses';
 
 /**
  * Metadata de un widget individual
