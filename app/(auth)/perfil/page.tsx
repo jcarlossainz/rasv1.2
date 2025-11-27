@@ -15,22 +15,16 @@ import Modal from '@/components/ui/modal'
 import { WidgetSelectorModal } from '@/components/dashboard'
 import type { WidgetId } from '@/types/dashboard'
 
-// Configuración de avatares predefinidos
-// Imagen: ~773x516px, cuadrícula 3x2, sin texto
-// Coordenadas X,Y de la esquina superior izquierda del recorte cuadrado
+// Configuración de avatares predefinidos con imágenes individuales
 const AVATARES = [
-  { id: 'avatar1', x: 42, y: 15 },    // Fila 1, Col 1 - monstruo verde cuernos
-  { id: 'avatar2', x: 298, y: 25 },   // Fila 1, Col 2 - momia
-  { id: 'avatar3', x: 555, y: 20 },   // Fila 1, Col 3 - oso café
-  { id: 'avatar4', x: 42, y: 280 },   // Fila 2, Col 1 - robot
-  { id: 'avatar5', x: 298, y: 290 },  // Fila 2, Col 2 - pacman
-  { id: 'avatar6', x: 555, y: 280 },  // Fila 2, Col 3 - fantasma
+  { id: 'ballena', src: '/avatars_logo/Ballena.png', label: 'Ballena' },
+  { id: 'estrella', src: '/avatars_logo/Estrella.png', label: 'Estrella' },
+  { id: 'foca', src: '/avatars_logo/Foca.png', label: 'Foca' },
+  { id: 'pez', src: '/avatars_logo/Pez.png', label: 'Pez' },
+  { id: 'pulpo', src: '/avatars_logo/Pulpo.png', label: 'Pulpo' },
 ]
 
-// Tamaño del área del avatar en la imagen original
-const CIRCLE_SIZE_ORIGINAL = 175
-
-// Componente para mostrar un avatar individual desde el sprite sheet
+// Componente para mostrar un avatar individual
 function AvatarSprite({
   avatarId,
   size = 96,
@@ -60,22 +54,18 @@ function AvatarSprite({
     )
   }
 
-  // Escala para ajustar el avatar al tamaño deseado
-  const scale = size / CIRCLE_SIZE_ORIGINAL
-
   return (
     <div
       className={`rounded-full overflow-hidden ${className}`}
-      style={{
-        width: size,
-        height: size,
-        backgroundImage: 'url(/avatars.png)',
-        backgroundSize: `${750 * scale}px ${750 * scale}px`,
-        backgroundPosition: `-${avatar.x * scale}px -${avatar.y * scale}px`,
-        backgroundRepeat: 'no-repeat'
-      }}
+      style={{ width: size, height: size }}
       onClick={onClick}
-    />
+    >
+      <img
+        src={avatar.src}
+        alt={avatar.label}
+        className="w-full h-full object-cover"
+      />
+    </div>
   )
 }
 
