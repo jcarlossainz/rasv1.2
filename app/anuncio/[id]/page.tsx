@@ -312,7 +312,7 @@ export default function AnuncioPublicoApple() {
   // ============================================================================
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F5F5F7] via-white to-[#F5F5F7]">
+    <div className="min-h-screen bg-[#F5F0E8]">
 
       {/* Banner de modo preview - solo si NO está publicado */}
       {isPreviewMode && propiedad.estado_anuncio !== 'publicado' && (
@@ -527,7 +527,7 @@ export default function AnuncioPublicoApple() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
-                className="bg-[#F5F0E8]/80 backdrop-blur-xl rounded-3xl border border-[#E5DDD0] p-8"
+                className="py-6 border-b border-[#E5DDD0]/50"
               >
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {propiedad.precios.venta > 0 && (
@@ -570,7 +570,7 @@ export default function AnuncioPublicoApple() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.1 }}
-                className="bg-[#F5F0E8]/80 backdrop-blur-xl rounded-3xl border border-[#E5DDD0] p-8"
+                className="py-6 border-b border-[#E5DDD0]/50"
               >
                 <p className="text-gray-700 leading-relaxed text-lg whitespace-pre-line">
                   {propiedad.descripcion_anuncio}
@@ -585,32 +585,32 @@ export default function AnuncioPublicoApple() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.2 }}
-                className="bg-[#F5F0E8]/80 backdrop-blur-xl rounded-3xl border border-[#E5DDD0] p-8"
+                className="py-6 border-b border-[#E5DDD0]/50"
               >
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Características</h2>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div className="py-3">
+                  <div className="py-2">
                     <div className="text-sm text-gray-500 mb-1">Tipo</div>
                     <div className="font-semibold text-gray-900">{propiedad.tipo_propiedad}</div>
                   </div>
 
                   {propiedad.mobiliario && (
-                    <div className="py-3">
+                    <div className="py-2">
                       <div className="text-sm text-gray-500 mb-1">Mobiliario</div>
                       <div className="font-semibold text-gray-900">{propiedad.mobiliario}</div>
                     </div>
                   )}
 
                   {capacidadPersonas && (
-                    <div className="py-3">
+                    <div className="py-2">
                       <div className="text-sm text-gray-500 mb-1">Capacidad</div>
                       <div className="font-semibold text-gray-900">{capacidadPersonas} personas</div>
                     </div>
                   )}
 
                   {propiedad.dimensiones?.construccion && (
-                    <div className="py-3">
+                    <div className="py-2">
                       <div className="text-sm text-gray-500 mb-1">Construcción</div>
                       <div className="font-semibold text-gray-900">
                         {propiedad.dimensiones.construccion.valor} {propiedad.dimensiones.construccion.unidad}
@@ -619,7 +619,7 @@ export default function AnuncioPublicoApple() {
                   )}
 
                   {propiedad.dimensiones?.terreno && (
-                    <div className="py-3">
+                    <div className="py-2">
                       <div className="text-sm text-gray-500 mb-1">Terreno</div>
                       <div className="font-semibold text-gray-900">
                         {propiedad.dimensiones.terreno.valor} {propiedad.dimensiones.terreno.unidad}
@@ -637,7 +637,7 @@ export default function AnuncioPublicoApple() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.3 }}
-                className="bg-[#F5F0E8]/80 backdrop-blur-xl rounded-3xl border border-[#E5DDD0] p-8"
+                className="py-6 border-b border-[#E5DDD0]/50"
               >
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Espacios</h2>
 
@@ -663,15 +663,15 @@ export default function AnuncioPublicoApple() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.4 }}
-                className="bg-[#F5F0E8]/80 backdrop-blur-xl rounded-3xl border border-[#E5DDD0] p-8"
+                className="py-6 border-b border-[#E5DDD0]/50"
               >
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Amenidades</h2>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-x-4 gap-y-2">
                   {propiedad.amenidades_vacacional.map((amenidad, idx) => (
                     <span
                       key={idx}
-                      className="px-4 py-2 bg-white/50 text-gray-700 rounded-full text-sm border border-[#E5DDD0]"
+                      className="text-gray-700"
                     >
                       {amenidad}
                     </span>
@@ -687,7 +687,7 @@ export default function AnuncioPublicoApple() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.5 }}
-                className="bg-[#F5F0E8]/80 backdrop-blur-xl rounded-3xl border border-[#E5DDD0] p-8"
+                className="py-6"
               >
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">Ubicación</h2>
 
@@ -710,7 +710,7 @@ export default function AnuncioPublicoApple() {
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
               id="contacto"
-              className="sticky top-8 bg-[#F5F0E8]/80 backdrop-blur-xl rounded-3xl border border-[#E5DDD0] p-6"
+              className="sticky top-8 py-6 lg:border-l lg:border-[#E5DDD0]/50 lg:pl-8"
             >
               <div className="text-center mb-6">
                 <h3 className="text-xl font-bold text-gray-900 mb-1">¿Te interesa?</h3>
