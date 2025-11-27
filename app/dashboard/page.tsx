@@ -11,11 +11,11 @@ import { useLogout } from '@/hooks/useLogout'
 import { useDashboardConfig } from '@/hooks/useDashboardConfig'
 import { useDashboardWidgets } from '@/hooks/useDashboardWidgets'
 import { useDashboardChartData } from '@/hooks/useDashboardChartData'
+import { useTicketsChartData } from '@/hooks/useTicketsChartData'
 import TopBar from '@/components/ui/topbar'
 import Card from '@/components/ui/card'
 import Loading from '@/components/ui/loading'
-import { DashboardWidget, DashboardWidgetPlaceholder } from '@/components/dashboard'
-import { IncomeExpenseChart } from '@/components/dashboard'
+import { DashboardWidget, DashboardWidgetPlaceholder, IncomeExpenseChart, TicketsPerDayChart } from '@/components/dashboard'
 import {
   DndContext,
   closestCenter,
@@ -80,6 +80,9 @@ export default function DashboardPage() {
     config?.chart_days || 7,
     config?.show_comparison || true
   )
+  const { chartData: ticketsChartData, loading: ticketsChartLoading, refreshChartData: refreshTicketsChartData } = useTicketsChartData(
+    config?.chart_days || 7
+  )
 
   // Local state
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -139,6 +142,7 @@ export default function DashboardPage() {
       await Promise.all([
         refreshWidgets(),
         refreshChartData(config?.chart_days || 7, config?.show_comparison || true),
+        refreshTicketsChartData(config?.chart_days || 7),
       ])
       toast.success('Dashboard actualizado')
     } catch (error) {
@@ -292,12 +296,19 @@ export default function DashboardPage() {
 
               {/* IZQUIERDA: Gráfica - Ocupa 50% */}
               <div>
-                <IncomeExpenseChart
-                  data={chartData}
-                  chartType={config?.chart_type || 'line'}
-                  showComparison={config?.show_comparison || false}
-                  loading={chartLoading}
-                />
+                {config?.chart_mode === 'tickets_per_day' ? (
+                  <TicketsPerDayChart
+                    data={ticketsChartData}
+                    loading={ticketsChartLoading}
+                  />
+                ) : (
+                  <IncomeExpenseChart
+                    data={chartData}
+                    chartType={config?.chart_type || 'line'}
+                    showComparison={config?.show_comparison || false}
+                    loading={chartLoading}
+                  />
+                )}
               </div>
 
               {/* DERECHA: 4 Widgets en grid 2x2 - Ocupa 50% */}
