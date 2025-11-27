@@ -144,18 +144,18 @@ function RegisterContent() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-ras-azul via-ras-turquesa to-ras-azul flex items-center justify-center p-4">
         <div className="rounded-2xl w-full max-w-md overflow-hidden">
-          <div className="pt-4 pb-2 px-8 text-center">
-            <h1 className="text-6xl font-bold text-white mb-4">OHANA</h1>
+          <div className="pt-3 pb-2 px-8 text-center">
+            <h2 className="text-4xl font-bold text-white mb-4">Completa tu perfil</h2>
             <div className="inline-flex items-center justify-center mb-3">
               <Image
-                src="/logo-ras-wizard.png"
+                src="/logo.png"
                 alt="Ohana Logo"
                 width={180}
                 height={180}
                 className="object-contain"
               />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Completa tu perfil</h2>
+            <h1 className="text-4xl font-semibold text-white mb-4 font-poppins tracking-wide">OHANA.mx</h1>
             <p className="text-white/80 text-sm mb-4">Solo un paso más para comenzar</p>
           </div>
 
@@ -241,18 +241,18 @@ function RegisterContent() {
       <div className="rounded-2xl w-full max-w-md overflow-hidden">
 
         {/* Header con logo */}
-        <div className="pt-4 pb-2 px-8 text-center">
-          <h1 className="text-6xl font-bold text-white mb-4">OHANA</h1>
+        <div className="pt-3 pb-2 px-8 text-center">
+          <h2 className="text-4xl font-bold text-white mb-4">Crear Cuenta</h2>
           <div className="inline-flex items-center justify-center mb-3">
             <Image
-              src="/logo-ras-wizard.png"
+              src="/logo.png"
               alt="Ohana Logo"
               width={180}
               height={180}
               className="object-contain"
             />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-4">Crear Cuenta</h2>
+          <h1 className="text-4xl font-semibold text-white mb-4 font-poppins tracking-wide">OHANA.mx</h1>
         </div>
 
         {/* Formulario */}
