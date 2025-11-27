@@ -527,7 +527,7 @@ export default function AnuncioPublicoApple() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
-                className="py-6 border-b border-[#E5DDD0]/50"
+                className="py-6 border-b border-[#D5CCC0]"
               >
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {propiedad.precios.venta > 0 && (
@@ -570,7 +570,7 @@ export default function AnuncioPublicoApple() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.1 }}
-                className="py-6 border-b border-[#E5DDD0]/50"
+                className="py-6 border-b border-[#D5CCC0]"
               >
                 <p className="text-gray-700 leading-relaxed text-lg whitespace-pre-line">
                   {propiedad.descripcion_anuncio}
@@ -585,44 +585,74 @@ export default function AnuncioPublicoApple() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.2 }}
-                className="py-6 border-b border-[#E5DDD0]/50"
+                className="py-6 border-b border-[#D5CCC0]"
               >
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Características</h2>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div className="py-2">
-                    <div className="text-sm text-gray-500 mb-1">Tipo</div>
-                    <div className="font-semibold text-gray-900">{propiedad.tipo_propiedad}</div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                  {/* Tipo de propiedad */}
+                  <div className="flex items-center gap-3">
+                    <svg className="w-6 h-6 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2 22h20M6 22V10l6-6 6 6v12M10 22v-6h4v6M9 10h6" />
+                    </svg>
+                    <div>
+                      <div className="text-xs text-gray-500">Tipo</div>
+                      <div className="font-semibold text-gray-900">{propiedad.tipo_propiedad}</div>
+                    </div>
                   </div>
 
+                  {/* Mobiliario */}
                   {propiedad.mobiliario && (
-                    <div className="py-2">
-                      <div className="text-sm text-gray-500 mb-1">Mobiliario</div>
-                      <div className="font-semibold text-gray-900">{propiedad.mobiliario}</div>
-                    </div>
-                  )}
-
-                  {capacidadPersonas && (
-                    <div className="py-2">
-                      <div className="text-sm text-gray-500 mb-1">Capacidad</div>
-                      <div className="font-semibold text-gray-900">{capacidadPersonas} personas</div>
-                    </div>
-                  )}
-
-                  {propiedad.dimensiones?.construccion && (
-                    <div className="py-2">
-                      <div className="text-sm text-gray-500 mb-1">Construcción</div>
-                      <div className="font-semibold text-gray-900">
-                        {propiedad.dimensiones.construccion.valor} {propiedad.dimensiones.construccion.unidad}
+                    <div className="flex items-center gap-3">
+                      <svg className="w-6 h-6 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 18v-4a2 2 0 012-2h12a2 2 0 012 2v4M4 18h16M4 18v2M20 18v2M6 12V8a2 2 0 012-2h8a2 2 0 012 2v4M9 6V4M15 6V4" />
+                      </svg>
+                      <div>
+                        <div className="text-xs text-gray-500">Mobiliario</div>
+                        <div className="font-semibold text-gray-900">{propiedad.mobiliario}</div>
                       </div>
                     </div>
                   )}
 
+                  {/* Capacidad */}
+                  {capacidadPersonas && (
+                    <div className="flex items-center gap-3">
+                      <svg className="w-6 h-6 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                      </svg>
+                      <div>
+                        <div className="text-xs text-gray-500">Capacidad</div>
+                        <div className="font-semibold text-gray-900">{capacidadPersonas} personas</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Construcción */}
+                  {propiedad.dimensiones?.construccion && (
+                    <div className="flex items-center gap-3">
+                      <svg className="w-6 h-6 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 4H5a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V5a1 1 0 00-1-1zM9 14H5a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1v-4a1 1 0 00-1-1zM19 4h-4a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V5a1 1 0 00-1-1zM19 14h-4a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1v-4a1 1 0 00-1-1z" />
+                      </svg>
+                      <div>
+                        <div className="text-xs text-gray-500">Construcción</div>
+                        <div className="font-semibold text-gray-900">
+                          {propiedad.dimensiones.construccion.valor} {propiedad.dimensiones.construccion.unidad}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Terreno */}
                   {propiedad.dimensiones?.terreno && (
-                    <div className="py-2">
-                      <div className="text-sm text-gray-500 mb-1">Terreno</div>
-                      <div className="font-semibold text-gray-900">
-                        {propiedad.dimensiones.terreno.valor} {propiedad.dimensiones.terreno.unidad}
+                    <div className="flex items-center gap-3">
+                      <svg className="w-6 h-6 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                      </svg>
+                      <div>
+                        <div className="text-xs text-gray-500">Terreno</div>
+                        <div className="font-semibold text-gray-900">
+                          {propiedad.dimensiones.terreno.valor} {propiedad.dimensiones.terreno.unidad}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -637,7 +667,7 @@ export default function AnuncioPublicoApple() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.3 }}
-                className="py-6 border-b border-[#E5DDD0]/50"
+                className="py-6 border-b border-[#D5CCC0]"
               >
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Espacios</h2>
 
@@ -663,7 +693,7 @@ export default function AnuncioPublicoApple() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.4 }}
-                className="py-6 border-b border-[#E5DDD0]/50"
+                className="py-6 border-b border-[#D5CCC0]"
               >
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Amenidades</h2>
 
@@ -710,7 +740,7 @@ export default function AnuncioPublicoApple() {
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
               id="contacto"
-              className="sticky top-8 py-6 lg:border-l lg:border-[#E5DDD0]/50 lg:pl-8"
+              className="sticky top-8 py-6 lg:border-l lg:border-[#D5CCC0] lg:pl-8"
             >
               <div className="text-center mb-6">
                 <h3 className="text-xl font-bold text-gray-900 mb-1">¿Te interesa?</h3>
