@@ -301,6 +301,135 @@ export function useDashboardWidgets(): UseDashboardWidgetsReturn {
           };
         }
 
+        case 'tickets_today': {
+          // Tickets para hoy
+          const { data: propiedades } = await supabase
+            .from('propiedades')
+            .select('id')
+            .eq('owner_id', user.id);
+
+          const propiedadIds = propiedades?.map(p => p.id) || [];
+
+          if (propiedadIds.length === 0) {
+            return { id: 'tickets_today', value: 0, loading: false };
+          }
+
+          const today = new Date().toISOString().split('T')[0];
+
+          const { count } = await supabase
+            .from('tickets')
+            .select('id', { count: 'exact', head: true })
+            .in('propiedad_id', propiedadIds)
+            .eq('fecha_programada', today)
+            .eq('pagado', false);
+
+          return {
+            id: 'tickets_today',
+            value: count || 0,
+            loading: false,
+          };
+        }
+
+        case 'tickets_next_7_days': {
+          // Tickets próximos 7 días
+          const { data: propiedades } = await supabase
+            .from('propiedades')
+            .select('id')
+            .eq('owner_id', user.id);
+
+          const propiedadIds = propiedades?.map(p => p.id) || [];
+
+          if (propiedadIds.length === 0) {
+            return { id: 'tickets_next_7_days', value: 0, loading: false };
+          }
+
+          const today = new Date();
+          const nextWeek = new Date();
+          nextWeek.setDate(today.getDate() + 7);
+
+          const { count } = await supabase
+            .from('tickets')
+            .select('id', { count: 'exact', head: true })
+            .in('propiedad_id', propiedadIds)
+            .gte('fecha_programada', today.toISOString().split('T')[0])
+            .lte('fecha_programada', nextWeek.toISOString().split('T')[0])
+            .eq('pagado', false);
+
+          return {
+            id: 'tickets_next_7_days',
+            value: count || 0,
+            loading: false,
+          };
+        }
+
+        case 'tickets_completed': {
+          // Tickets completados (pagados)
+          const { data: propiedades } = await supabase
+            .from('propiedades')
+            .select('id')
+            .eq('owner_id', user.id);
+
+          const propiedadIds = propiedades?.map(p => p.id) || [];
+
+          if (propiedadIds.length === 0) {
+            return { id: 'tickets_completed', value: 0, loading: false };
+          }
+
+          const { count } = await supabase
+            .from('tickets')
+            .select('id', { count: 'exact', head: true })
+            .in('propiedad_id', propiedadIds)
+            .eq('pagado', true);
+
+          return {
+            id: 'tickets_completed',
+            value: count || 0,
+            loading: false,
+          };
+        }
+
+        case 'yearly_income': {
+          // Total ingresos del año
+          const now = new Date();
+          const firstDayOfYear = new Date(now.getFullYear(), 0, 1);
+
+          const movimientos = await obtenerTodosLosMovimientos(
+            firstDayOfYear.toISOString().split('T')[0],
+            now.toISOString().split('T')[0]
+          );
+
+          const totalIngresos = movimientos
+            .filter(m => m.tipo === 'ingreso')
+            .reduce((sum, m) => sum + m.monto, 0);
+
+          return {
+            id: 'yearly_income',
+            value: totalIngresos,
+            loading: false,
+          };
+        }
+
+        case 'yearly_expenses': {
+          // Total egresos del año
+          const now = new Date();
+          const firstDayOfYear = new Date(now.getFullYear(), 0, 1);
+
+          const movimientos = await obtenerTodosLosMovimientos(
+            firstDayOfYear.toISOString().split('T')[0],
+            now.toISOString().split('T')[0]
+          );
+
+          const totalEgresos = movimientos
+            .filter(m => m.tipo === 'egreso')
+            .reduce((sum, m) => sum + m.monto, 0);
+
+          return {
+            id: 'yearly_expenses',
+            value: totalEgresos,
+            loading: false,
+          };
+        }
+
         default:
           return {
             id: widgetId,
@@ -339,6 +468,11 @@ export function useDashboardWidgets(): UseDashboardWidgetsReturn {
         'properties_published',
         'active_services',
         'recent_activity',
+        'tickets_today',
+        'tickets_next_7_days',
+        'tickets_completed',
+        'yearly_income',
+        'yearly_expenses',
       ];
 
       // Calcular datos de todos los widgets en paralelo

@@ -195,6 +195,41 @@ const AVAILABLE_WIDGETS: Record<WidgetId, WidgetMetadata> = {
     icon: 'Activity',
     category: 'operations',
   },
+  tickets_today: {
+    id: 'tickets_today',
+    title: 'Tickets para hoy',
+    description: 'Tickets programados para hoy',
+    icon: 'Calendar',
+    category: 'operations',
+  },
+  tickets_next_7_days: {
+    id: 'tickets_next_7_days',
+    title: 'Tickets próximos 7 días',
+    description: 'Tickets de los próximos 7 días',
+    icon: 'CalendarDays',
+    category: 'operations',
+  },
+  tickets_completed: {
+    id: 'tickets_completed',
+    title: 'Tickets completados',
+    description: 'Total de tickets pagados',
+    icon: 'CheckCircle',
+    category: 'operations',
+  },
+  yearly_income: {
+    id: 'yearly_income',
+    title: 'Ingresos del año',
+    description: 'Total de ingresos del año actual',
+    icon: 'TrendingUp',
+    category: 'financial',
+  },
+  yearly_expenses: {
+    id: 'yearly_expenses',
+    title: 'Egresos del año',
+    description: 'Total de egresos del año actual',
+    icon: 'TrendingDown',
+    category: 'financial',
+  },
 };
 
 // ================================================================
