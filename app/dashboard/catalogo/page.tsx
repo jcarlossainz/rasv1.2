@@ -331,16 +331,16 @@ export default function CatalogoPage() {
               <div className="flex items-center gap-4">
                 <div className="w-20"></div>
                 <div className="flex-1"></div>
-                <div className="flex gap-3">
-                  <div className="w-12 text-center text-xs font-semibold text-gray-500">Home</div>
-                  <div className="w-12 text-center text-xs font-semibold text-gray-500">Calendario</div>
-                  <div className="w-12 text-center text-xs font-semibold text-gray-500">Tickets</div>
-                  <div className="w-12 text-center text-xs font-semibold text-gray-500">Inventario</div>
-                  <div className="w-12 text-center text-xs font-semibold text-gray-500">Galería</div>
-                  <div className="w-12 text-center text-xs font-semibold text-gray-500">Anuncio</div>
-                  <div className="w-12 text-center text-xs font-semibold text-gray-500">Balance</div>
-                  <div className="w-12 text-center text-xs font-semibold text-gray-500">Archivero</div>
-                  <div className="w-12 text-center text-xs font-semibold text-gray-500">Config</div>
+                <div className="flex gap-2">
+                  <div className="w-10 text-center text-xs font-semibold text-gray-500">Home</div>
+                  <div className="w-10 text-center text-xs font-semibold text-gray-500">Calendario</div>
+                  <div className="w-10 text-center text-xs font-semibold text-gray-500">Tickets</div>
+                  <div className="w-10 text-center text-xs font-semibold text-gray-500">Inventario</div>
+                  <div className="w-10 text-center text-xs font-semibold text-gray-500">Galería</div>
+                  <div className="w-10 text-center text-xs font-semibold text-gray-500">Anuncio</div>
+                  <div className="w-10 text-center text-xs font-semibold text-gray-500">Balance</div>
+                  <div className="w-10 text-center text-xs font-semibold text-gray-500">Archivero</div>
+                  <div className="w-10 text-center text-xs font-semibold text-gray-500">Config</div>
                 </div>
               </div>
             </div>
@@ -392,26 +392,26 @@ export default function CatalogoPage() {
                       </h3>
                     </div>
 
-                    <div className="flex gap-3">
+                    <div className="flex gap-2">
                       <button
                         onClick={(e) => { e.stopPropagation(); abrirHome(prop.id); }}
-                        className="w-12 h-12 hover:scale-110 transition-all flex items-center justify-center"
+                        className="w-10 h-10 hover:scale-110 transition-all flex items-center justify-center"
                         title="Home"
                       >
-                        <img src="/catalogo_logos/icono_home.png" alt="Home" className="w-12 h-12 object-contain" />
+                        <img src="/catalogo_logos/icono_home.png" alt="Home" className="w-14 h-14 object-contain" />
                       </button>
 
                       <button
                         onClick={(e) => { e.stopPropagation(); abrirCalendario(prop.id); }}
-                        className="w-12 h-12 hover:scale-110 transition-all flex items-center justify-center"
+                        className="w-10 h-10 hover:scale-110 transition-all flex items-center justify-center"
                         title="Calendario"
                       >
-                        <img src="/catalogo_logos/icono_calendario.png" alt="Calendario" className="w-12 h-12 object-contain" />
+                        <img src="/catalogo_logos/icono_calendario.png" alt="Calendario" className="w-14 h-14 object-contain" />
                       </button>
 
                       <button
                         onClick={(e) => { e.stopPropagation(); abrirTickets(prop.id); }}
-                        className="w-12 h-12 hover:scale-110 transition-all flex items-center justify-center"
+                        className="w-10 h-10 hover:scale-110 transition-all flex items-center justify-center"
                         title="Tickets"
                       >
                         <svg className="w-10 h-10 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -424,36 +424,36 @@ export default function CatalogoPage() {
 
                       <button
                         onClick={(e) => { e.stopPropagation(); abrirInventario(prop.id); }}
-                        className="w-12 h-12 hover:scale-110 transition-all flex items-center justify-center"
+                        className="w-10 h-10 hover:scale-110 transition-all flex items-center justify-center"
                         title="Inventario"
                       >
-                        <img src="/catalogo_logos/icono_inventario.png" alt="Inventario" className="w-12 h-12 object-contain" />
+                        <img src="/catalogo_logos/icono_inventario.png" alt="Inventario" className="w-14 h-14 object-contain" />
                       </button>
 
                       <button
                         onClick={(e) => { e.stopPropagation(); abrirGaleria(prop.id); }}
-                        className="w-12 h-12 hover:scale-110 transition-all flex items-center justify-center"
+                        className="w-10 h-10 hover:scale-110 transition-all flex items-center justify-center"
                         title="Galería"
                       >
-                        <img src="/catalogo_logos/icono_galeria.png" alt="Galería" className="w-12 h-12 object-contain" />
+                        <img src="/catalogo_logos/icono_galeria.png" alt="Galería" className="w-14 h-14 object-contain" />
                       </button>
 
                       <button
                         onClick={(e) => { e.stopPropagation(); abrirAnuncio(prop.id); }}
-                        className="w-12 h-12 hover:scale-110 transition-all flex items-center justify-center"
+                        className="w-10 h-10 hover:scale-110 transition-all flex items-center justify-center"
                         title="Anuncio"
                       >
-                        <img src="/catalogo_logos/icono_anuncio.png" alt="Anuncio" className="w-12 h-12 object-contain" />
+                        <img src="/catalogo_logos/icono_anuncio.png" alt="Anuncio" className="w-14 h-14 object-contain" />
                       </button>
 
                       {/* Balance - Admin y Propietario (no supervisor) */}
                       {(prop.es_propio || prop.rol === 'propietario') && (
                         <button
                           onClick={(e) => { e.stopPropagation(); abrirBalance(prop.id); }}
-                          className="w-12 h-12 hover:scale-110 transition-all flex items-center justify-center"
+                          className="w-10 h-10 hover:scale-110 transition-all flex items-center justify-center"
                           title="Balance"
                         >
-                          <img src="/catalogo_logos/icono_balance.png" alt="Balance" className="w-12 h-12 object-contain" />
+                          <img src="/catalogo_logos/icono_balance.png" alt="Balance" className="w-14 h-14 object-contain" />
                         </button>
                       )}
 
@@ -461,7 +461,7 @@ export default function CatalogoPage() {
                       {(prop.es_propio || prop.rol === 'propietario') && (
                         <button
                           onClick={(e) => { e.stopPropagation(); abrirArchivo(prop.id); }}
-                          className="w-12 h-12 hover:scale-110 transition-all flex items-center justify-center"
+                          className="w-10 h-10 hover:scale-110 transition-all flex items-center justify-center"
                           title="Archivo"
                         >
                           <svg className="w-10 h-10 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -477,10 +477,10 @@ export default function CatalogoPage() {
                       {prop.es_propio && (
                         <button
                           onClick={(e) => { e.stopPropagation(); abrirConfig(prop.id); }}
-                          className="w-12 h-12 hover:scale-110 transition-all flex items-center justify-center"
+                          className="w-10 h-10 hover:scale-110 transition-all flex items-center justify-center"
                           title="Configuración"
                         >
-                          <img src="/catalogo_logos/icono_config.png" alt="Config" className="w-12 h-12 object-contain" />
+                          <img src="/catalogo_logos/icono_config.png" alt="Config" className="w-14 h-14 object-contain" />
                         </button>
                       )}
                     </div>
