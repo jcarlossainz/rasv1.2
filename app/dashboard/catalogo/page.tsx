@@ -331,7 +331,7 @@ export default function CatalogoPage() {
               <div className="flex items-center gap-4">
                 <div className="w-20"></div>
                 <div className="flex-1"></div>
-                <div className="flex gap-4">
+                <div className="flex gap-3">
                   <div className="w-12 text-center text-xs font-semibold text-gray-500">Home</div>
                   <div className="w-12 text-center text-xs font-semibold text-gray-500">Calendario</div>
                   <div className="w-12 text-center text-xs font-semibold text-gray-500">Tickets</div>
@@ -392,29 +392,29 @@ export default function CatalogoPage() {
                       </h3>
                     </div>
 
-                    <div className="flex gap-4">
+                    <div className="flex gap-3">
                       <button
                         onClick={(e) => { e.stopPropagation(); abrirHome(prop.id); }}
-                        className="w-12 h-12 rounded-lg border-2 border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-400 hover:scale-110 transition-all flex items-center justify-center group"
+                        className="w-12 h-12 hover:scale-110 transition-all flex items-center justify-center"
                         title="Home"
                       >
-                        <img src="/catalogo_logos/icono_home.png" alt="Home" className="w-8 h-8 object-contain group-hover:scale-110 transition-transform" />
+                        <img src="/catalogo_logos/icono_home.png" alt="Home" className="w-12 h-12 object-contain" />
                       </button>
 
                       <button
                         onClick={(e) => { e.stopPropagation(); abrirCalendario(prop.id); }}
-                        className="w-12 h-12 rounded-lg border-2 border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-400 hover:scale-110 transition-all flex items-center justify-center group"
+                        className="w-12 h-12 hover:scale-110 transition-all flex items-center justify-center"
                         title="Calendario"
                       >
-                        <img src="/catalogo_logos/icono_calendario.png" alt="Calendario" className="w-8 h-8 object-contain group-hover:scale-110 transition-transform" />
+                        <img src="/catalogo_logos/icono_calendario.png" alt="Calendario" className="w-12 h-12 object-contain" />
                       </button>
 
                       <button
                         onClick={(e) => { e.stopPropagation(); abrirTickets(prop.id); }}
-                        className="w-12 h-12 rounded-lg border-2 border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-400 hover:scale-110 transition-all flex items-center justify-center group"
+                        className="w-12 h-12 hover:scale-110 transition-all flex items-center justify-center"
                         title="Tickets"
                       >
-                        <svg className="w-7 h-7 text-gray-600 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <svg className="w-10 h-10 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                           <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
                           <polyline points="14 2 14 8 20 8"/>
                           <line x1="9" y1="15" x2="15" y2="15"/>
@@ -424,36 +424,36 @@ export default function CatalogoPage() {
 
                       <button
                         onClick={(e) => { e.stopPropagation(); abrirInventario(prop.id); }}
-                        className="w-12 h-12 rounded-lg border-2 border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-400 hover:scale-110 transition-all flex items-center justify-center group"
+                        className="w-12 h-12 hover:scale-110 transition-all flex items-center justify-center"
                         title="Inventario"
                       >
-                        <img src="/catalogo_logos/icono_inventario.png" alt="Inventario" className="w-8 h-8 object-contain group-hover:scale-110 transition-transform" />
+                        <img src="/catalogo_logos/icono_inventario.png" alt="Inventario" className="w-12 h-12 object-contain" />
                       </button>
 
                       <button
                         onClick={(e) => { e.stopPropagation(); abrirGaleria(prop.id); }}
-                        className="w-12 h-12 rounded-lg border-2 border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-400 hover:scale-110 transition-all flex items-center justify-center group"
+                        className="w-12 h-12 hover:scale-110 transition-all flex items-center justify-center"
                         title="Galería"
                       >
-                        <img src="/catalogo_logos/icono_galeria.png" alt="Galería" className="w-8 h-8 object-contain group-hover:scale-110 transition-transform" />
+                        <img src="/catalogo_logos/icono_galeria.png" alt="Galería" className="w-12 h-12 object-contain" />
                       </button>
 
                       <button
                         onClick={(e) => { e.stopPropagation(); abrirAnuncio(prop.id); }}
-                        className="w-12 h-12 rounded-lg border-2 border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-400 hover:scale-110 transition-all flex items-center justify-center group"
+                        className="w-12 h-12 hover:scale-110 transition-all flex items-center justify-center"
                         title="Anuncio"
                       >
-                        <img src="/catalogo_logos/icono_anuncio.png" alt="Anuncio" className="w-8 h-8 object-contain group-hover:scale-110 transition-transform" />
+                        <img src="/catalogo_logos/icono_anuncio.png" alt="Anuncio" className="w-12 h-12 object-contain" />
                       </button>
 
                       {/* Balance - Admin y Propietario (no supervisor) */}
                       {(prop.es_propio || prop.rol === 'propietario') && (
                         <button
                           onClick={(e) => { e.stopPropagation(); abrirBalance(prop.id); }}
-                          className="w-12 h-12 rounded-lg border-2 border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-400 hover:scale-110 transition-all flex items-center justify-center group"
+                          className="w-12 h-12 hover:scale-110 transition-all flex items-center justify-center"
                           title="Balance"
                         >
-                          <img src="/catalogo_logos/icono_balance.png" alt="Balance" className="w-8 h-8 object-contain group-hover:scale-110 transition-transform" />
+                          <img src="/catalogo_logos/icono_balance.png" alt="Balance" className="w-12 h-12 object-contain" />
                         </button>
                       )}
 
@@ -461,10 +461,10 @@ export default function CatalogoPage() {
                       {(prop.es_propio || prop.rol === 'propietario') && (
                         <button
                           onClick={(e) => { e.stopPropagation(); abrirArchivo(prop.id); }}
-                          className="w-12 h-12 rounded-lg border-2 border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-400 hover:scale-110 transition-all flex items-center justify-center group"
+                          className="w-12 h-12 hover:scale-110 transition-all flex items-center justify-center"
                           title="Archivo"
                         >
-                          <svg className="w-7 h-7 text-gray-600 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <svg className="w-10 h-10 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                             <rect x="4" y="3" width="16" height="18" rx="2" ry="2"/>
                             <line x1="4" y1="9" x2="20" y2="9"/>
                             <line x1="4" y1="15" x2="20" y2="15"/>
@@ -477,10 +477,10 @@ export default function CatalogoPage() {
                       {prop.es_propio && (
                         <button
                           onClick={(e) => { e.stopPropagation(); abrirConfig(prop.id); }}
-                          className="w-12 h-12 rounded-lg border-2 border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-400 hover:scale-110 transition-all flex items-center justify-center group"
+                          className="w-12 h-12 hover:scale-110 transition-all flex items-center justify-center"
                           title="Configuración"
                         >
-                          <img src="/catalogo_logos/icono_config.png" alt="Config" className="w-8 h-8 object-contain group-hover:scale-110 transition-transform" />
+                          <img src="/catalogo_logos/icono_config.png" alt="Config" className="w-12 h-12 object-contain" />
                         </button>
                       )}
                     </div>
