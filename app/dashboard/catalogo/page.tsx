@@ -327,24 +327,6 @@ export default function CatalogoPage() {
 
         {propiedadesFiltradas.length > 0 ? (
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 px-6 py-3">
-              <div className="flex items-center gap-4">
-                <div className="w-20"></div>
-                <div className="flex-1"></div>
-                <div className="flex gap-2">
-                  <div className="w-10 text-center text-xs font-semibold text-gray-500">Home</div>
-                  <div className="w-10 text-center text-xs font-semibold text-gray-500">Calendario</div>
-                  <div className="w-10 text-center text-xs font-semibold text-gray-500">Tickets</div>
-                  <div className="w-10 text-center text-xs font-semibold text-gray-500">Inventario</div>
-                  <div className="w-10 text-center text-xs font-semibold text-gray-500">Galería</div>
-                  <div className="w-10 text-center text-xs font-semibold text-gray-500">Anuncio</div>
-                  <div className="w-10 text-center text-xs font-semibold text-gray-500">Balance</div>
-                  <div className="w-10 text-center text-xs font-semibold text-gray-500">Archivero</div>
-                  <div className="w-10 text-center text-xs font-semibold text-gray-500">Config</div>
-                </div>
-              </div>
-            </div>
-
             <div className="divide-y divide-gray-100">
               {propiedadesPaginadas.map((prop) => (
                 <div 
