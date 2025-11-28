@@ -140,7 +140,7 @@ export default function DashboardPage() {
       {/* Main Content */}
       <main className="max-w-5xl mx-auto px-4 py-8">
         {/* Navigation Cards */}
-        <div className="grid grid-cols-3 gap-x-4 gap-y-6 mb-6">
+        <div className="grid grid-cols-3 gap-x-2 gap-y-6 mb-6">
           {/* CATÁLOGO */}
           <Card
             title="Catálogo"
@@ -233,8 +233,8 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* WIDGETS - 4 widgets en grid 2x2 */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* WIDGETS - 4 widgets */}
+        <div className="flex flex-wrap gap-2 justify-center">
           {config && config.visible_widgets && (
             <DndContext
               sensors={sensors}
