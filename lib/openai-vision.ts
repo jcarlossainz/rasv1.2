@@ -19,6 +19,8 @@ export async function analyzeImageWithOpenAI(imageUrl: string): Promise<Detected
       throw new Error('OPENAI_API_KEY no está configurada');
     }
 
+    console.log('Analizando imagen con OpenAI:', imageUrl);
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -26,7 +28,7 @@ export async function analyzeImageWithOpenAI(imageUrl: string): Promise<Detected
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -83,16 +85,22 @@ Ejemplo:
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`OpenAI API error: ${response.status} - ${JSON.stringify(errorData)}`);
+      const errorText = await response.text();
+      console.error('OpenAI API error response:', errorText);
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
+    console.log('OpenAI response:', JSON.stringify(data, null, 2));
+
     const content = data.choices[0]?.message?.content;
 
     if (!content) {
+      console.error('No content in OpenAI response:', data);
       throw new Error('No se recibió respuesta de OpenAI');
     }
+
+    console.log('OpenAI content:', content);
 
     // Parsear el JSON de la respuesta
     let parsedResponse;

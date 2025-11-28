@@ -105,8 +105,8 @@ export async function PUT(request: NextRequest) {
         // Delay de 300ms para no saturar la API de OpenAI
         await new Promise(resolve => setTimeout(resolve, 300));
 
-      } catch (error) {
-        console.error(`Error analizando imagen ${image.id}:`, error);
+      } catch (error: any) {
+        console.error(`Error analizando imagen ${image.id}:`, error?.message || error);
         // Continuar con la siguiente imagen
       }
     }
