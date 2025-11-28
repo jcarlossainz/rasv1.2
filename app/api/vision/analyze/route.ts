@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { analyzeImage } from '@/lib/google-vision';
+import { analyzeImageWithOpenAI } from '@/lib/openai-vision';
 
 // Cliente Supabase con permisos de servicio
 const supabase = createClient(
@@ -70,8 +70,8 @@ export async function PUT(request: NextRequest) {
 
     for (const image of images) {
       try {
-        // Analizar imagen con Google Vision
-        const detectedObjects = await analyzeImage(image.url);
+        // Analizar imagen con OpenAI Vision
+        const detectedObjects = await analyzeImageWithOpenAI(image.url);
 
         if (detectedObjects.length === 0) {
           continue;
@@ -81,7 +81,7 @@ export async function PUT(request: NextRequest) {
         const labels = detectedObjects.map(obj => obj.name);
 
         // Obtener el nombre del espacio
-        const spaceName = image.space_type 
+        const spaceName = image.space_type
           ? (spacesMap.get(image.space_type) || image.space_type)
           : null;
 
@@ -94,18 +94,19 @@ export async function PUT(request: NextRequest) {
             object_name: obj.name,
             space_type: spaceName, // Guardamos el NOMBRE, no el ID
             detectado_por_ia: true,
-            confidence: obj.confidence, // Nivel de confianza de Google Vision
-            labels: labels.join(', '),
+            confidence: obj.confidence,
+            labels: obj.description || labels.join(', '), // Usamos la descripción de OpenAI si existe
             created_at: new Date().toISOString()
           });
         }
 
         totalObjectsDetected += detectedObjects.length;
 
-        // Delay de 500ms para no saturar la API de Google
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Delay de 300ms para no saturar la API de OpenAI
+        await new Promise(resolve => setTimeout(resolve, 300));
 
-      } catch {
+      } catch (error) {
+        console.error(`Error analizando imagen ${image.id}:`, error);
         // Continuar con la siguiente imagen
       }
     }
