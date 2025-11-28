@@ -195,7 +195,7 @@ export default function DashboardPage() {
       {/* Main Content */}
       <main className="max-w-5xl mx-auto px-4 py-8">
         {/* Navigation Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
           {/* CATÁLOGO */}
           <Card
             title="Catálogo"
@@ -288,11 +288,9 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* DASHBOARD - Ocupa 3 columnas como antes */}
-        <div className="lg:col-span-3">
-          <div className="bg-white/20 rounded-2xl shadow-xl border-2 border-gray-200 p-6">
-            {/* Grid: Gráfica (izquierda 50%) + 4 Widgets (derecha 50%, grid 2x2) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* DASHBOARD */}
+        <div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
               {/* IZQUIERDA: Gráfica - Ocupa 50% */}
               <div>
@@ -336,7 +334,6 @@ export default function DashboardPage() {
                 )}
               </div>
 
-            </div>
           </div>
         </div>
       </main>
