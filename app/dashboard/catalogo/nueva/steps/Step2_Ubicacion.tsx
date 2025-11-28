@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PropertyFormData, Ubicacion } from '@/types/property';
 import Input from '@/components/ui/input';
 import { getAddressFromGoogleMapsLink } from '@/lib/googleMaps/googleMaps';
+import { supabase } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Step2Props {
   data: PropertyFormData;
@@ -27,11 +29,44 @@ const AMENIDADES_COMPLEJO = [
   'Pet park'
 ];
 
+interface EdificioOption {
+  id: string;
+  nombre_propiedad: string;
+  tipo_propiedad: string;
+}
+
 export default function Step2_Ubicacion({ data, onUpdate }: Step2Props) {
+  const { user } = useAuth();
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
-  
+  const [edificios, setEdificios] = useState<EdificioOption[]>([]);
+  const [loadingEdificios, setLoadingEdificios] = useState(true);
+
   // Obtener ubicación actual o inicializar objeto vacío
   const ubicacion = data.ubicacion || {};
+
+  // Cargar edificios/complejos disponibles
+  useEffect(() => {
+    const loadEdificios = async () => {
+      if (!user?.id) return;
+
+      try {
+        const { data: edificiosData, error } = await supabase
+          .from('propiedades')
+          .select('id, nombre_propiedad, tipo_propiedad')
+          .in('tipo_propiedad', ['Edificio', 'Complejo'])
+          .order('nombre_propiedad');
+
+        if (error) throw error;
+        setEdificios(edificiosData || []);
+      } catch (error) {
+        console.error('Error cargando edificios:', error);
+      } finally {
+        setLoadingEdificios(false);
+      }
+    };
+
+    loadEdificios();
+  }, [user?.id]);
 
   const handleUbicacionChange = (field: keyof Ubicacion, value: any) => {
     onUpdate({
@@ -239,57 +274,64 @@ export default function Step2_Ubicacion({ data, onUpdate }: Step2Props) {
       {/* DIVISOR */}
       <div className="border-t border-gray-200"></div>
 
-      {/* SECCIÓN: COMPLEJO/CONDOMINIO */}
+      {/* SECCIÓN: ASOCIAR A EDIFICIO/COMPLEJO */}
       <div>
-        {/* Header con toggle */}
         <div className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            <h2 className="text-xl font-bold text-gray-900 font-poppins flex items-center gap-2">
-              <svg className="w-6 h-6 text-ras-azul" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-              <span>Complejo</span>
-            </h2>
-            
-            {/* Toggle Switch */}
-            <button
-              type="button"
-              onClick={() => handleUbicacionChange('es_complejo', !ubicacion.es_complejo)}
-              className={`
-                relative inline-flex h-7 w-14 items-center rounded-full transition-colors
-                ${ubicacion.es_complejo ? 'bg-ras-azul' : 'bg-gray-300'}
-              `}
-            >
-              <span
-                className={`
-                  inline-block h-5 w-5 transform rounded-full bg-white transition-transform
-                  ${ubicacion.es_complejo ? 'translate-x-8' : 'translate-x-1'}
-                `}
-              />
-            </button>
-          </div>
-          
-          <p className="text-sm text-gray-600">
-            ¿Pertenece a un complejo o condominio?
+          <h2 className="text-xl font-bold text-gray-900 font-poppins flex items-center gap-2">
+            <svg className="w-6 h-6 text-ras-azul" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+            <span>Asociar a Edificio o Complejo</span>
+          </h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Si esta propiedad pertenece a un edificio o complejo que ya tienes registrado, selecciónalo aquí.
           </p>
         </div>
 
-        {/* Campos adicionales si pertenece a complejo */}
-        {ubicacion.es_complejo && (
-          <div className="space-y-6">
-            {/* Nombre del complejo */}
-            <div>
-              <Input
-                id="nombre_complejo"
-                label="Nombre del complejo o condominio"
-                type="text"
-                value={ubicacion.nombre_complejo || ''}
-                onChange={(e) => handleUbicacionChange('nombre_complejo', e.target.value)}
-                placeholder="Ej: Torres Laguna"
-              />
-            </div>
+        <div className="space-y-6">
+          {/* Dropdown de edificios/complejos */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Edificio o Complejo (opcional)
+            </label>
+            {loadingEdificios ? (
+              <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-500">
+                Cargando edificios...
+              </div>
+            ) : edificios.length === 0 ? (
+              <div className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 text-gray-500 text-sm">
+                No hay edificios o complejos registrados. Puedes crear uno desde el catálogo seleccionando tipo "Edificio" o "Complejo".
+              </div>
+            ) : (
+              <select
+                value={ubicacion.edificio_id || ''}
+                onChange={(e) => {
+                  const selectedId = e.target.value || null;
+                  const selectedEdificio = edificios.find(ed => ed.id === selectedId);
+                  handleUbicacionChange('edificio_id', selectedId);
+                  // Si se selecciona un edificio, marcamos es_complejo como true y guardamos el nombre
+                  if (selectedEdificio) {
+                    handleUbicacionChange('es_complejo', true);
+                    handleUbicacionChange('nombre_complejo', selectedEdificio.nombre_propiedad);
+                  } else {
+                    handleUbicacionChange('es_complejo', false);
+                    handleUbicacionChange('nombre_complejo', null);
+                  }
+                }}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ras-azul focus:border-transparent font-roboto appearance-none cursor-pointer"
+              >
+                <option value="">Sin asociar (propiedad independiente)</option>
+                {edificios.map(edificio => (
+                  <option key={edificio.id} value={edificio.id}>
+                    {edificio.nombre_propiedad} ({edificio.tipo_propiedad})
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
 
-            {/* Amenidades del complejo */}
+          {/* Amenidades del complejo - solo si está asociado */}
+          {ubicacion.edificio_id && (
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-3">
                 Amenidades del complejo
@@ -317,8 +359,8 @@ export default function Step2_Ubicacion({ data, onUpdate }: Step2Props) {
                 ))}
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

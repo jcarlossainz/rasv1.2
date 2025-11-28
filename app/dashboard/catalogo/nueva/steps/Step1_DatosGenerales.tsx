@@ -30,7 +30,9 @@ const TIPOS_PROPIEDAD = [
   'Estudio',
   'Oficina',
   'Local comercial',
-  'Bodega'
+  'Bodega',
+  'Edificio',
+  'Complejo'
 ];
 
 const ESTADOS_PROPIEDAD = [

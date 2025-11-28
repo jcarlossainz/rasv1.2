@@ -116,6 +116,7 @@ export interface Ubicacion {
   es_complejo?: boolean;
   nombre_complejo?: string | null;
   amenidades_complejo?: string[];
+  edificio_id?: string | null; // ID de propiedad tipo Edificio/Complejo a la que pertenece
 }
 
 // ===== SERVICIOS (TU ESTRUCTURA ACTUAL) =====
@@ -405,7 +406,9 @@ export const TIPOS_PROPIEDAD = [
   'Estudio',
   'Oficina',
   'Local comercial',
-  'Bodega'
+  'Bodega',
+  'Edificio',
+  'Complejo'
 ];
 
 export const ESTADOS_PROPIEDAD = [
