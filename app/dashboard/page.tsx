@@ -201,7 +201,7 @@ export default function DashboardPage() {
             title="Catálogo"
             onClick={() => router.push('/dashboard/catalogo')}
             icon={
-              <div className="w-24 h-24 rounded-xl bg-gradient-to-b from-ras-crema/80 to-white/80 border-2 border-ras-crema/50 flex items-center justify-center">
+              <div className="w-24 h-24 rounded-xl bg-gradient-to-b from-ras-crema/20 to-white/20 border-2 border-ras-crema/50 flex items-center justify-center">
                 <svg className="w-12 h-12" viewBox="0 0 24 24" fill="none">
                   <rect x="3" y="3" width="7" height="7" rx="1.5" fill="#4285F4" opacity="0.8" stroke="currentColor" strokeWidth="1.4"/>
                   <rect x="14" y="3" width="7" height="7" rx="1.5" fill="#EA4335" opacity="0.8" stroke="currentColor" strokeWidth="1.4"/>
@@ -217,7 +217,7 @@ export default function DashboardPage() {
             title="Market"
             onClick={() => router.push('/dashboard/market')}
             icon={
-              <div className="w-24 h-24 rounded-xl bg-gradient-to-b from-ras-crema/80 to-white/80 border-2 border-ras-crema/50 flex items-center justify-center">
+              <div className="w-24 h-24 rounded-xl bg-gradient-to-b from-ras-crema/20 to-white/20 border-2 border-ras-crema/50 flex items-center justify-center">
                 <svg className="w-12 h-12" viewBox="0 0 24 24" fill="none">
                   <path d="M12 2a2 2 0 0 1 2 2v1.5a7 7 0 0 1 4.5 6.196V15a3 3 0 0 0 1.5 2.598v.902H4v-.902A3 3 0 0 0 5.5 15v-3.304A7 7 0 0 1 10 5.5V4a2 2 0 0 1 2-2z" fill="#fbbf24" stroke="currentColor" strokeWidth="1.6"/>
                   <path d="M9 19a3 3 0 0 0 6 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
@@ -231,7 +231,7 @@ export default function DashboardPage() {
             title="Tickets"
             onClick={() => router.push('/dashboard/tickets')}
             icon={
-              <div className="w-24 h-24 rounded-xl bg-gradient-to-b from-ras-crema/80 to-white/80 border-2 border-ras-crema/50 flex items-center justify-center">
+              <div className="w-24 h-24 rounded-xl bg-gradient-to-b from-ras-crema/20 to-white/20 border-2 border-ras-crema/50 flex items-center justify-center">
                 <svg className="w-12 h-12" viewBox="0 0 24 24" fill="none">
                   <rect x="2" y="3" width="20" height="18" rx="2" fill="#fb8500" stroke="currentColor" strokeWidth="1.6"/>
                   <path d="M2 8h20M7 12h7M7 16h4" stroke="white" strokeWidth="1.6" strokeLinecap="round"/>
@@ -245,7 +245,7 @@ export default function DashboardPage() {
             title="Planificador"
             onClick={() => router.push('/dashboard/calendario')}
             icon={
-              <div className="w-24 h-24 rounded-xl bg-gradient-to-b from-ras-crema/80 to-white/80 border-2 border-ras-crema/50 flex items-center justify-center">
+              <div className="w-24 h-24 rounded-xl bg-gradient-to-b from-ras-crema/20 to-white/20 border-2 border-ras-crema/50 flex items-center justify-center">
                 <svg className="w-12 h-12" viewBox="0 0 24 24" fill="none">
                   <rect x="3" y="4" width="18" height="18" rx="2" fill="#5f7c8a" stroke="currentColor" strokeWidth="1.6"/>
                   <path d="M3 10h18M8 2v4M16 2v4" stroke="white" strokeWidth="1.6" strokeLinecap="round"/>
@@ -262,7 +262,7 @@ export default function DashboardPage() {
             title="Cuentas"
             onClick={() => router.push('/dashboard/cuentas')}
             icon={
-              <div className="w-24 h-24 rounded-xl bg-gradient-to-b from-ras-crema/80 to-white/80 border-2 border-ras-crema/50 flex items-center justify-center">
+              <div className="w-24 h-24 rounded-xl bg-gradient-to-b from-ras-crema/20 to-white/20 border-2 border-ras-crema/50 flex items-center justify-center">
                 <svg className="w-12 h-12" viewBox="0 0 24 24" fill="none">
                   <rect x="3" y="6" width="18" height="12" rx="2" fill="#6b8e23" stroke="currentColor" strokeWidth="1.6"/>
                   <circle cx="12" cy="12" r="3" stroke="white" strokeWidth="1.6"/>
@@ -276,7 +276,7 @@ export default function DashboardPage() {
             title="Directorio"
             onClick={() => router.push('/dashboard/directorio')}
             icon={
-              <div className="w-24 h-24 rounded-xl bg-gradient-to-b from-ras-crema/80 to-white/80 border-2 border-ras-crema/50 flex items-center justify-center">
+              <div className="w-24 h-24 rounded-xl bg-gradient-to-b from-ras-crema/20 to-white/20 border-2 border-ras-crema/50 flex items-center justify-center">
                 <svg className="w-12 h-12" viewBox="0 0 24 24" fill="none">
                   <rect x="4" y="3" width="14" height="18" rx="2" fill="#c1666b" stroke="currentColor" strokeWidth="1.6"/>
                   <path d="M19 7h2M19 12h2M19 17h2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
@@ -290,7 +290,7 @@ export default function DashboardPage() {
 
         {/* DASHBOARD - Ocupa 3 columnas como antes */}
         <div className="lg:col-span-3">
-          <div className="bg-white/80 rounded-2xl shadow-xl border-2 border-gray-200 p-6">
+          <div className="bg-white/20 rounded-2xl shadow-xl border-2 border-gray-200 p-6">
             {/* Grid: Gráfica (izquierda 50%) + 4 Widgets (derecha 50%, grid 2x2) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 

@@ -8,7 +8,7 @@ export default function Card({ title, icon, onClick }: CardProps) {
   return (
     <div
       onClick={onClick}
-      className="group relative bg-white/80 rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-visible"
+      className="group relative bg-white/20 rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-visible"
     >
       <div className="p-5 flex flex-col items-center gap-3">
         {/* Contenedor del ícono con efecto hover moderado */}
