@@ -93,8 +93,8 @@ export interface DashboardConfig {
  * Configuración por defecto del dashboard
  */
 const DEFAULT_DASHBOARD_CONFIG: Omit<DashboardConfig, 'id' | 'user_id' | 'created_at' | 'updated_at'> = {
-  visible_widgets: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income', 'monthly_expenses', 'tickets_today'],
-  widget_order: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income', 'monthly_expenses', 'tickets_today'],
+  visible_widgets: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income'],
+  widget_order: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income'],
   chart_type: 'line',
   chart_mode: 'income_expense',
   chart_days: 7,
@@ -375,10 +375,10 @@ function isValidChartDays(days: number): days is 7 | 15 | 30 | 60 | 90 {
 }
 
 /**
- * Valida que el array de widgets tenga máximo 6 elementos
+ * Valida que el array de widgets tenga máximo 4 elementos
  */
 function validateWidgetCount(widgets: WidgetId[]): boolean {
-  return widgets.length <= 6 && widgets.length >= 1;
+  return widgets.length <= 4 && widgets.length >= 1;
 }
 
 /**

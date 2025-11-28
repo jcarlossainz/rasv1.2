@@ -97,7 +97,7 @@ export function DashboardWidget({
       <div
         onClick={onClick}
         className={`
-          bg-white rounded-xl p-4 border-2 hover:shadow-lg transition-all cursor-pointer
+          bg-white rounded-xl p-3 border-2 hover:shadow-lg transition-all cursor-pointer
           ${isDragging ? 'opacity-50 scale-95' : ''}
           ${iconColor.includes('green') ? 'border-green-500/20 hover:border-green-500/40' : ''}
           ${iconColor.includes('blue') ? 'border-blue-500/20 hover:border-blue-500/40' : ''}
@@ -105,18 +105,10 @@ export function DashboardWidget({
           ${className}
         `}
       >
-        <div className="text-xs font-semibold mb-2 text-gray-700">{metadata.title}</div>
-        <div className="text-3xl font-bold mb-1 text-gray-900">
+        <div className="text-xs font-semibold text-gray-600 mb-1">{metadata.title}</div>
+        <div className="text-2xl font-bold text-gray-900">
           {data ? formatValue(data.value) : '---'}
         </div>
-        {data?.change !== undefined && (
-          <div className={`text-xs ${data.trend === 'up' ? 'text-green-600' : data.trend === 'down' ? 'text-red-600' : 'text-gray-600'}`}>
-            {formatPercentage(data.change, 0)}
-          </div>
-        )}
-        {!data?.change && (
-          <div className="text-xs text-gray-500">{metadata.description.substring(0, 20)}...</div>
-        )}
       </div>
     );
   }
