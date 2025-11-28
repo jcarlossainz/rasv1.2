@@ -19,11 +19,12 @@ interface SpaceData {
 interface EditItemModalProps {
   item: InventoryItem;
   spaces: SpaceData[];
+  isNew?: boolean;
   onClose: () => void;
   onSave: (data: { object_name: string; labels: string; space_type: string }) => void;
 }
 
-export default function EditItemModal({ item, spaces, onClose, onSave }: EditItemModalProps) {
+export default function EditItemModal({ item, spaces, isNew = false, onClose, onSave }: EditItemModalProps) {
   const [objectName, setObjectName] = useState(item.object_name);
   const [labels, setLabels] = useState(item.labels || '');
   const [spaceType, setSpaceType] = useState(item.space_type || '');
@@ -43,7 +44,7 @@ export default function EditItemModal({ item, spaces, onClose, onSave }: EditIte
         {/* Header */}
         <div className="sticky top-0 bg-gradient-to-r from-ras-primary to-ras-secondary text-white p-6 rounded-t-2xl">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Editar Item</h2>
+            <h2 className="text-2xl font-bold">{isNew ? 'Agregar Objeto' : 'Editar Item'}</h2>
             <button
               onClick={onClose}
               className="w-8 h-8 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all flex items-center justify-center"
@@ -58,14 +59,16 @@ export default function EditItemModal({ item, spaces, onClose, onSave }: EditIte
 
         {/* Content */}
         <form onSubmit={handleSubmit} className="p-6">
-          {/* Imagen del item */}
-          <div className="mb-6">
-            <img
-              src={item.image_url}
-              alt={item.object_name}
-              className="w-full h-48 object-cover rounded-xl border-2 border-gray-200"
-            />
-          </div>
+          {/* Imagen del item - solo mostrar si existe */}
+          {item.image_url && (
+            <div className="mb-6">
+              <img
+                src={item.image_url}
+                alt={item.object_name}
+                className="w-full h-48 object-cover rounded-xl border-2 border-gray-200"
+              />
+            </div>
+          )}
 
           {/* Campo: Objeto */}
           <div className="mb-6">
@@ -128,7 +131,7 @@ export default function EditItemModal({ item, spaces, onClose, onSave }: EditIte
               type="submit"
               className="flex-1 px-6 py-3 bg-gradient-to-r from-ras-azul to-ras-turquesa text-white rounded-xl hover:shadow-lg transition-all font-semibold"
             >
-              Guardar Cambios
+              {isNew ? 'Agregar' : 'Guardar Cambios'}
             </button>
           </div>
         </form>

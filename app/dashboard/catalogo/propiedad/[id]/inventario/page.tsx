@@ -56,6 +56,7 @@ export default function InventarioPage() {
   // Estados para el modal de edición
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [isAddingNew, setIsAddingNew] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
@@ -159,7 +160,54 @@ export default function InventarioPage() {
 
   const handleEditItem = (item: InventoryItem) => {
     setEditingItem(item);
+    setIsAddingNew(false);
     setShowEditModal(true);
+  };
+
+  const handleAddNewItem = () => {
+    // Crear un item vacío para agregar manualmente
+    const newItem: InventoryItem = {
+      id: '',
+      object_name: '',
+      confidence: 1,
+      space_type: null,
+      labels: null,
+      image_url: '',
+      image_id: '',
+      created_at: new Date().toISOString()
+    };
+    setEditingItem(newItem);
+    setIsAddingNew(true);
+    setShowEditModal(true);
+  };
+
+  const handleSaveNewItem = async (newItem: { object_name: string; labels: string; space_type: string }) => {
+    try {
+      const { error } = await supabase
+        .from('property_inventory')
+        .insert({
+          property_id: propertyId,
+          object_name: newItem.object_name,
+          labels: newItem.labels || null,
+          space_type: newItem.space_type || null,
+          confidence: 1,
+          detectado_por_ia: false,
+          image_url: '',
+          image_id: null,
+          created_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+
+      await loadInventory();
+      setShowEditModal(false);
+      setEditingItem(null);
+      setIsAddingNew(false);
+      toast.success('Objeto agregado correctamente');
+    } catch (error: any) {
+      logger.error('Error agregando objeto:', error);
+      toast.error('Error al agregar el objeto');
+    }
   };
 
   const handleSaveEdit = async (updatedItem: { object_name: string; labels: string; space_type: string }) => {
@@ -284,7 +332,7 @@ export default function InventarioPage() {
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md mx-4">
             <Loading />
             <p className="text-center mt-4 text-gray-700 font-medium">
-              Analizando imágenes con Google Vision AI...
+              Analizando imágenes con IA...
             </p>
             <p className="text-center mt-2 text-sm text-gray-500">
               Esto puede tomar varios minutos
@@ -298,15 +346,27 @@ export default function InventarioPage() {
         {inventory.length > 0 && (
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-6">
             <div className="flex items-center justify-between">
-              {/* Botón Analizar a la IZQUIERDA */}
-              <button
-                onClick={handleAnalyzeAll}
-                disabled={analyzing}
-                className="px-6 py-3 bg-gradient-to-r from-ras-azul to-ras-turquesa text-white rounded-xl hover:shadow-xl transition-all disabled:bg-gray-400 font-semibold"
-              >
-                {analyzing ? 'Analizando...' : '🔍 Analizar Galería'}
-              </button>
-              
+              {/* Botones a la IZQUIERDA */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleAnalyzeAll}
+                  disabled={analyzing}
+                  className="px-5 py-2.5 bg-gradient-to-r from-ras-azul to-ras-turquesa text-white rounded-xl hover:shadow-xl transition-all disabled:bg-gray-400 font-semibold"
+                >
+                  {analyzing ? 'Analizando...' : 'Analizar Galería'}
+                </button>
+                <button
+                  onClick={handleAddNewItem}
+                  className="px-5 py-2.5 bg-white border-2 border-gray-300 text-gray-700 rounded-xl hover:border-ras-turquesa hover:text-ras-turquesa transition-all font-semibold flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Agregar objeto
+                </button>
+              </div>
+
               {/* Total de Items a la DERECHA */}
               <div className="text-right">
                 <h3 className="text-sm font-medium text-gray-600 mb-1">Total de Items</h3>
@@ -461,16 +521,18 @@ export default function InventarioPage() {
         )}
       </main>
 
-      {/* Modal de edición */}
+      {/* Modal de edición / agregar */}
       {showEditModal && editingItem && (
         <EditItemModal
           item={editingItem}
           spaces={spaces}
+          isNew={isAddingNew}
           onClose={() => {
             setShowEditModal(false);
             setEditingItem(null);
+            setIsAddingNew(false);
           }}
-          onSave={handleSaveEdit}
+          onSave={isAddingNew ? handleSaveNewItem : handleSaveEdit}
         />
       )}
     </div>
