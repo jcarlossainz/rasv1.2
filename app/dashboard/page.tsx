@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
 import { useToast } from '@/hooks/useToast'
 import { useConfirm } from '@/components/ui/confirm-modal'
@@ -10,12 +9,10 @@ import { useAuth } from '@/hooks/useAuth'
 import { useLogout } from '@/hooks/useLogout'
 import { useDashboardConfig } from '@/hooks/useDashboardConfig'
 import { useDashboardWidgets } from '@/hooks/useDashboardWidgets'
-import { useDashboardChartData } from '@/hooks/useDashboardChartData'
-import { useTicketsChartData } from '@/hooks/useTicketsChartData'
 import TopBar from '@/components/ui/topbar'
 import Card from '@/components/ui/card'
 import Loading from '@/components/ui/loading'
-import { DashboardWidget, DashboardWidgetPlaceholder, IncomeExpenseChart, TicketsPerDayChart } from '@/components/dashboard'
+import { DashboardWidget } from '@/components/dashboard'
 import {
   DndContext,
   closestCenter,
@@ -30,7 +27,7 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { WidgetId } from '@/types/dashboard'
@@ -76,16 +73,6 @@ export default function DashboardPage() {
   // Dashboard hooks
   const { config, loading: configLoading, updateConfig, reorderWidgets } = useDashboardConfig()
   const { widgets, loading: widgetsLoading, refreshWidgets } = useDashboardWidgets()
-  const { chartData, loading: chartLoading, refreshChartData } = useDashboardChartData(
-    config?.chart_days || 7,
-    config?.show_comparison || true
-  )
-  const { chartData: ticketsChartData, loading: ticketsChartLoading, refreshChartData: refreshTicketsChartData } = useTicketsChartData(
-    config?.chart_days || 7
-  )
-
-  // Local state
-  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Drag & drop sensors
   const sensors = useSensors(
@@ -132,48 +119,6 @@ export default function DashboardPage() {
     } catch (error) {
       logger.error('Error reordenando widgets:', error)
       toast.error('Error al reordenar')
-    }
-  }
-
-  // Handle refresh
-  const handleRefresh = async () => {
-    setIsRefreshing(true)
-    try {
-      await Promise.all([
-        refreshWidgets(),
-        refreshChartData(config?.chart_days || 7, config?.show_comparison || true),
-        refreshTicketsChartData(config?.chart_days || 7),
-      ])
-      toast.success('Dashboard actualizado')
-    } catch (error) {
-      logger.error('Error refrescando dashboard:', error)
-      toast.error('Error al actualizar')
-    } finally {
-      setIsRefreshing(false)
-    }
-  }
-
-  // Handle chart type change
-  const handleChartTypeChange = async (type: 'line' | 'bar' | 'area') => {
-    if (!config) return
-    try {
-      await updateConfig({ chart_type: type })
-      toast.success('Tipo de gráfica actualizado')
-    } catch (error) {
-      logger.error('Error actualizando tipo de gráfica:', error)
-      toast.error('Error al actualizar')
-    }
-  }
-
-  // Handle chart days change
-  const handleChartDaysChange = async (days: 7 | 15 | 30 | 60 | 90) => {
-    if (!config) return
-    try {
-      await updateConfig({ chart_days: days })
-      toast.success('Periodo actualizado')
-    } catch (error) {
-      logger.error('Error actualizando periodo:', error)
-      toast.error('Error al actualizar')
     }
   }
 
@@ -288,53 +233,29 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* DASHBOARD */}
-        <div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-              {/* IZQUIERDA: Gráfica - Ocupa 50% */}
-              <div>
-                {config?.chart_mode === 'tickets_per_day' ? (
-                  <TicketsPerDayChart
-                    data={ticketsChartData}
-                    loading={ticketsChartLoading}
+        {/* WIDGETS - 6 widgets en grid 3x2 */}
+        <div className="grid grid-cols-3 gap-4">
+          {config && config.visible_widgets && (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={config.visible_widgets}
+                strategy={rectSortingStrategy}
+              >
+                {config.visible_widgets.map((widgetId) => (
+                  <SortableWidget
+                    key={widgetId}
+                    widgetId={widgetId}
+                    data={widgets[widgetId]}
+                    compact={true}
                   />
-                ) : (
-                  <IncomeExpenseChart
-                    data={chartData}
-                    chartType={config?.chart_type || 'line'}
-                    showComparison={config?.show_comparison || false}
-                    loading={chartLoading}
-                  />
-                )}
-              </div>
-
-              {/* DERECHA: 4 Widgets en grid 2x2 - Ocupa 50% */}
-              <div className="grid grid-cols-2 gap-3">
-                {config && config.visible_widgets && (
-                  <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEnd}
-                  >
-                    <SortableContext
-                      items={config.visible_widgets}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      {config.visible_widgets.map((widgetId) => (
-                        <SortableWidget
-                          key={widgetId}
-                          widgetId={widgetId}
-                          data={widgets[widgetId]}
-                          compact={true}
-                        />
-                      ))}
-                    </SortableContext>
-                  </DndContext>
-                )}
-              </div>
-
-          </div>
+                ))}
+              </SortableContext>
+            </DndContext>
+          )}
         </div>
       </main>
     </div>

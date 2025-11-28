@@ -29,7 +29,12 @@ export type WidgetId =
   | 'tickets_next_7_days'
   | 'tickets_completed'
   | 'yearly_income'
-  | 'yearly_expenses';
+  | 'yearly_expenses'
+  | 'contacts_count'
+  | 'events_this_week'
+  | 'properties_available'
+  | 'avg_ticket_value'
+  | 'last_update';
 
 /**
  * Metadata de un widget individual
@@ -88,8 +93,8 @@ export interface DashboardConfig {
  * Configuración por defecto del dashboard
  */
 const DEFAULT_DASHBOARD_CONFIG: Omit<DashboardConfig, 'id' | 'user_id' | 'created_at' | 'updated_at'> = {
-  visible_widgets: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income'],
-  widget_order: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income'],
+  visible_widgets: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income', 'monthly_expenses', 'tickets_today'],
+  widget_order: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income', 'monthly_expenses', 'tickets_today'],
   chart_type: 'line',
   chart_mode: 'income_expense',
   chart_days: 7,
@@ -237,6 +242,41 @@ const AVAILABLE_WIDGETS: Record<WidgetId, WidgetMetadata> = {
     icon: 'TrendingDown',
     category: 'financial',
   },
+  contacts_count: {
+    id: 'contacts_count',
+    title: 'Total Contactos',
+    description: 'Número de contactos en el directorio',
+    icon: 'Users',
+    category: 'operations',
+  },
+  events_this_week: {
+    id: 'events_this_week',
+    title: 'Eventos esta semana',
+    description: 'Eventos programados para esta semana',
+    icon: 'CalendarCheck',
+    category: 'operations',
+  },
+  properties_available: {
+    id: 'properties_available',
+    title: 'Propiedades disponibles',
+    description: 'Propiedades sin ocupar actualmente',
+    icon: 'KeyRound',
+    category: 'properties',
+  },
+  avg_ticket_value: {
+    id: 'avg_ticket_value',
+    title: 'Ticket promedio',
+    description: 'Valor promedio de tickets pagados',
+    icon: 'Receipt',
+    category: 'financial',
+  },
+  last_update: {
+    id: 'last_update',
+    title: 'Última actualización',
+    description: 'Fecha de la última actividad registrada',
+    icon: 'Clock',
+    category: 'operations',
+  },
 };
 
 // ================================================================
@@ -335,10 +375,10 @@ function isValidChartDays(days: number): days is 7 | 15 | 30 | 60 | 90 {
 }
 
 /**
- * Valida que el array de widgets tenga máximo 4 elementos
+ * Valida que el array de widgets tenga máximo 6 elementos
  */
 function validateWidgetCount(widgets: WidgetId[]): boolean {
-  return widgets.length <= 4 && widgets.length >= 1;
+  return widgets.length <= 6 && widgets.length >= 1;
 }
 
 /**

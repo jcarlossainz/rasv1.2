@@ -72,8 +72,8 @@ export function useDashboardConfig(): UseDashboardConfigReturn {
       // Si no existe, crear configuración por defecto
       const defaultConfig = {
         user_id: user.id,
-        visible_widgets: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income'] as WidgetId[],
-        widget_order: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income'] as WidgetId[],
+        visible_widgets: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income', 'monthly_expenses', 'tickets_today'] as WidgetId[],
+        widget_order: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income', 'monthly_expenses', 'tickets_today'] as WidgetId[],
         chart_type: 'line' as ChartType,
         chart_days: 7 as const,
         show_comparison: true,
@@ -163,9 +163,9 @@ export function useDashboardConfig(): UseDashboardConfigReturn {
         }
         newVisible = currentVisible.filter(id => id !== widgetId);
       } else {
-        // Activar widget (máximo 4 widgets)
-        if (currentVisible.length >= 4) {
-          throw new Error('Máximo 4 widgets visibles');
+        // Activar widget (máximo 6 widgets)
+        if (currentVisible.length >= 6) {
+          throw new Error('Máximo 6 widgets visibles');
         }
         newVisible = [...currentVisible, widgetId];
       }
@@ -218,8 +218,8 @@ export function useDashboardConfig(): UseDashboardConfigReturn {
   const resetToDefault = useCallback(async () => {
     try {
       const defaultConfig = {
-        visible_widgets: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income'] as WidgetId[],
-        widget_order: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income'] as WidgetId[],
+        visible_widgets: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income', 'monthly_expenses', 'tickets_today'] as WidgetId[],
+        widget_order: ['total_balance', 'total_properties', 'pending_tickets', 'monthly_income', 'monthly_expenses', 'tickets_today'] as WidgetId[],
         chart_type: 'line' as ChartType,
         chart_days: 15 as const,
         show_comparison: true,
