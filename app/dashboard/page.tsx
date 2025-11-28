@@ -233,8 +233,8 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* WIDGETS - 4 widgets en grid 2x2 proporcional */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* WIDGETS - 6 widgets en grid 3x2 */}
+        <div className="grid grid-cols-3 gap-4">
           {config && config.visible_widgets && (
             <DndContext
               sensors={sensors}
