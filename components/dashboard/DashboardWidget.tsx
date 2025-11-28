@@ -97,16 +97,14 @@ export function DashboardWidget({
       <div
         onClick={onClick}
         className={`
-          bg-white rounded-lg px-3 py-2 border hover:shadow transition-all cursor-pointer inline-block
+          bg-white rounded-xl p-4 border-2 hover:shadow-md transition-all cursor-pointer
           ${isDragging ? 'opacity-50 scale-95' : ''}
-          ${iconColor.includes('green') ? 'border-green-500/30' : ''}
-          ${iconColor.includes('blue') ? 'border-blue-500/30' : ''}
-          ${iconColor.includes('purple') ? 'border-purple-500/30' : ''}
+          border-gray-200
           ${className}
         `}
       >
-        <div className="text-[10px] font-medium text-gray-500 leading-tight">{metadata.title}</div>
-        <div className="text-lg font-bold text-gray-900 leading-tight">
+        <div className="text-xs font-medium text-gray-500 mb-1">{metadata.title}</div>
+        <div className="text-xl font-bold text-gray-900">
           {data ? formatValue(data.value) : '---'}
         </div>
       </div>
