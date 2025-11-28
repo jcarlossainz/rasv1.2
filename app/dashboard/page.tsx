@@ -290,7 +290,7 @@ export default function DashboardPage() {
 
         {/* DASHBOARD - Ocupa 3 columnas como antes */}
         <div className="lg:col-span-3">
-          <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-200 p-6">
+          <div className="bg-white/80 rounded-2xl shadow-xl border-2 border-gray-200 p-6">
             {/* Grid: Gráfica (izquierda 50%) + 4 Widgets (derecha 50%, grid 2x2) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
