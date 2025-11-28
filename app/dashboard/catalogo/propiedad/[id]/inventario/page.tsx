@@ -181,7 +181,7 @@ export default function InventarioPage() {
     setShowEditModal(true);
   };
 
-  const handleSaveNewItem = async (newItem: { object_name: string; labels: string; space_type: string }) => {
+  const handleSaveNewItem = async (newItem: { object_name: string; labels: string; space_type: string; image_url?: string }) => {
     try {
       const { error } = await supabase
         .from('property_inventory')
@@ -192,7 +192,7 @@ export default function InventarioPage() {
           space_type: newItem.space_type || null,
           confidence: 1,
           detectado_por_ia: false,
-          image_url: '',
+          image_url: newItem.image_url || '',
           image_id: null,
           created_at: new Date().toISOString()
         });
@@ -210,17 +210,24 @@ export default function InventarioPage() {
     }
   };
 
-  const handleSaveEdit = async (updatedItem: { object_name: string; labels: string; space_type: string }) => {
+  const handleSaveEdit = async (updatedItem: { object_name: string; labels: string; space_type: string; image_url?: string }) => {
     if (!editingItem) return;
 
     try {
+      const updateData: any = {
+        object_name: updatedItem.object_name,
+        labels: updatedItem.labels || null,
+        space_type: updatedItem.space_type || null
+      };
+
+      // Solo actualizar image_url si se proporcionó una nueva
+      if (updatedItem.image_url) {
+        updateData.image_url = updatedItem.image_url;
+      }
+
       const { error } = await supabase
         .from('property_inventory')
-        .update({
-          object_name: updatedItem.object_name,
-          labels: updatedItem.labels || null,
-          space_type: updatedItem.space_type || null
-        })
+        .update(updateData)
         .eq('id', editingItem.id);
 
       if (error) throw error;
@@ -526,6 +533,7 @@ export default function InventarioPage() {
         <EditItemModal
           item={editingItem}
           spaces={spaces}
+          propertyId={propertyId}
           isNew={isAddingNew}
           onClose={() => {
             setShowEditModal(false);

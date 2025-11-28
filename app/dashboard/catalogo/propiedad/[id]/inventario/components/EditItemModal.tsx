@@ -1,7 +1,8 @@
 // 📁 src/app/dashboard/propiedad/[id]/inventario/components/EditItemModal.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
+import { supabase } from '@/lib/supabase/client';
 
 interface InventoryItem {
   id: string;
@@ -19,22 +20,84 @@ interface SpaceData {
 interface EditItemModalProps {
   item: InventoryItem;
   spaces: SpaceData[];
+  propertyId: string;
   isNew?: boolean;
   onClose: () => void;
-  onSave: (data: { object_name: string; labels: string; space_type: string }) => void;
+  onSave: (data: { object_name: string; labels: string; space_type: string; image_url?: string }) => void;
 }
 
-export default function EditItemModal({ item, spaces, isNew = false, onClose, onSave }: EditItemModalProps) {
+export default function EditItemModal({ item, spaces, propertyId, isNew = false, onClose, onSave }: EditItemModalProps) {
   const [objectName, setObjectName] = useState(item.object_name);
   const [labels, setLabels] = useState(item.labels || '');
   const [spaceType, setSpaceType] = useState(item.space_type || '');
+  const [imageUrl, setImageUrl] = useState(item.image_url || '');
+  const [imagePreview, setImagePreview] = useState<string | null>(item.image_url || null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de archivo
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona un archivo de imagen válido');
+      return;
+    }
+
+    // Validar tamaño (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen no debe superar los 5MB');
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      // Mostrar preview local
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Subir a Supabase Storage
+      const timestamp = Date.now();
+      const ext = file.name.split('.').pop() || 'jpg';
+      const filePath = `propiedades/${propertyId}/inventory/${timestamp}_${crypto.randomUUID()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('property-images')
+        .upload(filePath, file, {
+          contentType: file.type,
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Obtener URL pública
+      const { data: urlData } = supabase.storage
+        .from('property-images')
+        .getPublicUrl(filePath);
+
+      setImageUrl(urlData.publicUrl);
+    } catch (error) {
+      console.error('Error subiendo imagen:', error);
+      alert('Error al subir la imagen. Intenta nuevamente.');
+      setImagePreview(item.image_url || null);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
       object_name: objectName.trim(),
       labels: labels.trim(),
-      space_type: spaceType
+      space_type: spaceType,
+      image_url: imageUrl || undefined
     });
   };
 
@@ -59,16 +122,62 @@ export default function EditItemModal({ item, spaces, isNew = false, onClose, on
 
         {/* Content */}
         <form onSubmit={handleSubmit} className="p-6">
-          {/* Imagen del item - solo mostrar si existe */}
-          {item.image_url && (
-            <div className="mb-6">
-              <img
-                src={item.image_url}
-                alt={item.object_name}
-                className="w-full h-48 object-cover rounded-xl border-2 border-gray-200"
-              />
-            </div>
-          )}
+          {/* Sección de imagen */}
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Imagen {isNew ? '(opcional)' : ''}
+            </label>
+
+            {imagePreview ? (
+              <div className="relative">
+                <img
+                  src={imagePreview}
+                  alt={objectName || 'Preview'}
+                  className="w-full h-48 object-cover rounded-xl border-2 border-gray-200"
+                />
+                {isUploading && (
+                  <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
+                    <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="absolute bottom-2 right-2 px-3 py-1.5 bg-white/90 hover:bg-white text-gray-700 rounded-lg text-sm font-medium shadow-md transition-all"
+                >
+                  Cambiar imagen
+                </button>
+              </div>
+            ) : (
+              <div
+                onClick={() => !isUploading && fileInputRef.current?.click()}
+                className="w-full h-48 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-ras-turquesa hover:bg-gray-50 transition-all"
+              >
+                {isUploading ? (
+                  <div className="w-8 h-8 border-4 border-ras-turquesa border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <>
+                    <svg className="w-12 h-12 text-gray-400 mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <path d="M21 15l-5-5L5 21"/>
+                    </svg>
+                    <p className="text-sm text-gray-500">Haz clic para subir una imagen</p>
+                    <p className="text-xs text-gray-400 mt-1">JPG, PNG (máx. 5MB)</p>
+                  </>
+                )}
+              </div>
+            )}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+          </div>
 
           {/* Campo: Objeto */}
           <div className="mb-6">
