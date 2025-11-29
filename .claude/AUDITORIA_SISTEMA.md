@@ -136,6 +136,86 @@ Proporcionar una **solución integral y automatizada** para:
 
 ---
 
+## PRÓXIMA ETAPA: RAS v1.3
+
+### 1. Integración con WhatsApp Business
+
+**Objetivo:** Comunicación automatizada y bidireccional con inquilinos, proveedores y propietarios.
+
+| Funcionalidad | Descripción |
+|---------------|-------------|
+| **Solicitud de pagos** | Envío automático de recordatorios de pago con enlace de pago |
+| **Seguimiento de tickets** | Notificaciones de estado de tickets y confirmación de pagos |
+| **Atención de dudas** | Respuestas automáticas a consultas frecuentes |
+| **Confirmaciones** | Recibos de pago y confirmaciones de reservas |
+| **Alertas** | Notificaciones de vencimientos, contratos por renovar, etc. |
+
+**Tecnología sugerida:** WhatsApp Business API / Twilio / Meta Cloud API
+
+---
+
+### 2. Asistente de Inteligencia Artificial
+
+**Objetivo:** Automatizar tareas repetitivas y asistir al usuario en la gestión diaria.
+
+| Funcionalidad | Descripción |
+|---------------|-------------|
+| **Carga de propiedades** | Subir fotos y el asistente genera automáticamente la propiedad completa (espacios, amenidades, descripción) |
+| **Respuesta de dudas** | Chatbot integrado que responde preguntas sobre propiedades, pagos, contratos |
+| **Creación de tickets** | Crear tickets de pago mediante comandos de voz o texto natural |
+| **Generación de reportes** | Solicitar reportes financieros en lenguaje natural |
+| **Sugerencias proactivas** | Alertas inteligentes sobre acciones recomendadas |
+
+**Tecnología sugerida:** OpenAI GPT-4 / Claude API / Whisper (voz)
+
+---
+
+### 3. Integración Avanzada con OTAs
+
+**Objetivo:** Sincronización bidireccional con plataformas de alquiler vacacional.
+
+| Plataforma | Funcionalidades |
+|------------|-----------------|
+| **Airbnb** | Sincronización de calendario, precios, disponibilidad y reservas |
+| **Booking.com** | Importar/exportar reservas, actualización de tarifas |
+| **VRBO/HomeAway** | Calendario unificado, gestión de bloqueos |
+| **Expedia** | Conexión de inventario y tarifas dinámicas |
+
+**Capacidades:**
+- Channel Manager integrado
+- Actualización de precios en tiempo real
+- Prevención de overbooking
+- Mensajería unificada con huéspedes
+- Sincronización de reviews
+
+**Tecnología sugerida:** APIs directas de OTAs / Hostaway / Guesty API
+
+---
+
+### Diagrama de Evolución
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        RAS v1.3                                 │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐        │
+│   │  WhatsApp   │    │     IA      │    │    OTAs     │        │
+│   │  Business   │    │  Assistant  │    │  Channels   │        │
+│   └──────┬──────┘    └──────┬──────┘    └──────┬──────┘        │
+│          │                  │                  │                │
+│          └──────────────────┼──────────────────┘                │
+│                             │                                   │
+│                    ┌────────▼────────┐                          │
+│                    │   RAS v1.2      │                          │
+│                    │   (Core ERP)    │                          │
+│                    └─────────────────┘                          │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## RESUMEN EJECUTIVO
 
 **RAS v1.2 (Ohana)** es un **ERP inmobiliario moderno** que transforma la administración de propiedades de un proceso manual y disperso a uno **automatizado y centralizado**.
