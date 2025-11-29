@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     })
 
     // Devolver el stream
-    return result.toDataStreamResponse()
+    return result.toTextStreamResponse()
 
   } catch (error) {
     console.error('[Assistant API Error]', error)
