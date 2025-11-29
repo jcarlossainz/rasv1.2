@@ -56,11 +56,20 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error('[Assistant API Error]', error)
 
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+    const errorStack = error instanceof Error ? error.stack : ''
+
+    console.error('[Assistant API Error Details]', {
+      message: errorMessage,
+      stack: errorStack,
+      name: error instanceof Error ? error.name : 'Unknown',
+    })
+
     // Manejar errores específicos de Anthropic
     if (error instanceof Error) {
-      if (error.message.includes('API key') || error.message.includes('api_key')) {
+      if (error.message.includes('API key') || error.message.includes('api_key') || error.message.includes('ANTHROPIC_API_KEY')) {
         return new Response(
-          JSON.stringify({ error: 'Error de configuración del asistente. Verifica la API key de Anthropic.' }),
+          JSON.stringify({ error: 'Error de configuración: API key de Anthropic no configurada o inválida.' }),
           { status: 500, headers: { 'Content-Type': 'application/json' } }
         )
       }
@@ -74,7 +83,7 @@ export async function POST(req: Request) {
     }
 
     return new Response(
-      JSON.stringify({ error: 'Error interno del asistente. Intenta de nuevo.' }),
+      JSON.stringify({ error: `Error del asistente: ${errorMessage}` }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }
