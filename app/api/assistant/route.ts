@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     const tools = createAssistantTools(userId)
 
     // Generar respuesta con streaming usando Claude
-    const result = streamText({
+    const result = await streamText({
       model: anthropic(ASSISTANT_CONFIG.model),
       system: ASSISTANT_SYSTEM_PROMPT,
       messages: convertToCoreMessages(messages),
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     })
 
     // Devolver el stream
-    return result.toTextStreamResponse()
+    return result.toDataStreamResponse()
 
   } catch (error) {
     console.error('[Assistant API Error]', error)
