@@ -269,6 +269,20 @@ export default function TopBar({
           )}
           */}
 
+          {/* Botón Admin - Solo visible para el propietario del sistema */}
+          {showUserInfo && user?.email === 'juancarlossainzn@gmail.com' && (
+            <button
+              onClick={() => router.push('/ohana-admin')}
+              className="w-11 h-11 rounded-full border-2 border-amber-400/50 bg-amber-500/20 flex items-center justify-center text-amber-300 hover:bg-amber-500/30 transition-all hover:scale-110"
+              aria-label="Panel de Administración"
+              title="Panel de Administración"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
+            </button>
+          )}
+
           {/* Botón Configuración */}
           {showUserInfo && (
             <button
