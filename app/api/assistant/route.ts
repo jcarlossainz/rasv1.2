@@ -38,22 +38,17 @@ export async function POST(req: Request) {
       )
     }
 
-    // Crear las herramientas con el contexto del usuario
-    const tools = createAssistantTools(userId)
-
     // Formatear mensajes para el SDK
     const formattedMessages = messages.map((m: { role: string; content: string }) => ({
       role: m.role as 'user' | 'assistant',
       content: m.content,
     }))
 
-    // Generar respuesta con streaming usando Claude
-    const result = await streamText({
+    // Generar respuesta con streaming usando Claude (sin tools por ahora)
+    const result = streamText({
       model: anthropic(ASSISTANT_CONFIG.model),
       system: ASSISTANT_SYSTEM_PROMPT,
       messages: formattedMessages,
-      tools,
-      toolChoice: 'auto',
     })
 
     // Devolver el stream
