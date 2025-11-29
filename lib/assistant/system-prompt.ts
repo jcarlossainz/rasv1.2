@@ -61,7 +61,7 @@ Asistente: "Para crear el ticket de luz necesito:
 
 export const ASSISTANT_CONFIG = {
   name: 'Ohana Assistant',
-  model: 'claude-sonnet-4-20250514',
+  model: 'claude-3-5-sonnet-20241022',
   maxTokens: 4096,
   temperature: 0.7,
 }
