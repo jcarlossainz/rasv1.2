@@ -4,7 +4,7 @@
  */
 
 import { anthropic } from '@ai-sdk/anthropic'
-import { streamText, convertToCoreMessages } from 'ai'
+import { streamText } from 'ai'
 import { createClient } from '@supabase/supabase-js'
 import { ASSISTANT_SYSTEM_PROMPT, ASSISTANT_CONFIG } from '@/lib/assistant/system-prompt'
 import { createAssistantTools } from '@/lib/assistant/tools'
@@ -41,11 +41,17 @@ export async function POST(req: Request) {
     // Crear las herramientas con el contexto del usuario
     const tools = createAssistantTools(userId)
 
+    // Formatear mensajes para el SDK
+    const formattedMessages = messages.map((m: { role: string; content: string }) => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    }))
+
     // Generar respuesta con streaming usando Claude
     const result = await streamText({
       model: anthropic(ASSISTANT_CONFIG.model),
       system: ASSISTANT_SYSTEM_PROMPT,
-      messages: convertToCoreMessages(messages),
+      messages: formattedMessages,
       tools,
       toolChoice: 'auto',
     })
