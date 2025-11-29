@@ -5,30 +5,23 @@
 
 import { anthropic } from '@ai-sdk/anthropic'
 import { streamText, convertToCoreMessages } from 'ai'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@supabase/supabase-js'
 import { ASSISTANT_SYSTEM_PROMPT, ASSISTANT_CONFIG } from '@/lib/assistant/system-prompt'
 import { createAssistantTools } from '@/lib/assistant/tools'
+
+// Cliente Supabase con permisos de servicio (igual que vision/analyze)
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 // Permitir streaming de hasta 30 segundos
 export const maxDuration = 30
 
 export async function POST(req: Request) {
   try {
-    // Obtener el usuario autenticado usando auth-helpers (compatible con el middleware)
-    const supabase = createRouteHandlerClient({ cookies })
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'No autorizado. Inicia sesión para usar el asistente.' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Obtener mensajes del request
-    const { messages } = await req.json()
+    // Obtener mensajes y userId del request
+    const { messages, userId } = await req.json()
 
     if (!messages || !Array.isArray(messages)) {
       return new Response(
@@ -37,8 +30,16 @@ export async function POST(req: Request) {
       )
     }
 
+    // Verificar que el userId existe (la autenticación se maneja en el cliente/middleware)
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: 'Usuario no identificado' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Crear las herramientas con el contexto del usuario
-    const tools = createAssistantTools(user.id)
+    const tools = createAssistantTools(userId)
 
     // Generar respuesta con streaming usando Claude
     const result = streamText({

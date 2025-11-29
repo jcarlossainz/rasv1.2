@@ -48,14 +48,15 @@ export function AssistantProvider({ children }: AssistantProviderProps) {
     <>
       {children}
 
-      {/* Chat flotante del asistente */}
+      {/* Chat flotante del asistente - solo si hay usuario autenticado */}
       <AnimatePresence>
-        {isOpen && (
+        {isOpen && user && (
           <AssistantChat
             mode="floating"
             onClose={() => setIsOpen(false)}
             avatarSrc={avatar?.src}
             avatarLabel={avatar?.label}
+            userId={user.id}
           />
         )}
       </AnimatePresence>

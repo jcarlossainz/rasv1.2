@@ -20,9 +20,10 @@ interface AssistantChatProps {
   onClose?: () => void
   avatarSrc?: string | null
   avatarLabel?: string
+  userId?: string
 }
 
-export function AssistantChat({ mode = 'floating', onClose, avatarSrc, avatarLabel }: AssistantChatProps) {
+export function AssistantChat({ mode = 'floating', onClose, avatarSrc, avatarLabel, userId }: AssistantChatProps) {
   const [isMinimized, setIsMinimized] = useState(false)
   const [inputValue, setInputValue] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
@@ -59,8 +60,9 @@ export function AssistantChat({ mode = 'floating', onClose, avatarSrc, avatarLab
       const response = await fetch('/api/assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // Importante: enviar cookies de autenticación
+        credentials: 'include',
         body: JSON.stringify({
+          userId, // Enviar el ID del usuario autenticado
           messages: [...messages, userMessage].map(m => ({
             role: m.role,
             content: m.content,
