@@ -8,7 +8,7 @@
 
 import { z } from 'zod'
 import { tool } from 'ai'
-import { createServerClient } from '@supabase/ssr'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
 // ============================================================================
@@ -16,20 +16,9 @@ import { cookies } from 'next/headers'
 // ============================================================================
 
 export function createAssistantTools(userId: string) {
-  // Crear cliente de Supabase para servidor
-  const getSupabase = async () => {
-    const cookieStore = await cookies()
-    return createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-        },
-      }
-    )
+  // Crear cliente de Supabase para servidor (compatible con auth-helpers)
+  const getSupabase = () => {
+    return createRouteHandlerClient({ cookies })
   }
 
   // ============================================================================
@@ -44,7 +33,7 @@ export function createAssistantTools(userId: string) {
       estado: z.string().optional().describe('Estado de la propiedad (Renta largo plazo, Venta, etc.)'),
     }),
     execute: async ({ busqueda, tipo, estado }) => {
-      const supabase = await getSupabase()
+      const supabase = getSupabase()
 
       let query = supabase
         .from('propiedades')
@@ -94,7 +83,7 @@ export function createAssistantTools(userId: string) {
       nombre: z.string().optional().describe('Nombre de la propiedad para buscar'),
     }),
     execute: async ({ propiedadId, nombre }) => {
-      const supabase = await getSupabase()
+      const supabase = getSupabase()
 
       let query = supabase
         .from('propiedades')
@@ -152,7 +141,7 @@ export function createAssistantTools(userId: string) {
         }
       }
 
-      const supabase = await getSupabase()
+      const supabase = getSupabase()
 
       const nuevaPropiedad = {
         owner_id: userId,
@@ -202,7 +191,7 @@ export function createAssistantTools(userId: string) {
       urgencia: z.enum(['vencido', 'hoy', 'proximo', 'futuro', 'todos']).optional().describe('Urgencia del ticket'),
     }),
     execute: async ({ propiedadId, estado, urgencia }) => {
-      const supabase = await getSupabase()
+      const supabase = getSupabase()
 
       // Primero obtener las propiedades del usuario
       const { data: propiedades } = await supabase
@@ -274,7 +263,7 @@ export function createAssistantTools(userId: string) {
       confirmado: z.boolean().describe('Si el usuario ha confirmado la creación'),
     }),
     execute: async ({ propiedadId, titulo, monto, fecha, descripcion, confirmado }) => {
-      const supabase = await getSupabase()
+      const supabase = getSupabase()
 
       // Verificar que la propiedad pertenece al usuario
       const { data: propiedad } = await supabase
@@ -337,7 +326,7 @@ export function createAssistantTools(userId: string) {
     description: 'Obtiene el balance general del usuario: total de cuentas, ingresos y egresos.',
     parameters: z.object({}),
     execute: async () => {
-      const supabase = await getSupabase()
+      const supabase = getSupabase()
 
       // Obtener cuentas
       const { data: cuentas, error: errorCuentas } = await supabase
@@ -381,7 +370,7 @@ export function createAssistantTools(userId: string) {
       anio: z.number().optional().describe('Año, si no se especifica usa el año actual'),
     }),
     execute: async ({ mes, anio }) => {
-      const supabase = await getSupabase()
+      const supabase = getSupabase()
 
       const ahora = new Date()
       const mesActual = mes || ahora.getMonth() + 1

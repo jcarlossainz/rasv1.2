@@ -247,18 +247,26 @@ export default function TopBar({
           
           <div className="flex-1"></div>
           
-          {/* Botón Asistente IA */}
+          {/* Botón Asistente IA - Avatar del usuario */}
           {showUserInfo && (
             <button
               onClick={() => window.dispatchEvent(new CustomEvent('openAssistant'))}
-              className="w-11 h-11 rounded-full border-2 border-white/30 bg-gradient-to-br from-violet-500/30 to-purple-600/30 flex items-center justify-center overflow-hidden cursor-pointer hover:scale-110 transition-all hover:from-violet-500/50 hover:to-purple-600/50 group"
+              className="w-11 h-11 rounded-full border-2 border-white/30 bg-white/10 flex items-center justify-center overflow-hidden cursor-pointer hover:scale-110 transition-all hover:bg-white/20"
               aria-label="Abrir Asistente IA"
               title="Asistente IA"
             >
-              {/* Icono de Sparkles/IA */}
-              <svg className="w-5 h-5 text-white group-hover:text-violet-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3Z" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              {avatar ? (
+                <img
+                  src={avatar.src}
+                  alt={avatar.label}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <svg className="w-6 h-6 text-white/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+              )}
             </button>
           )}
 

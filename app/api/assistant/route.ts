@@ -5,7 +5,7 @@
 
 import { anthropic } from '@ai-sdk/anthropic'
 import { streamText, convertToCoreMessages } from 'ai'
-import { createServerClient } from '@supabase/ssr'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { ASSISTANT_SYSTEM_PROMPT, ASSISTANT_CONFIG } from '@/lib/assistant/system-prompt'
 import { createAssistantTools } from '@/lib/assistant/tools'
@@ -15,19 +15,8 @@ export const maxDuration = 30
 
 export async function POST(req: Request) {
   try {
-    // Obtener el usuario autenticado
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-        },
-      }
-    )
+    // Obtener el usuario autenticado usando auth-helpers (compatible con el middleware)
+    const supabase = createRouteHandlerClient({ cookies })
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
