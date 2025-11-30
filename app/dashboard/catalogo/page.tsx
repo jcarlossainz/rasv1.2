@@ -27,6 +27,8 @@ interface Propiedad {
   foto_portada?: string | null
   colaboradores?: { user_id: string; nombre: string; email: string }[]
   rol?: 'propietario' | 'supervisor' | null // Rol del usuario en propiedades compartidas
+  tipo_propiedad?: string | null
+  estados?: string[] | null
 }
 
 export default function CatalogoPage() {
@@ -42,6 +44,9 @@ export default function CatalogoPage() {
 
   const [busqueda, setBusqueda] = useState('')
   const [filtroPropiedad, setFiltroPropiedad] = useState<'todos' | 'propios' | 'compartidos'>('todos')
+  const [filtroTipo, setFiltroTipo] = useState<string>('')
+  const [filtroEstado, setFiltroEstado] = useState<string>('')
+  const [filtrosDelAsistente, setFiltrosDelAsistente] = useState(false)
 
   // Paginación
   const [paginaActual, setPaginaActual] = useState(1)
@@ -93,7 +98,9 @@ export default function CatalogoPage() {
         created_at: prop.created_at,
         es_propio: true,
         foto_portada: prop.property_images?.find((img: any) => img.is_cover)?.url_thumbnail || null,
-        colaboradores: prop.propiedades_colaboradores || []
+        colaboradores: prop.propiedades_colaboradores || [],
+        tipo_propiedad: prop.tipo_propiedad || null,
+        estados: prop.estados || null
       }))
 
       // ✅ QUERY 2: IDs de propiedades compartidas CON ROL
@@ -132,7 +139,9 @@ export default function CatalogoPage() {
           es_propio: false,
           foto_portada: prop.property_images?.find((img: any) => img.is_cover)?.url_thumbnail || null,
           colaboradores: [],
-          rol: rolesMap.get(prop.id) || null
+          rol: rolesMap.get(prop.id) || null,
+          tipo_propiedad: prop.tipo_propiedad || null,
+          estados: prop.estados || null
         }))
       }
 
@@ -245,9 +254,13 @@ export default function CatalogoPage() {
         (filtroPropiedad === 'propios' && prop.es_propio) ||
         (filtroPropiedad === 'compartidos' && !prop.es_propio)
 
-      return cumpleBusqueda && cumpleFiltro
+      const cumpleTipo = !filtroTipo || prop.tipo_propiedad === filtroTipo
+
+      const cumpleEstado = !filtroEstado || (prop.estados && prop.estados.includes(filtroEstado))
+
+      return cumpleBusqueda && cumpleFiltro && cumpleTipo && cumpleEstado
     })
-  }, [propiedades, busqueda, filtroPropiedad])
+  }, [propiedades, busqueda, filtroPropiedad, filtroTipo, filtroEstado])
 
   // ⚡ PAGINACIÓN: Calcular propiedades a mostrar
   const propiedadesPaginadas = useMemo(() => {
@@ -261,7 +274,59 @@ export default function CatalogoPage() {
   // Resetear página cuando cambian los filtros
   useEffect(() => {
     setPaginaActual(1)
-  }, [busqueda, filtroPropiedad])
+  }, [busqueda, filtroPropiedad, filtroTipo, filtroEstado])
+
+  // Escuchar eventos de filtrado del asistente
+  useEffect(() => {
+    const handleAssistantFilter = (e: CustomEvent<{
+      busqueda?: string
+      tipo?: string
+      estado?: string
+      propiedad?: 'todos' | 'propios' | 'compartidos'
+    }>) => {
+      const filtros = e.detail
+
+      // Aplicar filtros del asistente
+      if (filtros.busqueda !== undefined) {
+        setBusqueda(filtros.busqueda)
+      }
+      if (filtros.tipo !== undefined) {
+        setFiltroTipo(filtros.tipo)
+      }
+      if (filtros.estado !== undefined) {
+        setFiltroEstado(filtros.estado)
+      }
+      if (filtros.propiedad !== undefined) {
+        setFiltroPropiedad(filtros.propiedad)
+      }
+
+      // Marcar que los filtros fueron aplicados por el asistente
+      setFiltrosDelAsistente(Object.keys(filtros).length > 0)
+
+      // Si no hay filtros, limpiar todo
+      if (Object.keys(filtros).length === 0) {
+        setBusqueda('')
+        setFiltroTipo('')
+        setFiltroEstado('')
+        setFiltroPropiedad('todos')
+      }
+    }
+
+    window.addEventListener('assistant-filter-catalogo', handleAssistantFilter as EventListener)
+
+    return () => {
+      window.removeEventListener('assistant-filter-catalogo', handleAssistantFilter as EventListener)
+    }
+  }, [])
+
+  // Función para limpiar filtros del asistente
+  const limpiarFiltrosAsistente = useCallback(() => {
+    setBusqueda('')
+    setFiltroTipo('')
+    setFiltroEstado('')
+    setFiltroPropiedad('todos')
+    setFiltrosDelAsistente(false)
+  }, [])
 
   if (authLoading) {
     return <Loading message="Cargando propiedades..." />
@@ -292,15 +357,35 @@ export default function CatalogoPage() {
       />
 
       <main className="max-w-5xl mx-auto px-4 py-8">
+        {/* Indicador de filtros del asistente */}
+        {filtrosDelAsistente && (
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-3 mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-blue-700">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"/>
+                <path d="M12 16v-4"/>
+                <path d="M12 8h.01"/>
+              </svg>
+              <span className="text-sm font-medium">Filtros aplicados por el asistente IA</span>
+            </div>
+            <button
+              onClick={limpiarFiltrosAsistente}
+              className="text-blue-600 hover:text-blue-800 text-sm font-medium underline"
+            >
+              Limpiar filtros
+            </button>
+          </div>
+        )}
+
         <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-300 p-4 mb-6">
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex-1 min-w-[200px]">
               <div className="relative">
                 <input
                   type="text"
                   placeholder="Buscar por nombre..."
                   value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
+                  onChange={(e) => { setBusqueda(e.target.value); setFiltrosDelAsistente(false); }}
                   className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 rounded-lg focus:border-ras-primary focus:outline-none transition-colors"
                 />
                 <svg className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -310,10 +395,51 @@ export default function CatalogoPage() {
               </div>
             </div>
 
+            {/* Filtro por tipo */}
+            <div className="relative">
+              <select
+                value={filtroTipo}
+                onChange={(e) => { setFiltroTipo(e.target.value); setFiltrosDelAsistente(false); }}
+                className="appearance-none bg-white border-2 border-gray-200 rounded-lg px-4 py-2 pr-10 font-medium text-gray-700 hover:border-ras-primary focus:border-ras-primary focus:outline-none transition-colors cursor-pointer"
+              >
+                <option value="">Tipo</option>
+                <option value="Casa">Casa</option>
+                <option value="Departamento">Departamento</option>
+                <option value="Villa">Villa</option>
+                <option value="Oficina">Oficina</option>
+                <option value="Local comercial">Local comercial</option>
+                <option value="Terreno">Terreno</option>
+                <option value="Bodega">Bodega</option>
+              </select>
+              <svg className="w-4 h-4 text-gray-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </div>
+
+            {/* Filtro por estado */}
+            <div className="relative">
+              <select
+                value={filtroEstado}
+                onChange={(e) => { setFiltroEstado(e.target.value); setFiltrosDelAsistente(false); }}
+                className="appearance-none bg-white border-2 border-gray-200 rounded-lg px-4 py-2 pr-10 font-medium text-gray-700 hover:border-ras-primary focus:border-ras-primary focus:outline-none transition-colors cursor-pointer"
+              >
+                <option value="">Estado</option>
+                <option value="Renta largo plazo">Renta largo plazo</option>
+                <option value="Renta vacacional">Renta vacacional</option>
+                <option value="Venta">Venta</option>
+                <option value="Mantenimiento">Mantenimiento</option>
+                <option value="Propietario">Propietario</option>
+              </select>
+              <svg className="w-4 h-4 text-gray-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </div>
+
+            {/* Filtro propios/compartidos */}
             <div className="relative">
               <select
                 value={filtroPropiedad}
-                onChange={(e) => setFiltroPropiedad(e.target.value as 'todos' | 'propios' | 'compartidos')}
+                onChange={(e) => { setFiltroPropiedad(e.target.value as 'todos' | 'propios' | 'compartidos'); setFiltrosDelAsistente(false); }}
                 className="appearance-none bg-white border-2 border-gray-200 rounded-lg px-4 py-2 pr-10 font-medium text-gray-700 hover:border-ras-primary focus:border-ras-primary focus:outline-none transition-colors cursor-pointer"
               >
                 <option value="todos">Todos</option>
@@ -324,6 +450,20 @@ export default function CatalogoPage() {
                 <polyline points="6 9 12 15 18 9"/>
               </svg>
             </div>
+
+            {/* Botón limpiar filtros */}
+            {(busqueda || filtroTipo || filtroEstado || filtroPropiedad !== 'todos') && (
+              <button
+                onClick={limpiarFiltrosAsistente}
+                className="text-gray-500 hover:text-gray-700 text-sm font-medium flex items-center gap-1"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+                Limpiar
+              </button>
+            )}
           </div>
         </div>
 

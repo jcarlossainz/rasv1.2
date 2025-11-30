@@ -44,16 +44,41 @@ export async function POST(req: Request) {
       content: m.content,
     }))
 
-    // Generar respuesta usando Claude (sin streaming para debug)
+    // Crear herramientas con el contexto del usuario
+    const tools = createAssistantTools(userId)
+
+    // Generar respuesta usando Claude con herramientas
     const result = await generateText({
       model: anthropic(ASSISTANT_CONFIG.model),
       system: ASSISTANT_SYSTEM_PROMPT,
       messages: formattedMessages,
+      tools,
+      maxSteps: 5, // Permitir múltiples pasos de tool calls
     })
 
-    // Devolver respuesta como texto plano
-    return new Response(result.text, {
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    // Buscar si hay acciones de UI en los tool calls
+    const uiActions: Array<{ accion: string; filtros: Record<string, any>; mensaje: string }> = []
+
+    if (result.steps) {
+      for (const step of result.steps) {
+        if (step.toolResults) {
+          for (const toolResult of step.toolResults) {
+            if (toolResult.result && typeof toolResult.result === 'object' && 'accion' in toolResult.result) {
+              uiActions.push(toolResult.result as any)
+            }
+          }
+        }
+      }
+    }
+
+    // Devolver respuesta con posibles acciones de UI
+    const response = {
+      text: result.text,
+      uiActions: uiActions.length > 0 ? uiActions : undefined,
+    }
+
+    return new Response(JSON.stringify(response), {
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
     })
 
   } catch (error) {

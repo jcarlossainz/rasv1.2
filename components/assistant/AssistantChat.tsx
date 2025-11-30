@@ -78,34 +78,26 @@ export function AssistantChat({ mode = 'floating', onClose, avatarSrc, avatarLab
         throw new Error(errorData.error || 'Error del asistente')
       }
 
-      // Leer el stream de respuesta
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-      let assistantContent = ''
+      // Parsear respuesta JSON
+      const data = await response.json()
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: '',
+        content: data.text || 'Sin respuesta',
       }
 
       setMessages(prev => [...prev, assistantMessage])
 
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-
-          const chunk = decoder.decode(value, { stream: true })
-          assistantContent += chunk
-
-          setMessages(prev =>
-            prev.map(m =>
-              m.id === assistantMessage.id
-                ? { ...m, content: assistantContent }
-                : m
-            )
-          )
+      // Ejecutar acciones de UI si las hay
+      if (data.uiActions && Array.isArray(data.uiActions)) {
+        for (const action of data.uiActions) {
+          if (action.accion === 'FILTRAR_CATALOGO') {
+            // Emitir evento para filtrar el catálogo
+            window.dispatchEvent(new CustomEvent('assistant-filter-catalogo', {
+              detail: action.filtros
+            }))
+          }
         }
       }
     } catch (err) {

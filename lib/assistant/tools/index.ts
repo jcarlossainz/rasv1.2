@@ -425,6 +425,70 @@ export function createAssistantTools(userId: string) {
   })
 
   // ============================================================================
+  // HERRAMIENTAS DE FILTRADO DE INTERFAZ
+  // ============================================================================
+
+  const filtrarCatalogo = tool({
+    description: `Filtra las propiedades mostradas en el catálogo. Usa esta herramienta cuando el usuario pida filtrar, buscar o mostrar propiedades específicas en la vista del catálogo.
+
+    Tipos válidos: Casa, Departamento, Villa, Oficina, Local comercial, Terreno, Bodega
+    Estados válidos: Renta largo plazo, Renta vacacional, Venta, Mantenimiento, Propietario
+    Propiedad: todos, propios, compartidos`,
+    parameters: z.object({
+      busqueda: z.string().optional().describe('Texto para buscar en el nombre de la propiedad'),
+      tipo: z.string().optional().describe('Tipo de propiedad: Casa, Departamento, Villa, Oficina, Local comercial, Terreno, Bodega'),
+      estado: z.string().optional().describe('Estado de la propiedad: Renta largo plazo, Renta vacacional, Venta, Mantenimiento, Propietario'),
+      propiedad: z.enum(['todos', 'propios', 'compartidos']).optional().describe('Filtrar por propiedades propias o compartidas'),
+      limpiarFiltros: z.boolean().optional().describe('Si es true, limpia todos los filtros'),
+    }),
+    execute: async ({ busqueda, tipo, estado, propiedad, limpiarFiltros }) => {
+      // Esta herramienta no ejecuta nada en el backend
+      // Solo retorna la acción que el frontend debe ejecutar
+
+      if (limpiarFiltros) {
+        return {
+          accion: 'FILTRAR_CATALOGO',
+          filtros: {},
+          mensaje: 'He limpiado todos los filtros del catálogo. Ahora se muestran todas las propiedades.'
+        }
+      }
+
+      const filtrosAplicados: string[] = []
+      const filtros: Record<string, string> = {}
+
+      if (busqueda) {
+        filtros.busqueda = busqueda
+        filtrosAplicados.push(`nombre que contenga "${busqueda}"`)
+      }
+
+      if (tipo) {
+        filtros.tipo = tipo
+        filtrosAplicados.push(`tipo: ${tipo}`)
+      }
+
+      if (estado) {
+        filtros.estado = estado
+        filtrosAplicados.push(`estado: ${estado}`)
+      }
+
+      if (propiedad && propiedad !== 'todos') {
+        filtros.propiedad = propiedad
+        filtrosAplicados.push(propiedad === 'propios' ? 'solo propiedades propias' : 'solo propiedades compartidas')
+      }
+
+      const mensaje = filtrosAplicados.length > 0
+        ? `He filtrado el catálogo para mostrar: ${filtrosAplicados.join(', ')}.`
+        : 'No se especificaron filtros. Mostrando todas las propiedades.'
+
+      return {
+        accion: 'FILTRAR_CATALOGO',
+        filtros,
+        mensaje
+      }
+    }
+  })
+
+  // ============================================================================
   // RETORNAR TODAS LAS HERRAMIENTAS
   // ============================================================================
 
@@ -436,5 +500,6 @@ export function createAssistantTools(userId: string) {
     crearTicket,
     obtenerBalanceGeneral,
     obtenerResumenFinanciero,
+    filtrarCatalogo,
   }
 }
