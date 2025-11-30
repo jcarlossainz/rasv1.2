@@ -316,8 +316,10 @@ export function createAssistantTools(userId: string) {
 
   const obtenerBalanceGeneral = tool({
     description: 'Obtiene el balance general del usuario: total de cuentas, ingresos y egresos.',
-    parameters: z.object({}),
-    execute: async () => {
+    parameters: z.object({
+      incluirDetalles: z.boolean().optional().describe('Si es true, incluye el detalle de cada cuenta'),
+    }),
+    execute: async ({ incluirDetalles }) => {
       const { data: cuentas, error: errorCuentas } = await supabase
         .from('cuentas')
         .select('*')
