@@ -48,6 +48,8 @@ export async function POST(req: Request) {
     const tools = createAssistantTools(userId)
 
     // Generar respuesta usando Claude con herramientas
+    console.log('[Assistant] Llamando a Claude con', Object.keys(tools).length, 'herramientas')
+
     const result = await generateText({
       model: anthropic(ASSISTANT_CONFIG.model),
       system: ASSISTANT_SYSTEM_PROMPT,
@@ -56,21 +58,59 @@ export async function POST(req: Request) {
       maxToolRoundtrips: 5,
     })
 
-    // Buscar si hay acciones de UI en los tool calls
-    const uiActions: Array<{ accion: string; filtros: Record<string, any>; mensaje: string }> = []
+    console.log('[Assistant] Respuesta recibida:', {
+      hasText: !!result.text,
+      textLength: result.text?.length || 0,
+      toolCalls: result.toolCalls?.length || 0,
+      toolResults: result.toolResults?.length || 0,
+    })
 
-    if (result.toolResults) {
+    // Buscar si hay acciones de UI en los tool calls
+    const uiActions: Array<{ accion: string; filtros?: Record<string, any>; ruta?: string; mensaje: string }> = []
+    let toolMessages: string[] = []
+
+    if (result.toolResults && result.toolResults.length > 0) {
+      console.log('[Assistant] Procesando', result.toolResults.length, 'resultados de herramientas')
+
       for (const toolResult of result.toolResults) {
         const resultValue = (toolResult as any).result
-        if (resultValue && typeof resultValue === 'object' && 'accion' in resultValue) {
-          uiActions.push(resultValue as any)
+        console.log('[Assistant] Tool result:', JSON.stringify(resultValue).slice(0, 200))
+
+        if (resultValue && typeof resultValue === 'object') {
+          // Capturar acciones de UI
+          if ('accion' in resultValue) {
+            uiActions.push(resultValue as any)
+          }
+          // Capturar mensajes de éxito
+          if ('mensaje' in resultValue) {
+            toolMessages.push(resultValue.mensaje)
+          }
+          // Capturar errores
+          if ('error' in resultValue) {
+            toolMessages.push(`Error: ${resultValue.error}`)
+          }
         }
       }
     }
 
+    // Construir texto de respuesta
+    let responseText = result.text || ''
+
+    // Si no hay texto pero hay mensajes de herramientas, usarlos
+    if (!responseText && toolMessages.length > 0) {
+      responseText = toolMessages.join('\n')
+    }
+
+    // Si aún no hay texto, dar una respuesta por defecto
+    if (!responseText) {
+      responseText = 'He procesado tu solicitud.'
+    }
+
+    console.log('[Assistant] Respuesta final:', responseText.slice(0, 100))
+
     // Devolver respuesta con posibles acciones de UI
     const response = {
-      text: result.text,
+      text: responseText,
       uiActions: uiActions.length > 0 ? uiActions : undefined,
     }
 
