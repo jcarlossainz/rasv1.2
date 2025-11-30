@@ -30,6 +30,7 @@ export function AssistantChat({ mode = 'floating', onClose, avatarSrc, avatarLab
   const [inputValue, setInputValue] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isNavigating, setIsNavigating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -93,15 +94,27 @@ export function AssistantChat({ mode = 'floating', onClose, avatarSrc, avatarLab
 
       // Ejecutar acciones de UI si las hay
       if (data.uiActions && Array.isArray(data.uiActions)) {
+        console.log('[AssistantChat] UI Actions recibidas:', data.uiActions)
+
         for (const action of data.uiActions) {
+          console.log('[AssistantChat] Procesando acción:', action.accion)
+
           if (action.accion === 'FILTRAR_CATALOGO') {
-            // Emitir evento para filtrar el catálogo
             window.dispatchEvent(new CustomEvent('assistant-filter-catalogo', {
               detail: action.filtros
             }))
           } else if (action.accion === 'NAVEGAR' && action.ruta) {
-            // Navegar a la ruta especificada
-            router.push(action.ruta)
+            console.log('[AssistantChat] Navegando a:', action.ruta)
+            setIsNavigating(true)
+            // Pequeño delay para que el usuario vea el mensaje
+            setTimeout(() => {
+              router.push(action.ruta)
+              // Minimizar el chat después de navegar
+              setTimeout(() => {
+                setIsNavigating(false)
+                setIsMinimized(true)
+              }, 500)
+            }, 800)
           }
         }
       }
@@ -257,6 +270,17 @@ export function AssistantChat({ mode = 'floating', onClose, avatarSrc, avatarLab
                 </div>
               )}
 
+              {isNavigating && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="flex items-center gap-2 bg-blue-50 text-blue-600 px-4 py-3 rounded-xl"
+                >
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span className="text-sm font-medium">Navegando...</span>
+                </motion.div>
+              )}
+
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-600">
                   <p>Error: {error}</p>
@@ -371,6 +395,17 @@ export function AssistantChat({ mode = 'floating', onClose, avatarSrc, avatarLab
             <Loader2 className="w-4 h-4 animate-spin" />
             <span className="text-sm">Pensando...</span>
           </div>
+        )}
+
+        {isNavigating && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex items-center gap-2 bg-blue-50 text-blue-600 px-4 py-3 rounded-xl"
+          >
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="text-sm font-medium">Navegando...</span>
+          </motion.div>
         )}
 
         {error && (

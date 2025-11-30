@@ -73,30 +73,31 @@ export async function POST(req: Request) {
       console.log('[Assistant] Tool results:', JSON.stringify(result.toolResults, null, 2).substring(0, 500))
     }
 
-    // Buscar si hay acciones de UI en los tool calls
-    const uiActions: Array<{ accion: string; filtros?: Record<string, any>; ruta?: string; mensaje: string }> = []
+    // Buscar acciones de UI y mensajes en los resultados
+    const uiActions: Array<{ accion: string; filtros?: Record<string, any>; ruta?: string; mensaje?: string }> = []
     let toolMessages: string[] = []
 
-    if (result.toolResults && Array.isArray(result.toolResults) && result.toolResults.length > 0) {
-      console.log('[Assistant] Procesando', result.toolResults.length, 'resultados de herramientas')
+    // Procesar toolResults (resultados de ejecución de herramientas)
+    if (result.toolResults && Array.isArray(result.toolResults)) {
+      console.log('[Assistant] Procesando toolResults:', result.toolResults.length)
 
       for (const toolResult of result.toolResults) {
         try {
           const resultValue = (toolResult as any)?.result
-          const resultStr = resultValue ? JSON.stringify(resultValue) : 'undefined'
-          console.log('[Assistant] Tool result:', resultStr.substring(0, 200))
+          console.log('[Assistant] Tool result value:', JSON.stringify(resultValue)?.substring(0, 300))
 
           if (resultValue && typeof resultValue === 'object') {
-            // Capturar acciones de UI
-            if ('accion' in resultValue) {
-              uiActions.push(resultValue as any)
+            // Capturar acciones de UI (NAVEGAR, FILTRAR_CATALOGO, MENSAJE)
+            if (resultValue.accion) {
+              console.log('[Assistant] Acción encontrada:', resultValue.accion)
+              uiActions.push(resultValue)
             }
-            // Capturar mensajes de éxito
-            if ('mensaje' in resultValue && resultValue.mensaje) {
+            // Capturar mensajes
+            if (resultValue.mensaje) {
               toolMessages.push(String(resultValue.mensaje))
             }
             // Capturar errores
-            if ('error' in resultValue && resultValue.error) {
+            if (resultValue.error) {
               toolMessages.push(`Error: ${String(resultValue.error)}`)
             }
           }
@@ -105,6 +106,14 @@ export async function POST(req: Request) {
         }
       }
     }
+
+    // También revisar toolCalls por si hay resultados ahí
+    if (result.toolCalls && Array.isArray(result.toolCalls)) {
+      console.log('[Assistant] Tool calls encontrados:', result.toolCalls.length)
+    }
+
+    console.log('[Assistant] UI Actions:', JSON.stringify(uiActions))
+    console.log('[Assistant] Tool Messages:', toolMessages)
 
     // Construir texto de respuesta
     let responseText = result.text ?? ''
