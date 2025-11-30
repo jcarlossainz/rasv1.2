@@ -3,8 +3,8 @@
  * Define las acciones que el asistente puede ejecutar
  */
 
+import { tool } from 'ai'
 import { z } from 'zod'
-import { tool, CoreTool } from 'ai'
 import { createClient } from '@supabase/supabase-js'
 
 // Cliente Supabase con permisos de servicio
@@ -17,7 +17,7 @@ const supabaseAdmin = createClient(
 // FACTORY PARA CREAR HERRAMIENTAS CON CONTEXTO DE USUARIO
 // ============================================================================
 
-export function createAssistantTools(userId: string): Record<string, CoreTool> {
+export function createAssistantTools(userId: string) {
   const supabase = supabaseAdmin
 
   // ============================================================================
@@ -25,11 +25,11 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
   // ============================================================================
 
   const buscarPropiedades = tool({
-    description: 'Busca y lista las propiedades del usuario. Puede filtrar por nombre, tipo o estado. Usa esto para encontrar una propiedad antes de navegar a ella.',
+    description: 'Busca y lista las propiedades del usuario. Puede filtrar por nombre, tipo o estado.',
     parameters: z.object({
-      busqueda: z.string().optional().describe('Texto para buscar en el nombre de la propiedad'),
-      tipo: z.string().optional().describe('Tipo de propiedad (Departamento, Casa, Villa, etc.)'),
-      estado: z.string().optional().describe('Estado de la propiedad (Renta largo plazo, Venta, etc.)'),
+      busqueda: z.string().describe('Texto para buscar en el nombre de la propiedad').optional(),
+      tipo: z.string().describe('Tipo de propiedad (Departamento, Casa, Villa, etc.)').optional(),
+      estado: z.string().describe('Estado de la propiedad (Renta largo plazo, Venta, etc.)').optional(),
     }),
     execute: async ({ busqueda, tipo, estado }) => {
       let query = supabase
@@ -54,14 +54,14 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
 
       let propiedades = data || []
       if (estado) {
-        propiedades = propiedades.filter(p =>
+        propiedades = propiedades.filter((p: any) =>
           p.estados && p.estados.includes(estado)
         )
       }
 
       return {
         total: propiedades.length,
-        propiedades: propiedades.map(p => ({
+        propiedades: propiedades.map((p: any) => ({
           id: p.id,
           nombre: p.nombre_propiedad,
           tipo: p.tipo_propiedad,
@@ -75,8 +75,8 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
   const obtenerDetallePropiedad = tool({
     description: 'Obtiene los detalles completos de una propiedad específica por su ID o nombre.',
     parameters: z.object({
-      propiedadId: z.string().optional().describe('ID de la propiedad'),
-      nombre: z.string().optional().describe('Nombre de la propiedad para buscar'),
+      propiedadId: z.string().describe('ID de la propiedad').optional(),
+      nombre: z.string().describe('Nombre de la propiedad para buscar').optional(),
     }),
     execute: async ({ propiedadId, nombre }) => {
       let query = supabase
@@ -122,8 +122,8 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
       nombre: z.string().describe('Nombre de la propiedad'),
       tipo: z.string().describe('Tipo de propiedad: Casa, Departamento, Villa, Oficina, Local comercial, Terreno, Bodega'),
       estados: z.array(z.string()).describe('Estados de la propiedad: Renta largo plazo, Renta vacacional, Venta, Mantenimiento, Propietario'),
-      ciudad: z.string().optional().describe('Ciudad donde se ubica'),
-      mobiliario: z.string().optional().describe('Amueblada, Semi-amueblada, Sin amueblar'),
+      ciudad: z.string().describe('Ciudad donde se ubica').optional(),
+      mobiliario: z.string().describe('Amueblada, Semi-amueblada, Sin amueblar').optional(),
     }),
     execute: async ({ nombre, tipo, estados, ciudad, mobiliario }) => {
       const nuevaPropiedad = {
@@ -169,28 +169,26 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
   const buscarTickets = tool({
     description: 'Busca tickets de pago. Puede filtrar por propiedad, estado o fecha.',
     parameters: z.object({
-      propiedadId: z.string().optional().describe('ID de la propiedad'),
-      nombrePropiedad: z.string().optional().describe('Nombre de la propiedad para buscar sus tickets'),
-      estado: z.enum(['pendiente', 'completado', 'todos']).optional().describe('Estado del ticket'),
-      urgencia: z.enum(['vencido', 'hoy', 'proximo', 'futuro', 'todos']).optional().describe('Urgencia del ticket'),
+      propiedadId: z.string().describe('ID de la propiedad').optional(),
+      nombrePropiedad: z.string().describe('Nombre de la propiedad para buscar sus tickets').optional(),
+      estado: z.enum(['pendiente', 'completado', 'todos']).describe('Estado del ticket').optional(),
+      urgencia: z.enum(['vencido', 'hoy', 'proximo', 'futuro', 'todos']).describe('Urgencia del ticket').optional(),
     }),
     execute: async ({ propiedadId, nombrePropiedad, estado, urgencia }) => {
-      // Primero obtener las propiedades del usuario
       const { data: propiedades } = await supabase
         .from('propiedades')
         .select('id, nombre_propiedad')
         .eq('owner_id', userId)
 
-      const propiedadIds = propiedades?.map(p => p.id) || []
+      const propiedadIds = propiedades?.map((p: any) => p.id) || []
 
       if (propiedadIds.length === 0) {
         return { total: 0, tickets: [], mensaje: 'No tienes propiedades registradas' }
       }
 
-      // Si se proporciona nombre, buscar el ID
       let targetPropiedadId = propiedadId
       if (nombrePropiedad && !propiedadId) {
-        const prop = propiedades?.find(p =>
+        const prop = propiedades?.find((p: any) =>
           p.nombre_propiedad.toLowerCase().includes(nombrePropiedad.toLowerCase())
         )
         if (prop) targetPropiedadId = prop.id
@@ -216,7 +214,7 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
       let tickets = data || []
 
       if (urgencia && urgencia !== 'todos') {
-        tickets = tickets.filter(t => {
+        tickets = tickets.filter((t: any) => {
           const fechaTicket = t.fecha_programada
           if (urgencia === 'vencido') return fechaTicket < hoy && !t.pagado
           if (urgencia === 'hoy') return fechaTicket === hoy
@@ -230,7 +228,7 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
 
       return {
         total: tickets.length,
-        tickets: tickets.slice(0, 10).map(t => ({
+        tickets: tickets.slice(0, 10).map((t: any) => ({
           id: t.id,
           titulo: t.titulo,
           propiedad: t.propiedades?.nombre_propiedad || 'Sin propiedad',
@@ -245,15 +243,14 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
   const crearTicket = tool({
     description: 'Crea un nuevo ticket de pago para una propiedad.',
     parameters: z.object({
-      propiedadId: z.string().optional().describe('ID de la propiedad'),
-      nombrePropiedad: z.string().optional().describe('Nombre de la propiedad (si no tienes el ID)'),
+      propiedadId: z.string().describe('ID de la propiedad').optional(),
+      nombrePropiedad: z.string().describe('Nombre de la propiedad (si no tienes el ID)').optional(),
       titulo: z.string().describe('Título o concepto del ticket (ej: "Pago de luz", "Mantenimiento")'),
       monto: z.number().describe('Monto del pago'),
       fecha: z.string().describe('Fecha programada del pago (formato YYYY-MM-DD)'),
-      descripcion: z.string().optional().describe('Descripción adicional'),
+      descripcion: z.string().describe('Descripción adicional').optional(),
     }),
     execute: async ({ propiedadId, nombrePropiedad, titulo, monto, fecha, descripcion }) => {
-      // Buscar la propiedad
       let targetPropiedadId = propiedadId
       let nombreProp = nombrePropiedad
 
@@ -314,9 +311,9 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
   const obtenerBalanceGeneral = tool({
     description: 'Obtiene el balance general del usuario: total de cuentas, ingresos y egresos.',
     parameters: z.object({
-      incluirDetalles: z.boolean().optional().describe('Si es true, incluye el detalle de cada cuenta'),
+      moneda: z.string().describe('Filtrar por moneda: MXN o USD').optional(),
     }),
-    execute: async ({ incluirDetalles }) => {
+    execute: async ({ moneda }) => {
       const { data: cuentas, error: errorCuentas } = await supabase
         .from('cuentas')
         .select('*')
@@ -327,17 +324,22 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
         return { error: errorCuentas.message }
       }
 
+      let cuentasFiltradas = cuentas || []
+      if (moneda) {
+        cuentasFiltradas = cuentasFiltradas.filter((c: any) => c.moneda === moneda)
+      }
+
       const balanceMXN = (cuentas || [])
-        .filter(c => c.moneda === 'MXN')
-        .reduce((sum, c) => sum + (c.saldo_actual || 0), 0)
+        .filter((c: any) => c.moneda === 'MXN')
+        .reduce((sum: number, c: any) => sum + (c.saldo_actual || 0), 0)
 
       const balanceUSD = (cuentas || [])
-        .filter(c => c.moneda === 'USD')
-        .reduce((sum, c) => sum + (c.saldo_actual || 0), 0)
+        .filter((c: any) => c.moneda === 'USD')
+        .reduce((sum: number, c: any) => sum + (c.saldo_actual || 0), 0)
 
       return {
         balance: { mxn: balanceMXN, usd: balanceUSD },
-        cuentas: (cuentas || []).map(c => ({
+        cuentas: cuentasFiltradas.map((c: any) => ({
           id: c.id,
           nombre: c.nombre_cuenta,
           tipo: c.tipo_cuenta,
@@ -355,7 +357,7 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
       nombre: z.string().describe('Nombre de la cuenta (ej: "BBVA Principal", "Efectivo Casa")'),
       tipo: z.enum(['Banco', 'Efectivo', 'Tarjeta de crédito', 'Inversión', 'Otro']).describe('Tipo de cuenta'),
       moneda: z.enum(['MXN', 'USD']).describe('Moneda de la cuenta'),
-      saldoInicial: z.number().optional().describe('Saldo inicial de la cuenta'),
+      saldoInicial: z.number().describe('Saldo inicial de la cuenta').optional(),
     }),
     execute: async ({ nombre, tipo, moneda, saldoInicial }) => {
       const nuevaCuenta = {
@@ -394,8 +396,8 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
   const obtenerResumenFinanciero = tool({
     description: 'Obtiene un resumen financiero del mes actual o un periodo específico.',
     parameters: z.object({
-      mes: z.number().optional().describe('Mes (1-12), si no se especifica usa el mes actual'),
-      anio: z.number().optional().describe('Año, si no se especifica usa el año actual'),
+      mes: z.number().describe('Mes (1-12), si no se especifica usa el mes actual').optional(),
+      anio: z.number().describe('Año, si no se especifica usa el año actual').optional(),
     }),
     execute: async ({ mes, anio }) => {
       const ahora = new Date()
@@ -410,7 +412,7 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
         .select('id')
         .eq('owner_id', userId)
 
-      const propiedadIds = propiedades?.map(p => p.id) || []
+      const propiedadIds = propiedades?.map((p: any) => p.id) || []
 
       if (propiedadIds.length === 0) {
         return { ingresos: 0, egresos: 0, balance: 0, mensaje: 'No tienes propiedades registradas' }
@@ -423,7 +425,7 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
         .gte('fecha_ingreso', fechaInicio)
         .lte('fecha_ingreso', fechaFin)
 
-      const totalIngresos = (ingresos || []).reduce((sum, i) => sum + (i.monto || 0), 0)
+      const totalIngresos = (ingresos || []).reduce((sum: number, i: any) => sum + (i.monto || 0), 0)
 
       const { data: egresos } = await supabase
         .from('tickets')
@@ -433,7 +435,7 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
         .gte('fecha_pago_real', fechaInicio)
         .lte('fecha_pago_real', fechaFin)
 
-      const totalEgresos = (egresos || []).reduce((sum, e) => sum + (e.monto_real || 0), 0)
+      const totalEgresos = (egresos || []).reduce((sum: number, e: any) => sum + (e.monto_real || 0), 0)
 
       const nombreMes = new Date(anioActual, mesActual - 1).toLocaleString('es-MX', { month: 'long' })
 
@@ -453,8 +455,8 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
   const buscarContactos = tool({
     description: 'Busca contactos en el directorio del usuario.',
     parameters: z.object({
-      busqueda: z.string().optional().describe('Texto para buscar en nombre o empresa'),
-      tipo: z.enum(['Inquilino', 'Proveedor', 'Propietario', 'Otro', 'todos']).optional().describe('Tipo de contacto'),
+      busqueda: z.string().describe('Texto para buscar en nombre o empresa').optional(),
+      tipo: z.enum(['Inquilino', 'Proveedor', 'Propietario', 'Otro', 'todos']).describe('Tipo de contacto').optional(),
     }),
     execute: async ({ busqueda, tipo }) => {
       let query = supabase
@@ -479,7 +481,7 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
 
       return {
         total: data?.length || 0,
-        contactos: (data || []).map(c => ({
+        contactos: (data || []).map((c: any) => ({
           id: c.id,
           nombre: c.nombre,
           tipo: c.tipo,
@@ -496,10 +498,10 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
     parameters: z.object({
       nombre: z.string().describe('Nombre completo del contacto'),
       tipo: z.enum(['Inquilino', 'Proveedor', 'Propietario', 'Otro']).describe('Tipo de contacto'),
-      telefono: z.string().optional().describe('Número de teléfono'),
-      email: z.string().optional().describe('Correo electrónico'),
-      empresa: z.string().optional().describe('Empresa o compañía (para proveedores)'),
-      notas: z.string().optional().describe('Notas adicionales'),
+      telefono: z.string().describe('Número de teléfono').optional(),
+      email: z.string().describe('Correo electrónico').optional(),
+      empresa: z.string().describe('Empresa o compañía (para proveedores)').optional(),
+      notas: z.string().describe('Notas adicionales').optional(),
     }),
     execute: async ({ nombre, tipo, telefono, email, empresa, notas }) => {
       const nuevoContacto = {
@@ -539,27 +541,17 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
   // ============================================================================
 
   const navegarASeccion = tool({
-    description: `Navega a una sección específica de una propiedad o del sistema.
-
-    Secciones de propiedad disponibles: home, calendario, tickets, inventario, galeria, anuncio, balance, archivero, config
-    Secciones generales: dashboard, catalogo, cuentas, directorio, market, tickets, perfil
-
-    Usa esta herramienta cuando el usuario diga cosas como:
-    - "Llévame a la galería de Casa Playa"
-    - "Quiero ver el balance de Amatista 3"
-    - "Abre el calendario de mi departamento"
-    - "Ve a configuración de la propiedad X"`,
+    description: 'Navega a una sección del sistema o de una propiedad. Secciones de propiedad: home, calendario, tickets, inventario, galeria, anuncio, balance, archivero, config. Secciones generales: dashboard, catalogo, cuentas, directorio, market, perfil.',
     parameters: z.object({
       seccion: z.enum([
         'home', 'calendario', 'tickets', 'inventario', 'galeria',
         'anuncio', 'balance', 'archivero', 'config',
         'dashboard', 'catalogo', 'cuentas', 'directorio', 'market', 'perfil'
       ]).describe('Sección a la que navegar'),
-      propiedadId: z.string().optional().describe('ID de la propiedad (para secciones de propiedad)'),
-      nombrePropiedad: z.string().optional().describe('Nombre de la propiedad para buscarla'),
+      propiedadId: z.string().describe('ID de la propiedad (para secciones de propiedad)').optional(),
+      nombrePropiedad: z.string().describe('Nombre de la propiedad para buscarla').optional(),
     }),
     execute: async ({ seccion, propiedadId, nombrePropiedad }) => {
-      // Secciones generales (no requieren propiedad)
       const seccionesGenerales = ['dashboard', 'catalogo', 'cuentas', 'directorio', 'market', 'perfil']
 
       if (seccionesGenerales.includes(seccion)) {
@@ -579,7 +571,6 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
         }
       }
 
-      // Secciones de propiedad (requieren ID de propiedad)
       let targetPropiedadId = propiedadId
       let nombreProp = nombrePropiedad
 
@@ -598,7 +589,6 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
       }
 
       if (!targetPropiedadId) {
-        // Buscar propiedades para sugerir
         const { data: todasProps } = await supabase
           .from('propiedades')
           .select('id, nombre_propiedad')
@@ -608,7 +598,7 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
         return {
           error: 'No encontré la propiedad',
           sugerencia: 'Estas son tus propiedades:',
-          propiedades: todasProps?.map(p => ({ id: p.id, nombre: p.nombre_propiedad })) || []
+          propiedades: todasProps?.map((p: any) => ({ id: p.id, nombre: p.nombre_propiedad })) || []
         }
       }
 
@@ -629,13 +619,13 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
   // ============================================================================
 
   const filtrarCatalogo = tool({
-    description: `Filtra las propiedades mostradas en el catálogo. Usa esta herramienta cuando el usuario pida filtrar o mostrar solo cierto tipo de propiedades.`,
+    description: 'Filtra las propiedades mostradas en el catálogo.',
     parameters: z.object({
-      busqueda: z.string().optional().describe('Texto para buscar en el nombre'),
-      tipo: z.string().optional().describe('Tipo: Casa, Departamento, Villa, Oficina, Local comercial, Terreno, Bodega'),
-      estado: z.string().optional().describe('Estado: Renta largo plazo, Renta vacacional, Venta, Mantenimiento, Propietario'),
-      propiedad: z.enum(['todos', 'propios', 'compartidos']).optional().describe('Propias o compartidas'),
-      limpiarFiltros: z.boolean().optional().describe('Si es true, limpia todos los filtros'),
+      busqueda: z.string().describe('Texto para buscar en el nombre').optional(),
+      tipo: z.string().describe('Tipo: Casa, Departamento, Villa, Oficina, Local comercial, Terreno, Bodega').optional(),
+      estado: z.string().describe('Estado: Renta largo plazo, Renta vacacional, Venta, Mantenimiento, Propietario').optional(),
+      propiedad: z.enum(['todos', 'propios', 'compartidos']).describe('Propias o compartidas').optional(),
+      limpiarFiltros: z.boolean().describe('Si es true, limpia todos los filtros').optional(),
     }),
     execute: async ({ busqueda, tipo, estado, propiedad, limpiarFiltros }) => {
       if (limpiarFiltros) {
@@ -681,23 +671,17 @@ export function createAssistantTools(userId: string): Record<string, CoreTool> {
   // ============================================================================
 
   return {
-    // Propiedades
     buscarPropiedades,
     obtenerDetallePropiedad,
     crearPropiedad,
-    // Tickets
     buscarTickets,
     crearTicket,
-    // Finanzas
     obtenerBalanceGeneral,
     obtenerResumenFinanciero,
     crearCuenta,
-    // Directorio
     buscarContactos,
     crearContacto,
-    // Navegación
     navegarASeccion,
-    // Filtrado UI
     filtrarCatalogo,
   }
 }
