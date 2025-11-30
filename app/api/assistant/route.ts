@@ -58,12 +58,13 @@ export async function POST(req: Request) {
       maxToolRoundtrips: 5,
     })
 
-    console.log('[Assistant] Respuesta recibida:', {
-      hasText: !!result.text,
-      textLength: result.text?.length ?? 0,
-      toolCalls: result.toolCalls?.length ?? 0,
-      toolResults: result.toolResults?.length ?? 0,
-    })
+    console.log('[Assistant] Respuesta completa:', JSON.stringify({
+      text: result.text,
+      toolCalls: result.toolCalls,
+      toolResults: result.toolResults,
+      finishReason: result.finishReason,
+      usage: result.usage,
+    }, null, 2).substring(0, 2000))
 
     // Buscar si hay acciones de UI en los tool calls
     const uiActions: Array<{ accion: string; filtros?: Record<string, any>; ruta?: string; mensaje: string }> = []

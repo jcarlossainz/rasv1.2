@@ -73,7 +73,7 @@ Usuario: "crea ticket de luz de 500 pesos para mañana en casa playa"
 
 export const ASSISTANT_CONFIG = {
   name: 'Ohana Assistant',
-  model: 'claude-sonnet-4-20250514',
+  model: 'claude-3-5-sonnet-20241022',
   maxTokens: 4096,
-  temperature: 0.3, // Más bajo para ser más determinístico
+  temperature: 0.3,
 }
