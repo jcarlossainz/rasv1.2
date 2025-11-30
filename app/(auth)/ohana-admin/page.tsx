@@ -32,6 +32,7 @@ export default function OhanaAdminPage() {
   const [totalUsuarios, setTotalUsuarios] = useState(0)
   const [totalPropiedades, setTotalPropiedades] = useState(0)
   const [usuariosConPropiedades, setUsuariosConPropiedades] = useState<UserWithProperties[]>([])
+  const [error, setError] = useState<string | null>(null)
 
   // Verificar acceso solo para el owner
   useEffect(() => {
@@ -52,48 +53,37 @@ export default function OhanaAdminPage() {
   const loadSystemData = async () => {
     try {
       setLoadingData(true)
+      setError(null)
 
-      // Obtener total de usuarios
-      const { count: usersCount, data: profiles } = await supabase
-        .from('profiles')
-        .select('id, email, full_name, created_at', { count: 'exact' })
+      // Obtener el token de sesión actual
+      const { data: { session } } = await supabase.auth.getSession()
 
-      setTotalUsuarios(usersCount || 0)
-
-      // Obtener total de propiedades
-      const { count: propsCount } = await supabase
-        .from('propiedades')
-        .select('*', { count: 'exact', head: true })
-
-      setTotalPropiedades(propsCount || 0)
-
-      // Obtener propiedades de cada usuario
-      if (profiles) {
-        const usersWithProps: UserWithProperties[] = []
-
-        for (const profile of profiles) {
-          // Propiedades propias (owner_id)
-          const { data: propiedadesPropias } = await supabase
-            .from('propiedades')
-            .select('id, nombre')
-            .eq('owner_id', profile.id)
-
-          usersWithProps.push({
-            id: profile.id,
-            email: profile.email || 'Sin email',
-            full_name: profile.full_name,
-            created_at: profile.created_at,
-            propiedades: propiedadesPropias || [],
-            total_propiedades: propiedadesPropias?.length || 0
-          })
-        }
-
-        // Ordenar por cantidad de propiedades (descendente)
-        usersWithProps.sort((a, b) => b.total_propiedades - a.total_propiedades)
-        setUsuariosConPropiedades(usersWithProps)
+      if (!session?.access_token) {
+        setError('No hay sesión activa')
+        return
       }
+
+      // Llamar a la API con el token
+      const response = await fetch('/api/admin/stats', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Error al cargar datos')
+      }
+
+      const data = await response.json()
+
+      setTotalUsuarios(data.totalUsuarios)
+      setTotalPropiedades(data.totalPropiedades)
+      setUsuariosConPropiedades(data.usuariosConPropiedades)
+
     } catch (error) {
       console.error('Error cargando datos del sistema:', error)
+      setError(error instanceof Error ? error.message : 'Error desconocido')
     } finally {
       setLoadingData(false)
     }
@@ -143,6 +133,17 @@ export default function OhanaAdminPage() {
               <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
               <p className="text-slate-400">Cargando estadísticas...</p>
             </div>
+          </div>
+        ) : error ? (
+          <div className="bg-red-500/20 border border-red-500/50 rounded-2xl p-6 text-center">
+            <p className="text-red-400 font-medium mb-2">Error al cargar datos</p>
+            <p className="text-red-300 text-sm">{error}</p>
+            <button
+              onClick={loadSystemData}
+              className="mt-4 px-4 py-2 bg-red-500/30 hover:bg-red-500/50 rounded-lg text-red-300 text-sm font-medium transition-colors"
+            >
+              Reintentar
+            </button>
           </div>
         ) : (
           <>
