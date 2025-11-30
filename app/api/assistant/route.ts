@@ -49,6 +49,7 @@ export async function POST(req: Request) {
 
     // Generar respuesta usando Claude con herramientas
     console.log('[Assistant] Llamando a Claude con', Object.keys(tools).length, 'herramientas')
+    console.log('[Assistant] Modelo:', ASSISTANT_CONFIG.model)
 
     const result = await generateText({
       model: anthropic(ASSISTANT_CONFIG.model),
@@ -56,15 +57,21 @@ export async function POST(req: Request) {
       messages: formattedMessages,
       tools: tools,
       maxToolRoundtrips: 5,
+      toolChoice: 'auto',
     })
 
-    console.log('[Assistant] Respuesta completa:', JSON.stringify({
-      text: result.text,
-      toolCalls: result.toolCalls,
-      toolResults: result.toolResults,
-      finishReason: result.finishReason,
-      usage: result.usage,
-    }, null, 2).substring(0, 2000))
+    // Log detallado
+    console.log('[Assistant] finishReason:', result.finishReason)
+    console.log('[Assistant] text:', result.text?.substring(0, 200))
+    console.log('[Assistant] toolCalls count:', result.toolCalls?.length ?? 0)
+    console.log('[Assistant] toolResults count:', result.toolResults?.length ?? 0)
+
+    if (result.toolCalls && result.toolCalls.length > 0) {
+      console.log('[Assistant] Tool calls:', JSON.stringify(result.toolCalls, null, 2).substring(0, 500))
+    }
+    if (result.toolResults && result.toolResults.length > 0) {
+      console.log('[Assistant] Tool results:', JSON.stringify(result.toolResults, null, 2).substring(0, 500))
+    }
 
     // Buscar si hay acciones de UI en los tool calls
     const uiActions: Array<{ accion: string; filtros?: Record<string, any>; ruta?: string; mensaje: string }> = []
