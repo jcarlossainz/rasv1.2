@@ -60,9 +60,9 @@ export async function POST(req: Request) {
 
     console.log('[Assistant] Respuesta recibida:', {
       hasText: !!result.text,
-      textLength: result.text?.length || 0,
-      toolCalls: result.toolCalls?.length || 0,
-      toolResults: result.toolResults?.length || 0,
+      textLength: result.text?.length ?? 0,
+      toolCalls: result.toolCalls?.length ?? 0,
+      toolResults: result.toolResults?.length ?? 0,
     })
 
     // Buscar si hay acciones de UI en los tool calls
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
     }
 
     // Construir texto de respuesta
-    let responseText = result.text || ''
+    let responseText = result.text ?? ''
 
     // Si no hay texto pero hay mensajes de herramientas, usarlos
     if (!responseText && toolMessages.length > 0) {
@@ -106,7 +106,7 @@ export async function POST(req: Request) {
       responseText = 'He procesado tu solicitud.'
     }
 
-    console.log('[Assistant] Respuesta final:', responseText.slice(0, 100))
+    console.log('[Assistant] Respuesta final:', String(responseText).slice(0, 100))
 
     // Devolver respuesta con posibles acciones de UI
     const response = {
