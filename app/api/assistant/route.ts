@@ -118,17 +118,37 @@ export async function POST(req: Request) {
     console.log('[Assistant] UI Actions:', JSON.stringify(uiActions))
     console.log('[Assistant] Tool Messages:', toolMessages)
 
-    // Construir texto de respuesta
-    let responseText = result.text ?? ''
+    // Construir texto de respuesta - PRIORIZAR mensajes de herramientas
+    let responseText = ''
 
-    // Si no hay texto pero hay mensajes de herramientas, usarlos
-    if (!responseText && toolMessages.length > 0) {
-      responseText = toolMessages.join('\n')
+    // 1. Si hay mensajes de herramientas, usarlos primero
+    if (toolMessages.length > 0) {
+      responseText = toolMessages.join('\n\n')
     }
 
-    // Si aún no hay texto, dar una respuesta por defecto
+    // 2. Si el modelo también generó texto, combinarlo (pero evitar duplicados)
+    if (result.text && result.text.trim()) {
+      const modelText = result.text.trim()
+      // Solo agregar si no es redundante con los mensajes de herramientas
+      if (!responseText) {
+        responseText = modelText
+      } else if (!toolMessages.some(msg => modelText.includes(msg.substring(0, 50)))) {
+        // Si el texto del modelo no está ya en los mensajes, agregarlo
+        responseText = `${modelText}\n\n${responseText}`
+      }
+    }
+
+    // 3. Si aún no hay texto, revisar si hay acciones con mensajes
+    if (!responseText && uiActions.length > 0) {
+      const accionesConMensaje = uiActions.filter(a => a.mensaje)
+      if (accionesConMensaje.length > 0) {
+        responseText = accionesConMensaje.map(a => a.mensaje).join('\n\n')
+      }
+    }
+
+    // 4. Fallback final
     if (!responseText) {
-      responseText = 'He procesado tu solicitud.'
+      responseText = '¿En qué más puedo ayudarte?'
     }
 
     console.log('[Assistant] Respuesta final:', String(responseText).slice(0, 100))
