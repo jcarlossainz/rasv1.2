@@ -213,16 +213,16 @@ export function AssistantChat({ mode = 'floating', onClose, avatarSrc, avatarLab
             </p>
             <div className="mt-4 space-y-2 w-full max-w-xs">
               <SuggestionButton
-                text="¿Cuántas propiedades tengo?"
-                onClick={() => setInputValue('¿Cuántas propiedades tengo?')}
+                text="Crear nuevo ticket"
+                onClick={() => setInputValue('Quiero crear un nuevo ticket')}
               />
               <SuggestionButton
-                text="Ver tickets pendientes"
-                onClick={() => setInputValue('Muéstrame los tickets pendientes')}
+                text="Agregar nueva propiedad"
+                onClick={() => setInputValue('Quiero agregar una nueva propiedad')}
               />
               <SuggestionButton
-                text="Resumen financiero del mes"
-                onClick={() => setInputValue('Dame el resumen financiero de este mes')}
+                text="Ver mis tickets para hoy"
+                onClick={() => setInputValue('Muéstrame mis tickets para hoy')}
               />
             </div>
           </div>
