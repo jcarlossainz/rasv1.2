@@ -36,10 +36,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 })
     }
 
-    // Obtener total de usuarios desde profiles
-    const { count: totalUsuarios, data: profiles } = await supabaseAdmin
-      .from('profiles')
-      .select('id, email, full_name, created_at', { count: 'exact' })
+    // Obtener usuarios desde auth.users (la tabla real de autenticación)
+    const { data: authUsers, error: usersError } = await supabaseAdmin.auth.admin.listUsers()
+
+    if (usersError) {
+      console.error('Error listando usuarios:', usersError)
+    }
+
+    const users = authUsers?.users || []
+    const totalUsuarios = users.length
 
     // Obtener total de propiedades
     const { count: totalPropiedades } = await supabaseAdmin
@@ -52,19 +57,19 @@ export async function GET(req: NextRequest) {
       .select('id, nombre_propiedad, owner_id')
 
     // Construir lista de usuarios con sus propiedades
-    const usuariosConPropiedades = (profiles || []).map(profile => {
+    const usuariosConPropiedades = users.map(authUser => {
       const propiedadesDelUsuario = (todasPropiedades || [])
-        .filter(p => p.owner_id === profile.id)
+        .filter(p => p.owner_id === authUser.id)
         .map(p => ({
           id: p.id,
           nombre: p.nombre_propiedad || 'Sin nombre'
         }))
 
       return {
-        id: profile.id,
-        email: profile.email || 'Sin email',
-        full_name: profile.full_name,
-        created_at: profile.created_at,
+        id: authUser.id,
+        email: authUser.email || 'Sin email',
+        full_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || null,
+        created_at: authUser.created_at,
         propiedades: propiedadesDelUsuario,
         total_propiedades: propiedadesDelUsuario.length
       }
@@ -74,7 +79,7 @@ export async function GET(req: NextRequest) {
     usuariosConPropiedades.sort((a, b) => b.total_propiedades - a.total_propiedades)
 
     return NextResponse.json({
-      totalUsuarios: totalUsuarios || 0,
+      totalUsuarios,
       totalPropiedades: totalPropiedades || 0,
       usuariosConPropiedades
     })
