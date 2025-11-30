@@ -4,7 +4,7 @@
  */
 
 import { anthropic } from '@ai-sdk/anthropic'
-import { streamText } from 'ai'
+import { generateText } from 'ai'
 import { createClient } from '@supabase/supabase-js'
 import { ASSISTANT_SYSTEM_PROMPT, ASSISTANT_CONFIG } from '@/lib/assistant/system-prompt'
 import { createAssistantTools } from '@/lib/assistant/tools'
@@ -44,15 +44,17 @@ export async function POST(req: Request) {
       content: m.content,
     }))
 
-    // Generar respuesta con streaming usando Claude (sin tools por ahora)
-    const result = streamText({
+    // Generar respuesta usando Claude (sin streaming para debug)
+    const result = await generateText({
       model: anthropic(ASSISTANT_CONFIG.model),
       system: ASSISTANT_SYSTEM_PROMPT,
       messages: formattedMessages,
     })
 
-    // Devolver el stream
-    return result.toTextStreamResponse()
+    // Devolver respuesta como texto plano
+    return new Response(result.text, {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    })
 
   } catch (error) {
     console.error('[Assistant API Error]', error)
