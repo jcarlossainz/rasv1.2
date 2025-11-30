@@ -52,8 +52,8 @@ export async function POST(req: Request) {
       model: anthropic(ASSISTANT_CONFIG.model),
       system: ASSISTANT_SYSTEM_PROMPT,
       messages: formattedMessages,
-      tools,
-      maxToolRoundtrips: 5, // Permitir múltiples pasos de tool calls
+      tools: tools,
+      maxToolRoundtrips: 5,
     })
 
     // Buscar si hay acciones de UI en los tool calls
