@@ -244,16 +244,20 @@ export function AssistantChat({ mode = 'floating', onClose, avatarSrc, avatarLab
                   </p>
                   <div className="mt-4 space-y-2 w-full max-w-xs">
                     <SuggestionButton
-                      text="Crear nuevo ticket"
-                      onClick={() => setInputValue('Quiero crear un nuevo ticket')}
+                      text="🏠 Crear nueva propiedad"
+                      onClick={() => setInputValue('Quiero crear una casa llamada Mi Casa')}
                     />
                     <SuggestionButton
-                      text="Agregar nueva propiedad"
-                      onClick={() => setInputValue('Quiero agregar una nueva propiedad')}
+                      text="🎫 Crear ticket de pago"
+                      onClick={() => setInputValue('Crear ticket de luz para el 15 de este mes')}
                     />
                     <SuggestionButton
-                      text="Ver mis tickets para hoy"
-                      onClick={() => setInputValue('Muéstrame mis tickets para hoy')}
+                      text="👤 Agregar contacto/proveedor"
+                      onClick={() => setInputValue('Agregar proveedor plomero')}
+                    />
+                    <SuggestionButton
+                      text="✅ Registrar un pago"
+                      onClick={() => setInputValue('Ya pagué la luz')}
                     />
                   </div>
                 </div>
@@ -371,16 +375,20 @@ export function AssistantChat({ mode = 'floating', onClose, avatarSrc, avatarLab
             </p>
             <div className="mt-4 space-y-2 w-full max-w-xs">
               <SuggestionButton
-                text="Crear nuevo ticket"
-                onClick={() => setInputValue('Quiero crear un nuevo ticket')}
+                text="🏠 Crear nueva propiedad"
+                onClick={() => setInputValue('Quiero crear una casa llamada Mi Casa')}
               />
               <SuggestionButton
-                text="Agregar nueva propiedad"
-                onClick={() => setInputValue('Quiero agregar una nueva propiedad')}
+                text="🎫 Crear ticket de pago"
+                onClick={() => setInputValue('Crear ticket de luz para el 15 de este mes')}
               />
               <SuggestionButton
-                text="Ver mis tickets para hoy"
-                onClick={() => setInputValue('Muéstrame mis tickets para hoy')}
+                text="👤 Agregar contacto/proveedor"
+                onClick={() => setInputValue('Agregar proveedor plomero')}
+              />
+              <SuggestionButton
+                text="✅ Registrar un pago"
+                onClick={() => setInputValue('Ya pagué la luz')}
               />
             </div>
           </div>
