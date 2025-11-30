@@ -53,20 +53,17 @@ export async function POST(req: Request) {
       system: ASSISTANT_SYSTEM_PROMPT,
       messages: formattedMessages,
       tools,
-      maxSteps: 5, // Permitir múltiples pasos de tool calls
+      maxToolRoundtrips: 5, // Permitir múltiples pasos de tool calls
     })
 
     // Buscar si hay acciones de UI en los tool calls
     const uiActions: Array<{ accion: string; filtros: Record<string, any>; mensaje: string }> = []
 
-    if (result.steps) {
-      for (const step of result.steps) {
-        if (step.toolResults) {
-          for (const toolResult of step.toolResults) {
-            if (toolResult.result && typeof toolResult.result === 'object' && 'accion' in toolResult.result) {
-              uiActions.push(toolResult.result as any)
-            }
-          }
+    if (result.toolResults) {
+      for (const toolResult of result.toolResults) {
+        const resultValue = (toolResult as any).result
+        if (resultValue && typeof resultValue === 'object' && 'accion' in resultValue) {
+          uiActions.push(resultValue as any)
         }
       }
     }

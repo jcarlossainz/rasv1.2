@@ -3,11 +3,8 @@
  * Define las acciones que el asistente puede ejecutar
  */
 
-// @ts-nocheck
-// TODO: Agregar tipos correctos cuando se estabilice la API del SDK
-
 import { z } from 'zod'
-import { tool } from 'ai'
+import { tool, CoreTool } from 'ai'
 import { createClient } from '@supabase/supabase-js'
 
 // Cliente Supabase con permisos de servicio
@@ -20,7 +17,7 @@ const supabaseAdmin = createClient(
 // FACTORY PARA CREAR HERRAMIENTAS CON CONTEXTO DE USUARIO
 // ============================================================================
 
-export function createAssistantTools(userId: string) {
+export function createAssistantTools(userId: string): Record<string, CoreTool> {
   const supabase = supabaseAdmin
 
   // ============================================================================
