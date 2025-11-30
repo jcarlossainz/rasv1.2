@@ -69,26 +69,31 @@ export async function POST(req: Request) {
     const uiActions: Array<{ accion: string; filtros?: Record<string, any>; ruta?: string; mensaje: string }> = []
     let toolMessages: string[] = []
 
-    if (result.toolResults && result.toolResults.length > 0) {
+    if (result.toolResults && Array.isArray(result.toolResults) && result.toolResults.length > 0) {
       console.log('[Assistant] Procesando', result.toolResults.length, 'resultados de herramientas')
 
       for (const toolResult of result.toolResults) {
-        const resultValue = (toolResult as any).result
-        console.log('[Assistant] Tool result:', JSON.stringify(resultValue).slice(0, 200))
+        try {
+          const resultValue = (toolResult as any)?.result
+          const resultStr = resultValue ? JSON.stringify(resultValue) : 'undefined'
+          console.log('[Assistant] Tool result:', resultStr.substring(0, 200))
 
-        if (resultValue && typeof resultValue === 'object') {
-          // Capturar acciones de UI
-          if ('accion' in resultValue) {
-            uiActions.push(resultValue as any)
+          if (resultValue && typeof resultValue === 'object') {
+            // Capturar acciones de UI
+            if ('accion' in resultValue) {
+              uiActions.push(resultValue as any)
+            }
+            // Capturar mensajes de éxito
+            if ('mensaje' in resultValue && resultValue.mensaje) {
+              toolMessages.push(String(resultValue.mensaje))
+            }
+            // Capturar errores
+            if ('error' in resultValue && resultValue.error) {
+              toolMessages.push(`Error: ${String(resultValue.error)}`)
+            }
           }
-          // Capturar mensajes de éxito
-          if ('mensaje' in resultValue) {
-            toolMessages.push(resultValue.mensaje)
-          }
-          // Capturar errores
-          if ('error' in resultValue) {
-            toolMessages.push(`Error: ${resultValue.error}`)
-          }
+        } catch (e) {
+          console.error('[Assistant] Error procesando tool result:', e)
         }
       }
     }
