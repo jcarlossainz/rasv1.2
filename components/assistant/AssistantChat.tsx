@@ -6,6 +6,7 @@
  */
 
 import { useState, useRef, useEffect, FormEvent } from 'react'
+import { useRouter } from 'next/navigation'
 import { Send, User, Loader2, X, Minimize2, GripVertical } from 'lucide-react'
 import { motion, useDragControls } from 'framer-motion'
 
@@ -24,6 +25,7 @@ interface AssistantChatProps {
 }
 
 export function AssistantChat({ mode = 'floating', onClose, avatarSrc, avatarLabel, userId }: AssistantChatProps) {
+  const router = useRouter()
   const [isMinimized, setIsMinimized] = useState(false)
   const [inputValue, setInputValue] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
@@ -97,6 +99,9 @@ export function AssistantChat({ mode = 'floating', onClose, avatarSrc, avatarLab
             window.dispatchEvent(new CustomEvent('assistant-filter-catalogo', {
               detail: action.filtros
             }))
+          } else if (action.accion === 'NAVEGAR' && action.ruta) {
+            // Navegar a la ruta especificada
+            router.push(action.ruta)
           }
         }
       }
