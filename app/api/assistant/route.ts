@@ -6,7 +6,7 @@
 import { anthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { createClient } from '@supabase/supabase-js'
-import { ASSISTANT_SYSTEM_PROMPT, ASSISTANT_CONFIG } from '@/lib/assistant/system-prompt'
+import { getAssistantSystemPrompt, ASSISTANT_CONFIG } from '@/lib/assistant/system-prompt'
 import { createAssistantTools } from '@/lib/assistant/tools'
 
 // Cliente Supabase con permisos de servicio (igual que vision/analyze)
@@ -51,9 +51,12 @@ export async function POST(req: Request) {
     console.log('[Assistant] Llamando a Claude con', Object.keys(tools).length, 'herramientas')
     console.log('[Assistant] Modelo:', ASSISTANT_CONFIG.model)
 
+    // Generar el system prompt con fecha actual
+    const systemPrompt = getAssistantSystemPrompt()
+
     const result = await generateText({
       model: anthropic(ASSISTANT_CONFIG.model),
-      system: ASSISTANT_SYSTEM_PROMPT,
+      system: systemPrompt,
       messages: formattedMessages,
       tools: tools,
       maxToolRoundtrips: 5,
