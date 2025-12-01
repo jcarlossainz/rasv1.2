@@ -23,6 +23,23 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "Ohana - Property Management System",
   description: "Sistema profesional de administración inmobiliaria",
+  manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/favicon.png", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Ohana",
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export default function RootLayout({
