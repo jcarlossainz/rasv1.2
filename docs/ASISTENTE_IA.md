@@ -4,6 +4,17 @@
 
 El Asistente IA de Ohana es un chatbot conversacional integrado en el sistema de administración de propiedades. Utiliza **Claude Sonnet 4** como modelo de lenguaje y el **Vercel AI SDK** para la orquestación de herramientas.
 
+### Personalidad
+- **Amigable y cercano**: Responde como un colega que ayuda
+- **Conversacional**: No robótico, usa lenguaje natural
+- **Expresivo**: Usa emojis ocasionalmente
+- **Proactivo**: Ofrece ayuda y alternativas
+
+### Capacidades Principales
+1. **Ejecutar acciones**: Crear propiedades, tickets, contactos
+2. **Responder preguntas de ayuda**: "¿Cómo hago X?"
+3. **Conversación natural**: Saludos, agradecimientos, etc.
+
 ---
 
 ## Arquitectura
