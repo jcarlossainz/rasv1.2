@@ -108,10 +108,16 @@ export default function CatalogoPage() {
       }))
 
       // ✅ QUERY 2: IDs de propiedades compartidas CON ROL
-      const { data: colaboraciones } = await supabase
+      const { data: colaboraciones, error: errorColaboraciones } = await supabase
         .from('propiedades_colaboradores')
         .select('propiedad_id, rol')
         .eq('user_id', userId)
+
+      // 🔍 DEBUG: Log para diagnosticar problemas de propiedades compartidas
+      if (errorColaboraciones) {
+        logger.error('❌ Error cargando colaboraciones:', errorColaboraciones)
+      }
+      logger.log(`🔍 Colaboraciones encontradas para user_id=${userId}:`, colaboraciones?.length || 0, colaboraciones)
 
       let propiedadesCompartidas: any[] = []
 

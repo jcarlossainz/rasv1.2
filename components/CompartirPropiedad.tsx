@@ -102,11 +102,14 @@ export default function CompartirPropiedad({
     }
 
     // Buscar si el usuario ya está registrado (case-insensitive)
-    const { data: perfilData } = await supabase
+    const { data: perfilData, error: perfilError } = await supabase
       .from('profiles')
       .select('id, email')
       .ilike('email', emailBuscar)
       .maybeSingle()
+
+    // 🔍 DEBUG: Log para diagnosticar búsqueda de perfil
+    console.log('🔍 Búsqueda de perfil:', { emailBuscar, perfilData, perfilError })
 
     let dataToInsert: any = {
       propiedad_id: propiedadId,
@@ -116,15 +119,21 @@ export default function CompartirPropiedad({
     if (perfilData) {
       // ✅ Usuario registrado: usar user_id
       dataToInsert.user_id = perfilData.id
+      console.log('✅ Usuario encontrado, insertando con user_id:', perfilData.id)
     } else {
       // ✅ Usuario NO registrado: usar email_invitado
       dataToInsert.email_invitado = emailBuscar
+      console.log('⚠️ Usuario NO encontrado, insertando con email_invitado:', emailBuscar)
     }
 
     // Agregar colaborador o invitación
-    const { error: insertError } = await supabase
+    const { data: insertData, error: insertError } = await supabase
       .from('propiedades_colaboradores')
       .insert(dataToInsert)
+      .select()
+
+    // 🔍 DEBUG: Log del resultado de inserción
+    console.log('🔍 Resultado de inserción:', { dataToInsert, insertData, insertError })
 
     if (insertError) {
       if (insertError.code === '23505') {
@@ -214,15 +223,25 @@ export default function CompartirPropiedad({
                       <span className="font-semibold text-gray-800 font-roboto">
                         {colab.email}
                       </span>
-                      {colab.esPendiente && (
+                      {colab.esPendiente ? (
                         <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
                           Invitación pendiente
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                          Activo
                         </span>
                       )}
                     </div>
                     {colab.full_name && (
                       <div className="text-sm text-gray-500 font-roboto">
                         {colab.full_name}
+                      </div>
+                    )}
+                    {/* 🔍 DEBUG: Mostrar user_id para verificar */}
+                    {colab.user_id && (
+                      <div className="text-xs text-gray-400 font-mono mt-1">
+                        ID: {colab.user_id.substring(0, 8)}...
                       </div>
                     )}
                     {colab.esPendiente && (
