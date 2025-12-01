@@ -86,13 +86,15 @@ export async function POST(req: Request) {
 
       for (const toolResult of result.toolResults) {
         try {
-          const resultValue = (toolResult as any)?.result
+          // El SDK de Vercel AI puede tener el resultado en diferentes lugares
+          const resultValue = (toolResult as any)?.result || (toolResult as any)?.output || toolResult
+          console.log('[Assistant] Tool result raw:', JSON.stringify(toolResult)?.substring(0, 500))
           console.log('[Assistant] Tool result value:', JSON.stringify(resultValue)?.substring(0, 300))
 
           if (resultValue && typeof resultValue === 'object') {
             // Capturar acciones de UI (NAVEGAR, FILTRAR_CATALOGO, MENSAJE)
             if (resultValue.accion) {
-              console.log('[Assistant] Acción encontrada:', resultValue.accion)
+              console.log('[Assistant] Acción encontrada:', resultValue.accion, 'ruta:', resultValue.ruta)
               uiActions.push(resultValue)
             }
             // Capturar mensajes
@@ -110,9 +112,32 @@ export async function POST(req: Request) {
       }
     }
 
+    // También revisar en los steps si hay resultados de herramientas
+    if ((result as any).steps && Array.isArray((result as any).steps)) {
+      console.log('[Assistant] Revisando steps:', (result as any).steps.length)
+      for (const step of (result as any).steps) {
+        if (step.toolResults && Array.isArray(step.toolResults)) {
+          for (const tr of step.toolResults) {
+            const resultValue = tr?.result || tr?.output || tr
+            console.log('[Assistant] Step tool result:', JSON.stringify(resultValue)?.substring(0, 300))
+            if (resultValue && typeof resultValue === 'object' && resultValue.accion) {
+              console.log('[Assistant] Acción en step:', resultValue.accion)
+              if (!uiActions.find(a => a.ruta === resultValue.ruta)) {
+                uiActions.push(resultValue)
+              }
+              if (resultValue.mensaje && !toolMessages.includes(resultValue.mensaje)) {
+                toolMessages.push(resultValue.mensaje)
+              }
+            }
+          }
+        }
+      }
+    }
+
     // También revisar toolCalls por si hay resultados ahí
     if (result.toolCalls && Array.isArray(result.toolCalls)) {
       console.log('[Assistant] Tool calls encontrados:', result.toolCalls.length)
+      console.log('[Assistant] Tool calls:', JSON.stringify(result.toolCalls).substring(0, 500))
     }
 
     console.log('[Assistant] UI Actions:', JSON.stringify(uiActions))
