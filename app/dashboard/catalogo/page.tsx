@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/useToast'
 import { useConfirm } from '@/components/ui/confirm-modal'
 import { useAuth } from '@/hooks/useAuth'
 import { useLogout } from '@/hooks/useLogout'
+import { useConvertirInvitaciones } from '@/hooks/useConvertirInvitaciones'
 import { logger } from '@/lib/logger'
 import TopBar from '@/components/ui/topbar'
 import Loading from '@/components/ui/loading'
@@ -37,6 +38,9 @@ export default function CatalogoPage() {
   const confirm = useConfirm()
   const { user, loading: authLoading } = useAuth()
   const logout = useLogout()
+
+  // 🔄 Convertir invitaciones pendientes del usuario a user_id
+  useConvertirInvitaciones(user?.id)
   const [propiedades, setPropiedades] = useState<Propiedad[]>([])
   const [showWizard, setShowWizard] = useState(false)
   const [showCompartir, setShowCompartir] = useState(false)

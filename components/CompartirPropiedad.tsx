@@ -101,11 +101,11 @@ export default function CompartirPropiedad({
       throw new Error('No puedes agregarte a ti mismo')
     }
 
-    // Buscar si el usuario ya está registrado
+    // Buscar si el usuario ya está registrado (case-insensitive)
     const { data: perfilData } = await supabase
       .from('profiles')
       .select('id, email')
-      .eq('email', emailBuscar)
+      .ilike('email', emailBuscar)
       .maybeSingle()
 
     let dataToInsert: any = {
