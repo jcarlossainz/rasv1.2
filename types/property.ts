@@ -615,11 +615,11 @@ export interface Service {
 }
 
 // ============================================================================
-// SISTEMA DE CUENTAS BANCARIAS E INGRESOS
+// SISTEMA DE CUENTAS E INGRESOS
 // ============================================================================
 
 /**
- * Cuenta bancaria, tarjeta o efectivo
+ * Cuenta (transferencia, tarjeta o efectivo)
  * Ahora soporta múltiples propiedades y propietarios via arrays
  */
 export interface CuentaBancaria {
@@ -630,7 +630,7 @@ export interface CuentaBancaria {
   saldo_inicial: number;
   saldo_actual: number;
   moneda: 'MXN' | 'USD';
-  tipo_cuenta: 'Banco' | 'Tarjeta' | 'Efectivo';
+  tipo_cuenta: 'Transferencia' | 'Tarjeta' | 'Efectivo';
   banco: string | null;
   numero_cuenta: string | null;
   clabe: string | null;
@@ -651,7 +651,7 @@ export interface NuevaCuentaBancaria {
   descripcion?: string;
   saldo_inicial: number;
   moneda?: 'MXN' | 'USD';
-  tipo_cuenta: 'Banco' | 'Tarjeta' | 'Efectivo';
+  tipo_cuenta: 'Transferencia' | 'Tarjeta' | 'Efectivo';
   banco?: string;
   numero_cuenta?: string;
   clabe?: string;

@@ -39,16 +39,16 @@ export default function CuentasGlobalPage() {
   const [movimientosFiltrados, setMovimientosFiltrados] = useState<Movimiento[]>([])
   const [propiedades, setPropiedades] = useState<{ id: string; nombre: string }[]>([])
 
-  // Estados para cuentas bancarias
+  // Estados para cuentas
   const [cuentas, setCuentas] = useState<CuentaBancaria[]>([])
   const [cargandoCuentas, setCargandoCuentas] = useState(false)
   const [mostrarModalCuenta, setMostrarModalCuenta] = useState(false)
 
   // Estados del formulario de nueva cuenta
   const [nombreCuenta, setNombreCuenta] = useState('')
-  const [propiedadCuenta, setPropiedadCuenta] = useState('')
+  const [propiedadesCuenta, setPropiedadesCuenta] = useState<string[]>([])
   const [tipoMoneda, setTipoMoneda] = useState<'MXN' | 'USD'>('MXN')
-  const [tipoCuenta, setTipoCuenta] = useState<'Banco' | 'Tarjeta' | 'Efectivo'>('Banco')
+  const [tipoCuenta, setTipoCuenta] = useState<'Transferencia' | 'Tarjeta' | 'Efectivo'>('Transferencia')
   const [banco, setBanco] = useState('')
   const [numeroCuenta, setNumeroCuenta] = useState('')
   const [balanceInicial, setBalanceInicial] = useState('0')
@@ -198,8 +198,8 @@ export default function CuentasGlobalPage() {
       const data = await obtenerTodasLasCuentas()
       setCuentas(data)
     } catch (error) {
-      console.error('Error cargando cuentas bancarias:', error)
-      toast.error('Error al cargar cuentas bancarias')
+      console.error('Error cargando cuentas:', error)
+      toast.error('Error al cargar cuentas')
     } finally {
       setCargandoCuentas(false)
     }
@@ -208,28 +208,28 @@ export default function CuentasGlobalPage() {
   const abrirModalNuevaCuenta = () => {
     setCuentaEditando(null)
     setNombreCuenta('')
-    setPropiedadCuenta('')
+    setPropiedadesCuenta([])
     setTipoMoneda('MXN')
-    setTipoCuenta('Banco')
-    setBanco('')
-    setNumeroCuenta('')
+    setTipoCuenta('Transferencia')
+    
+    
     setBalanceInicial('0')
-    setDescripcion('')
-    setColor('#3B82F6')
+    
+    
     setMostrarModalCuenta(true)
   }
 
   const abrirModalEditarCuenta = (cuenta: CuentaBancaria) => {
     setCuentaEditando(cuenta)
     setNombreCuenta(cuenta.nombre_cuenta)
-    setPropiedadCuenta('') // No se puede cambiar la propiedad al editar
+    setPropiedadesCuenta(cuenta.propiedades_ids || [])
     setTipoMoneda(cuenta.moneda)
     setTipoCuenta(cuenta.tipo_cuenta)
-    setBanco(cuenta.banco || '')
-    setNumeroCuenta(cuenta.numero_cuenta || '')
+    
+    
     setBalanceInicial(cuenta.saldo_inicial?.toString() || '0')
-    setDescripcion(cuenta.descripcion || '')
-    setColor('#3B82F6') // Color fijo ya que no está en la BD
+    
+    
     setMostrarModalCuenta(true)
   }
 
@@ -259,12 +259,6 @@ export default function CuentasGlobalPage() {
       return
     }
 
-    // Solo requerir propiedad si es cuenta nueva
-    if (!cuentaEditando && !propiedadCuenta) {
-      toast.error('Debes seleccionar una propiedad')
-      return
-    }
-
     if (parseFloat(balanceInicial) < 0) {
       toast.error('El balance inicial no puede ser negativo')
       return
@@ -277,11 +271,11 @@ export default function CuentasGlobalPage() {
         nombre_cuenta: nombreCuenta.trim(),
         moneda: tipoMoneda,
         tipo_cuenta: tipoCuenta,
-        banco: banco.trim() || undefined,
-        numero_cuenta: numeroCuenta.trim() || undefined,
+        
+        
         saldo_inicial: parseFloat(balanceInicial),
-        descripcion: descripcion.trim() || undefined,
-        propiedades_ids: propiedadCuenta ? [propiedadCuenta] : undefined
+        
+        propiedades_ids: propiedadesCuenta.length > 0 ? propiedadesCuenta : undefined
       }
 
       if (cuentaEditando) {
@@ -609,11 +603,11 @@ export default function CuentasGlobalPage() {
         {/* Línea divisora */}
         <div className="border-t-2 border-gray-300 my-6"></div>
 
-        {/* Sección de Cuentas Bancarias */}
+        {/* Sección de Cuentas */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Cuentas Bancarias</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Cuentas</h3>
               <p className="text-sm text-gray-500">Gestiona tus cuentas y balances</p>
             </div>
             <button
@@ -637,7 +631,7 @@ export default function CuentasGlobalPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
               </svg>
               <h3 className="mt-2 text-sm font-medium text-gray-900">No hay cuentas registradas</h3>
-              <p className="mt-1 text-sm text-gray-500">Comienza creando una cuenta bancaria</p>
+              <p className="mt-1 text-sm text-gray-500">Comienza creando una cuenta</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -677,15 +671,10 @@ export default function CuentasGlobalPage() {
                     </div>
                   </div>
 
-                  {/* Tipo y banco */}
-                  <div className="space-y-1 mb-3">
-                    <p className="text-xs text-gray-500">{cuenta.tipo_cuenta}</p>
-                    {cuenta.banco && (
-                      <p className="text-xs text-gray-600">{cuenta.banco}</p>
-                    )}
-                    {cuenta.numero_cuenta && (
-                      <p className="text-xs text-gray-500">•••• {cuenta.numero_cuenta}</p>
-                    )}
+                  {/* Tipo y moneda */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">{cuenta.tipo_cuenta}</span>
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">{cuenta.moneda}</span>
                   </div>
 
                   {/* Balance */}
@@ -695,10 +684,6 @@ export default function CuentasGlobalPage() {
                       {formatoMoneda(cuenta.saldo_actual || 0, cuenta.moneda)}
                     </p>
                   </div>
-
-                  {cuenta.descripcion && (
-                    <p className="mt-2 text-xs text-gray-500 line-clamp-2">{cuenta.descripcion}</p>
-                  )}
                 </div>
               ))}
             </div>
@@ -1233,37 +1218,51 @@ export default function CuentasGlobalPage() {
                   />
                 </div>
 
-                {/* Propiedad (dropdown obligatorio - solo para nueva cuenta) */}
-                {!cuentaEditando && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Propiedad <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={propiedadCuenta}
-                      onChange={(e) => setPropiedadCuenta(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ras-turquesa"
-                    >
-                      <option value="">Seleccionar propiedad...</option>
-                      {propiedades.map(prop => (
-                        <option key={prop.id} value={prop.id}>{prop.nombre}</option>
-                      ))}
-                    </select>
+                {/* Propiedad (multi-select - opcional) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Propiedades asociadas <span className="text-gray-400 text-xs">(opcional)</span>
+                  </label>
+                  <div className="border border-gray-300 rounded-md p-2 max-h-32 overflow-y-auto">
+                    {propiedades.length === 0 ? (
+                      <p className="text-sm text-gray-500 italic">No hay propiedades disponibles</p>
+                    ) : (
+                      propiedades.map(prop => (
+                        <label key={prop.id} className="flex items-center gap-2 py-1 hover:bg-gray-50 px-1 rounded cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={propiedadesCuenta.includes(prop.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setPropiedadesCuenta([...propiedadesCuenta, prop.id])
+                              } else {
+                                setPropiedadesCuenta(propiedadesCuenta.filter(id => id !== prop.id))
+                              }
+                            }}
+                            className="w-4 h-4 text-ras-turquesa border-gray-300 rounded focus:ring-ras-turquesa"
+                          />
+                          <span className="text-sm text-gray-700">{prop.nombre}</span>
+                        </label>
+                      ))
+                    )}
                   </div>
-                )}
+                  <p className="mt-1 text-xs text-gray-500">
+                    Puedes asociar esta cuenta a una o más propiedades, o dejarla sin asociar
+                  </p>
+                </div>
 
                 {/* Tipo de cuenta y moneda */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tipo de cuenta <span className="text-red-500">*</span>
+                      Tipo <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={tipoCuenta}
                       onChange={(e) => setTipoCuenta(e.target.value as any)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ras-turquesa"
                     >
-                      <option value="Banco">Banco</option>
+                      <option value="Transferencia">Transferencia</option>
                       <option value="Tarjeta">Tarjeta</option>
                       <option value="Efectivo">Efectivo</option>
                     </select>
@@ -1284,35 +1283,6 @@ export default function CuentasGlobalPage() {
                   </div>
                 </div>
 
-                {/* Banco (solo si no es efectivo) */}
-                {tipoCuenta !== 'Efectivo' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Banco</label>
-                    <input
-                      type="text"
-                      value={banco}
-                      onChange={(e) => setBanco(e.target.value)}
-                      placeholder="Ej: BBVA, Santander, Banamex..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ras-turquesa"
-                    />
-                  </div>
-                )}
-
-                {/* Número de cuenta */}
-                {tipoCuenta !== 'Efectivo' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Últimos 4 dígitos</label>
-                    <input
-                      type="text"
-                      value={numeroCuenta}
-                      onChange={(e) => setNumeroCuenta(e.target.value)}
-                      placeholder="1234"
-                      maxLength={4}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ras-turquesa"
-                    />
-                  </div>
-                )}
-
                 {/* Balance inicial */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1329,36 +1299,6 @@ export default function CuentasGlobalPage() {
                   <p className="mt-1 text-xs text-gray-500">
                     El balance actual se calculará automáticamente con ingresos y egresos
                   </p>
-                </div>
-
-                {/* Color */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Color (para identificación visual)
-                  </label>
-                  <div className="flex gap-2 items-center">
-                    <input
-                      type="color"
-                      value={color}
-                      onChange={(e) => setColor(e.target.value)}
-                      className="w-12 h-10 border border-gray-300 rounded cursor-pointer"
-                    />
-                    <span className="text-sm text-gray-600">{color}</span>
-                  </div>
-                </div>
-
-                {/* Descripción */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Descripción (opcional)
-                  </label>
-                  <textarea
-                    value={descripcion}
-                    onChange={(e) => setDescripcion(e.target.value)}
-                    rows={2}
-                    placeholder="Notas adicionales sobre esta cuenta..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ras-turquesa"
-                  />
                 </div>
               </div>
 
