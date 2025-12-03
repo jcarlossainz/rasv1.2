@@ -332,62 +332,6 @@ export default function BalancePropiedadPage() {
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
-        {/* Filtro de Rango Personalizado - DEL AL */}
-        <div className="mb-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-2">
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide font-poppins">
-              Comparativo
-            </h3>
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="text-xs font-semibold text-gray-600 font-poppins">Del:</label>
-              <input
-                type="date"
-                value={fechaDesde}
-                onChange={(e) => setFechaDesde(e.target.value)}
-                className="px-2 py-1 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ras-turquesa"
-              />
-              <label className="text-xs font-semibold text-gray-600 font-poppins">Al:</label>
-              <input
-                type="date"
-                value={fechaHasta}
-                onChange={(e) => setFechaHasta(e.target.value)}
-                className="px-2 py-1 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ras-turquesa"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <div className="bg-white rounded-lg shadow-sm p-2.5 border border-red-200">
-              <div className="text-[10px] font-semibold text-gray-500 mb-0.5 font-poppins">Egresos</div>
-              <div className="text-xl font-bold text-red-600 font-poppins">
-                ${(statsRangoPersonalizado.totalEgresos / 1000).toFixed(1)}K
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm p-2.5 border border-green-200">
-              <div className="text-[10px] font-semibold text-gray-500 mb-0.5 font-poppins">Ingresos</div>
-              <div className="text-xl font-bold text-green-600 font-poppins">
-                ${(statsRangoPersonalizado.totalIngresos / 1000).toFixed(1)}K
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm p-2.5 border border-blue-200">
-              <div className="text-[10px] font-semibold text-gray-500 mb-0.5 font-poppins">Balance</div>
-              <div className={`text-xl font-bold font-poppins ${statsRangoPersonalizado.balance >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                ${(statsRangoPersonalizado.balance / 1000).toFixed(1)}K
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm p-2.5 border border-purple-200">
-              <div className="text-[10px] font-semibold text-gray-500 mb-0.5 font-poppins">Movimientos</div>
-              <div className="text-xl font-bold text-purple-600 font-poppins">
-                {statsRangoPersonalizado.totalMovimientos}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Línea divisora */}
-        <div className="border-t-2 border-gray-300 my-6"></div>
 
         {/* Tarjetas de Resumen - MES ACTUAL */}
         <div className="mb-2">

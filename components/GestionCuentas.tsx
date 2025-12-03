@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * COMPONENTE: Gestión de Cuentas Bancarias
- * Permite ver, crear, editar y eliminar cuentas bancarias de una propiedad
+ * COMPONENTE: Gestión de Cuentas
+ * Permite ver, crear, editar y eliminar cuentas de una propiedad
  */
 
 import { useState, useEffect } from 'react'
@@ -30,11 +30,8 @@ export default function GestionCuentas({
   // Formulario
   const [nombreCuenta, setNombreCuenta] = useState('')
   const [tipoMoneda, setTipoMoneda] = useState<'MXN' | 'USD'>('MXN')
-  const [tipoCuenta, setTipoCuenta] = useState<'Banco' | 'Tarjeta' | 'Efectivo'>('Banco')
-  const [banco, setBanco] = useState('')
-  const [numeroCuenta, setNumeroCuenta] = useState('')
+  const [tipoCuenta, setTipoCuenta] = useState<'Transferencia' | 'Tarjeta' | 'Efectivo'>('Banco')
   const [saldoInicial, setSaldoInicial] = useState('0')
-  const [descripcion, setDescripcion] = useState('')
 
   const [guardando, setGuardando] = useState(false)
 
@@ -59,11 +56,8 @@ export default function GestionCuentas({
     setCuentaEditando(null)
     setNombreCuenta('')
     setTipoMoneda('MXN')
-    setTipoCuenta('Banco')
-    setBanco('')
-    setNumeroCuenta('')
+    setTipoCuenta('Transferencia')
     setSaldoInicial('0')
-    setDescripcion('')
     setMostrarModal(true)
   }
 
@@ -72,10 +66,7 @@ export default function GestionCuentas({
     setNombreCuenta(cuenta.nombre_cuenta)
     setTipoMoneda(cuenta.moneda)
     setTipoCuenta(cuenta.tipo_cuenta)
-    setBanco(cuenta.banco || '')
-    setNumeroCuenta(cuenta.numero_cuenta || '')
     setSaldoInicial(cuenta.saldo_inicial.toString())
-    setDescripcion(cuenta.descripcion || '')
     setMostrarModal(true)
   }
 
@@ -97,10 +88,7 @@ export default function GestionCuentas({
         nombre_cuenta: nombreCuenta.trim(),
         moneda: tipoMoneda,
         tipo_cuenta: tipoCuenta,
-        banco: banco.trim() || undefined,
-        numero_cuenta: numeroCuenta.trim() || undefined,
         saldo_inicial: parseFloat(saldoInicial),
-        descripcion: descripcion.trim() || undefined,
         propiedades_ids: [propiedadId]
       }
 
@@ -148,7 +136,7 @@ export default function GestionCuentas({
   if (cargando) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+        <div className="animate-spin h-8 w-8 border-4 border-ras-azul border-t-transparent rounded-full" />
       </div>
     )
   }
@@ -158,12 +146,12 @@ export default function GestionCuentas({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">Cuentas Bancarias</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Cuentas</h3>
           <p className="text-sm text-gray-500">Gestiona las cuentas de {propiedadNombre}</p>
         </div>
         <button
           onClick={abrirModalNueva}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+          className="px-4 py-2 bg-ras-azul text-white rounded-md hover:bg-ras-turquesa transition-colors flex items-center gap-2"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -179,7 +167,7 @@ export default function GestionCuentas({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
           </svg>
           <h3 className="mt-2 text-sm font-medium text-gray-900">No hay cuentas registradas</h3>
-          <p className="mt-1 text-sm text-gray-500">Comienza creando una cuenta bancaria</p>
+          <p className="mt-1 text-sm text-gray-500">Comienza creando una cuenta</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -193,7 +181,7 @@ export default function GestionCuentas({
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <div
-                    className="w-3 h-3 rounded-full bg-blue-500"
+                    className="w-3 h-3 rounded-full bg-ras-azul"
                   />
                   <h4 className="font-semibold text-gray-900">{cuenta.nombre_cuenta}</h4>
                 </div>
@@ -203,7 +191,7 @@ export default function GestionCuentas({
                       e.stopPropagation()
                       abrirModalEditar(cuenta)
                     }}
-                    className="p-1 text-gray-400 hover:text-blue-600"
+                    className="p-1 text-gray-400 hover:text-ras-azul"
                     title="Editar"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -228,12 +216,6 @@ export default function GestionCuentas({
               {/* Tipo y banco */}
               <div className="space-y-1 mb-3">
                 <p className="text-xs text-gray-500">{cuenta.tipo_cuenta}</p>
-                {cuenta.banco && (
-                  <p className="text-xs text-gray-600">{cuenta.banco}</p>
-                )}
-                {cuenta.numero_cuenta && (
-                  <p className="text-xs text-gray-500">•••• {cuenta.numero_cuenta}</p>
-                )}
               </div>
 
               {/* Balance */}
@@ -244,9 +226,6 @@ export default function GestionCuentas({
                 </p>
               </div>
 
-              {cuenta.descripcion && (
-                <p className="mt-2 text-xs text-gray-500 line-clamp-2">{cuenta.descripcion}</p>
-              )}
             </div>
           ))}
         </div>
@@ -284,7 +263,7 @@ export default function GestionCuentas({
                   value={nombreCuenta}
                   onChange={(e) => setNombreCuenta(e.target.value)}
                   placeholder="Ej: Cuenta principal Casa Playa"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ras-azul"
                 />
               </div>
 
@@ -297,7 +276,7 @@ export default function GestionCuentas({
                   <select
                     value={tipoCuenta}
                     onChange={(e) => setTipoCuenta(e.target.value as any)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ras-azul"
                   >
                     <option value="Banco">Banco</option>
                     <option value="Tarjeta">Tarjeta</option>
@@ -312,7 +291,7 @@ export default function GestionCuentas({
                   <select
                     value={tipoMoneda}
                     onChange={(e) => setTipoMoneda(e.target.value as any)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ras-azul"
                   >
                     <option value="MXN">MXN (Pesos)</option>
                     <option value="USD">USD (Dólares)</option>
@@ -331,7 +310,7 @@ export default function GestionCuentas({
                     value={banco}
                     onChange={(e) => setBanco(e.target.value)}
                     placeholder="Ej: BBVA, Santander, Banamex..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ras-azul"
                   />
                 </div>
               )}
@@ -348,7 +327,7 @@ export default function GestionCuentas({
                     onChange={(e) => setNumeroCuenta(e.target.value)}
                     placeholder="1234"
                     maxLength={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ras-azul"
                   />
                 </div>
               )}
@@ -364,7 +343,7 @@ export default function GestionCuentas({
                   value={saldoInicial}
                   onChange={(e) => setSaldoInicial(e.target.value)}
                   placeholder="0.00"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ras-azul"
                 />
                 <p className="mt-1 text-xs text-gray-500">
                   El saldo actual se calculará automáticamente con ingresos y egresos
@@ -381,7 +360,7 @@ export default function GestionCuentas({
                   onChange={(e) => setDescripcion(e.target.value)}
                   rows={2}
                   placeholder="Notas adicionales sobre esta cuenta..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-ras-azul"
                 />
               </div>
             </div>
@@ -398,7 +377,7 @@ export default function GestionCuentas({
               <button
                 onClick={handleGuardar}
                 disabled={guardando}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-ras-azul text-white rounded-md hover:bg-ras-turquesa transition-colors disabled:opacity-50"
               >
                 {guardando ? 'Guardando...' : cuentaEditando ? 'Actualizar' : 'Crear Cuenta'}
               </button>
